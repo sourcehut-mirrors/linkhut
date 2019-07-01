@@ -1,0 +1,10 @@
+<%= if logged_in?(@conn) do %>
+ <div class="gray f6 f5-ns dib pv2">Logged in as <span class="black"><%= current_user(@conn).email %></span></div> <span class="gray">—</span>
+ <%# Using a form instead of a link, since the route for signing out requires making a DELETE call and we don't want to rely on JS being activated %>
+ <%= form_for :nil, Routes.session_path(@conn, :delete, current_user(@conn).id), [method: :delete, class: "dib pa0 input-reset button-reset"], fn _f -> %>
+  <%= submit "Sign out", class: "bn bg-transparent link underline-hover black f6 f5-ns dib pa0" %>
+ <% end %>
+<% else %>
+ <%= link "Sign in", to: Routes.session_path(@conn, :new), class: "link underline-hover black f6 f5-ns dib pv2" %> <span class="gray">—</span>
+ <%= link "Register", to: Routes.user_path(@conn, :new), class: "link underline-hover black f6 f5-ns dib pv2" %>
+<% end %>

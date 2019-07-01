@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>linkhut · social bookmarking</title>
+    <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
+  </head>
+  <body class=" w-100 sans-serif bg-white">
+    <main>
+    <header class="">
+      <nav class="flex justify-between ph3 pv2">
+        <div>
+          <a class="link dim black b f6 f5-ns dib pv2" href="/" title="Home">linkhut</a>
+        </div>
+        <div>
+          <%= render "session.html", conn: @conn %>
+        </div>
+      </nav>
+    </header>
+      <%= render "alerts.html", conn: @conn %>
+      <%= render @view_module, @view_template, assigns %>
+    </main>
+    <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
+  </body>
+</html>
