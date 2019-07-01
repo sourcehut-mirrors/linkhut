@@ -7,19 +7,11 @@ defmodule Linkhut.Web.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug Guardian.Plug.Pipeline, module: Linkhut.Web.Auth.Guardian,
-                                 error_handler: Linkhut.Web.Auth.AuthErrorHandler
-    plug Guardian.Plug.VerifySession
-    plug Guardian.Plug.LoadResource, allow_blank: true
+    plug Linkhut.Web.Plugs.AuthenticationPlug
   end
 
-  pipeline :browser_auth do
-    plug Guardian.Plug.Pipeline, module: Linkhut.Web.Auth.Guardian,
-                                 error_handler: Linkhut.Web.Auth.AuthErrorHandler
-    plug Guardian.Plug.VerifySession, claims: %{"typ" => "access"}
-    plug Guardian.Plug.VerifyHeader, claims: %{"typ" => "access"}
+  pipeline :ensure_auth do
     plug Guardian.Plug.EnsureAuthenticated
-    plug Guardian.Plug.LoadResource
   end
 
   pipeline :api do
@@ -35,7 +27,8 @@ defmodule Linkhut.Web.Router do
   end
 
   scope "/", Linkhut.Web do
-    pipe_through [:browser, :browser_auth]
+    pipe_through [:browser, :ensure_auth]
+
     resources "/users", UserController, only: [:show, :index, :update]
   end
 

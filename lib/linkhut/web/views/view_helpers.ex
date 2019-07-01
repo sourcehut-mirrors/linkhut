@@ -1,7 +1,9 @@
 defmodule Linkhut.Web.ViewHelpers do
 
-  def current_user(conn), do: Linkhut.Web.Auth.Guardian.Plug.current_resource(conn)
+  alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
 
-  def logged_in?(conn), do: Linkhut.Web.Auth.Guardian.Plug.authenticated?(conn)
+  def current_user(conn), do: GuardianPlug.current_resource(conn)
+
+  def logged_in?(conn), do: GuardianPlug.authenticated?(conn)
 
 end
