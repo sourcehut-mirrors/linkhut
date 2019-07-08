@@ -5,7 +5,6 @@ defmodule Linkhut.Web.FormHelpers do
 
   use Phoenix.HTML
 
-
   @doc """
   Wraps a form input in a div that carries information on why it failed validation
   """
@@ -15,11 +14,15 @@ defmodule Linkhut.Web.FormHelpers do
         html_escape([
           tag(:div, class: "invalid"),
           fun.(),
-          content_tag(:ul,
+          content_tag(
+            :ul,
             Enum.map(errors, fn error ->
-                                content_tag(:li, translate_error(error), class: "invalid")
-            end)),
-          raw("</div>")])
+              content_tag(:li, translate_error(error), class: "invalid")
+            end)
+          ),
+          raw("</div>")
+        ])
+
       true ->
         html_escape([fun.()])
     end
