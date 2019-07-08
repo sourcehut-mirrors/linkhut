@@ -10,17 +10,17 @@ body {
     padding-left: $spacing-medium;
     padding-right: $spacing-medium;
 
-    @media screen and (min-width: 30em) {
+    @media #{$not-small} {
         font-size: 1rem;
     }
 
-    @media screen and (min-width: 60em) {
+    @media #{$large} {
         max-width: 64rem;
     }
 }
 
-.highlight {
-    color: $highlight-fg;
+.strong {
+    color: $strong;
 }
 
 @mixin banner($fg-color, $bg-color) {

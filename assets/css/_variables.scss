@@ -4,15 +4,18 @@ $navy: #001B44;
 $red: #FF4136;
 $washed-red: #FFDFDF;
 
-  // theme colors
+// theme colors
 $foreground: #000000;
 $background: #FFFFFF;
 
 $muted: #777777;
-$highlight-fg: #000000;
+$strong: #000000;
 
-
-  // spacing
+// spacing
 $spacing-small:  .5rem;
 $spacing-medium: 1rem;
 $spacing-large:  2rem;
+
+// media queries relating to screen sizes
+$not-small: "screen and (min-width: 48em)";
+$large: "screen and (min-width: 64em)";
