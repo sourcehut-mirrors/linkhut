@@ -1,0 +1,176 @@
+@import "~normalize.css/normalize.css";
+@import "variables";
+
+body {
+    background-color: $background;
+    color: $foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'helvetica neue', helvetica, ubuntu, roboto, noto, 'segoe ui', arial, sans-serif;
+    font-size: .875rem;
+    max-width: 34em;
+    padding-left: $spacing-medium;
+    padding-right: $spacing-medium;
+
+    @media screen and (min-width: 30em) {
+        font-size: 1rem;
+    }
+
+    @media screen and (min-width: 60em) {
+        max-width: 64rem;
+    }
+}
+
+.highlight {
+    color: $highlight-fg;
+}
+
+@mixin banner($fg-color, $bg-color) {
+    align-items: center;
+    background-color: $bg-color;
+    color: $fg-color;
+    display: flex;
+    justify-content: center;
+    padding: $spacing-large;
+    & span {
+        line-height: 1.25;
+    }
+}
+
+div.info {
+    @include banner($navy, $light-blue);
+}
+
+div.error {
+    @include banner($red, $washed-red);
+}
+
+a {
+    color: $foreground;
+    text-decoration: none;
+    transition: color .15s ease-in;
+
+    &:hover {
+        text-decoration: underline;
+        transition: color .15s ease-in;
+    }
+
+    &:link, &:visited {
+        transition: color .15s ease-in;
+    }
+
+    &:active {
+        transition: color .15s ease-in;
+    }
+
+    &:focus {
+        text-decoration: underline;
+        transition: color .15s ease-in;
+        outline: 1px dotted currentColor;
+    }
+}
+
+fieldset {
+    border-color: transparent;
+    border-width: 1px;
+    border-style: solid;
+    margin: 0;
+    max-width: 34em;
+    padding: 0;
+
+    & input {
+        border-color: $muted;
+        border-style: solid;
+        border-width: 1px;
+        box-sizing: border-box;
+        display: block;
+        margin-bottom: $spacing-small;
+        padding: $spacing-small;
+        width: 100%;
+    }
+
+    & label {
+        display: block;
+        font-size: .875rem;
+        font-weight: 400;
+        line-height: 1.5;
+    }
+
+    & div.invalid {
+        & input {
+            background-color: $washed-red;
+            color: $red;
+        }
+
+        & ul {
+            color: $red;
+            list-style: none;
+            margin: 0 0 $spacing-small;
+            padding: 0;
+        }
+    }
+}
+
+form {
+    & button {
+        background-color: transparent;
+        border-style: solid;
+        border-width: 1px;
+        display: inline-block;
+        font-weight: bold;
+        padding: $spacing-small $spacing-medium;
+
+        &:hover {
+            cursor: pointer;
+        }
+    }
+}
+
+button, input {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+
+    &::-moz-focus-inner {
+        border: 0;
+        padding: 0;
+    }
+}
+
+nav {
+    color: $muted;
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: $spacing-small;
+    padding-top: $spacing-small;
+}
+
+nav a.brand {
+    color: $foreground;
+    font-weight: bold;
+    opacity: 1;
+    transition: opacity .15s ease-in;
+
+    &:hover, &:focus {
+        opacity: .5;
+        text-decoration: none;
+        transition: opacity .15s ease-in;
+    }
+
+    &:active {
+        opacity: .8;
+        transition: opacity .15s ease-out;
+    }
+}
+
+// The sign out button should be styled exactly like an action link
+nav form[itemprop="signout"] {
+    display: inline-block;
+    padding: 0;
+
+    & > button {
+        border: none;
+        padding: 0;
+        background-color: transparent;
+        font-weight: normal;
+        @extend a;
+    }
+}
+

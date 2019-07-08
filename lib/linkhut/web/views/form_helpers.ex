@@ -1,17 +1,28 @@
-defmodule Linkhut.Web.ErrorHelpers do
+defmodule Linkhut.Web.FormHelpers do
   @moduledoc """
-  Conveniences for translating and building error messages.
+  Conveniences for translating and building error messages when validating forms
   """
 
   use Phoenix.HTML
 
+
   @doc """
-  Generates tag for inlined form input errors.
+  Wraps a form input in a div that carries information on why it failed validation
   """
-  def error_tag(form, field) do
-    Enum.map(Keyword.get_values(form.errors, field), fn error ->
-      content_tag(:span, translate_error(error), class: "help-block")
-    end)
+  def form_field(form, field, fun) do
+    cond do
+      (errors = Keyword.get_values(form.errors, field)) && length(errors) > 0 ->
+        html_escape([
+          tag(:div, class: "invalid"),
+          fun.(),
+          content_tag(:ul,
+            Enum.map(errors, fn error ->
+                                content_tag(:li, translate_error(error), class: "invalid")
+            end)),
+          raw("</div>")])
+      true ->
+        html_escape([fun.()])
+    end
   end
 
   @doc """

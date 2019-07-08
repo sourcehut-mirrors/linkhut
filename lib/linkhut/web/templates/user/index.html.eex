@@ -1,9 +1,11 @@
 <h1>Users</h1>
-<table class="table">
+<table>
   <%= for user <- @users do %>
     <tr>
       <td><%= user.email %>
-          (<%= link "View", to: Routes.user_path(@conn, :show, user) %>)
+      <%= if user.id == current_user(@conn).id do %>
+       (<%= link "View", to: Routes.user_path(@conn, :show) %>)
+      <% end %>
       </td>
     </tr>
   <% end %>

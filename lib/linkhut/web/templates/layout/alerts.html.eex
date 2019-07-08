@@ -1,10 +1,10 @@
 <%= if info = get_flash(@conn, :info) do %>
-<div class="flex items-center justify-center pa4 bg-lightest-blue navy">
-<span class="lh-title ml3" role="alert"><%= info %></span>
+<div class="info">
+    <span role="alert"><%= info %></span>
 </div>
 <% end %>
 <%= if error = get_flash(@conn, :error) do %>
-<div class="flex items-center justify-center pa4 bg-washed-red red">
-<span class="lh-title ml3" role="alert"><%= error %></span>
+<div class="error">
+    <span role="alert"><%= error %></span>
 </div>
 <% end %>

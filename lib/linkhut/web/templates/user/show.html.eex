@@ -1,20 +1,16 @@
-<h1><%= @user.email %></h1>
-<%= form_for @changeset, Routes.user_path(@conn, :update, @user),
-    fn f -> %>
-  <%= if @changeset.action do %>
-    <div class="alert alert-danger">
-      <p>Oops, something went wrong</p>
-    </div>
+<h3>Profile</h3>
+<%= form_for @changeset, Routes.user_path(@conn, :update, @user), fn f -> %>
+  <fieldset>
+  <label for="username">Username (you can't update this)</label>
+  <input type="text" disabled value=<%= @user.username %> />
+  <label for="email">Email</label>
+  <%= form_field f, :email, fn -> %>
+      <%= text_input f, :email %>
   <% end %>
-  <div class="form-group">
-    <%= text_input f, :email, placeholder: "Email",
-                              class: "form-control" %>
-    <%= error_tag f, :email %>
-  </div>
-  <div class="form-group">
-    <%= password_input f, :password, placeholder: "Password",
-                                     class: ":form-control" %>
-    <%= error_tag f, :password %>
-  </div>
-  <%= submit "Update user", class: "btn btn-primary" %>
+  <label for="password">Password</label>
+  <%= form_field f, :password, fn -> %>
+      <%= password_input f, :password, placeholder: "" %>
+  <% end %>
+  </fieldset>
+  <%= submit "Save" %>
 <% end %>

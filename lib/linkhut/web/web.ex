@@ -39,7 +39,7 @@ defmodule Linkhut.Web do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
 
-      import Linkhut.Web.ErrorHelpers
+      import Linkhut.Web.FormHelpers
       import Linkhut.Web.Gettext
       import Linkhut.Web.ViewHelpers
       alias Linkhut.Web.Router.Helpers, as: Routes

@@ -3,19 +3,10 @@ defmodule Linkhut.Web.Plugs.AuthenticationPlug do
   Pipeline which ensures a user is authenticated
   """
 
-  defmodule ErrorHandler do
-    import Plug.Conn
-
-    def auth_error(conn, {type, _reason}, _opts) do
-      body = Jason.encode!(%{message: to_string(type)})
-      send_resp(conn, 401, body)
-    end
-  end
-
   use Guardian.Plug.Pipeline,
-      otp_app: :linkhut,
-      error_handler: ErrorHandler,
-      module: Linkhut.Web.Auth.Guardian
+    otp_app: :linkhut,
+    error_handler: Linkhut.Web.SessionController,
+    module: Linkhut.Web.Auth.Guardian
 
   # If there is a session token, validate it
   plug(Guardian.Plug.VerifySession, claims: %{"typ" => "access"})
@@ -25,5 +16,4 @@ defmodule Linkhut.Web.Plugs.AuthenticationPlug do
 
   # Load the user if either of the verifications worked
   plug(Guardian.Plug.LoadResource, allow_blank: true)
-
 end

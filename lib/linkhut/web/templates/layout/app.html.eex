@@ -4,21 +4,22 @@
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>linkhut · social bookmarking</title>
+    <link rel="shortcut icon" href="<%= Routes.static_path(@conn, "/favicon.svg") %>" />
+    <title>linkhut</title>
     <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
   </head>
-  <body class=" w-100 sans-serif bg-white">
-    <main>
-    <header class="">
-      <nav class="flex justify-between ph3 pv2">
+  <body>
+    <header>
+      <nav>
         <div>
-          <a class="link dim black b f6 f5-ns dib pv2" href="/" title="Home">linkhut</a>
+          <a class="brand" href="/">linkhut</a>
         </div>
         <div>
           <%= render "session.html", conn: @conn %>
         </div>
       </nav>
     </header>
+    <main>
       <%= render "alerts.html", conn: @conn %>
       <%= render @view_module, @view_template, assigns %>
     </main>

@@ -12,7 +12,20 @@ defmodule Linkhut.Web.Auth.Guardian do
 
   def resource_from_claims(claims) do
     id = claims["sub"]
-    user = Repo.get(User, id)
-    {:ok, user}
+
+    cond do
+      user = Repo.get(User, id) -> {:ok, user}
+      true -> {:error, "User not found"}
+    end
+  end
+
+  def on_verify(claims, _token, _options) do
+    cond do
+      Repo.get(User, claims["sub"]) ->
+        {:ok, claims}
+
+      true ->
+        {:error, "User not found"}
+    end
   end
 end

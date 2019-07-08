@@ -7,6 +7,13 @@ defmodule Linkhut.Web.ErrorView do
   #   "Internal Server Error"
   # end
 
+  def render("404.html", _assigns) do
+    """
+    <h1>404 Not Found</h1>
+    <a href="/">Take me home</a>
+    """
+  end
+
   # By default, Phoenix returns the status message from
   # the template name. For example, "404.html" becomes
   # "Not Found".
