@@ -23,16 +23,21 @@ defmodule Linkhut.Web.Router do
 
     get "/", LinkController, :index
     get "/~:username", LinkController, :show
-    resources "/account", UserController, only: [:new, :create]
-    resources "/session", SessionController, singleton: true, only: [:new, :create, :delete]
+
+    get "/register", UserController, :new
+    post "/register", UserController, :create
+
+    get "/login", SessionController, :new
+    post "/login", SessionController, :create
+    delete "/logout", SessionController, :delete
   end
 
   scope "/", Linkhut.Web do
     pipe_through [:browser, :ensure_auth]
 
     get "/profile", UserController, :show
-    resources "/users", UserController, only: [:index]
-    resources "/users", UserController, singleton: true, only: [:update]
+    get "/users", UserController, :index
+    put "/profile", UserController, :update
   end
 
   # Other scopes may use custom stacks.
