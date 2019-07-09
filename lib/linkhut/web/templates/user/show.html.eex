@@ -1,5 +1,5 @@
 <h3>Profile</h3>
-<%= form_for @changeset, Routes.user_path(@conn, :update, @user), fn f -> %>
+<%= form_for @changeset, Routes.user_path(@conn, :update), fn f -> %>
   <fieldset>
   <label for="username">Username (you can't update this)</label>
   <input type="text" disabled value=<%= @user.username %> />

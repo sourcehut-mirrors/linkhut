@@ -7,7 +7,7 @@ defmodule Linkhut.Web.SessionController do
     cond do
       GuardianPlug.current_resource(conn) ->
         conn
-        |> redirect(to: Routes.user_path(conn, :show))
+        |> login(to: target_path(conn))
 
       true ->
         conn
@@ -15,12 +15,15 @@ defmodule Linkhut.Web.SessionController do
     end
   end
 
+  defp login(conn, to: path) do
+    redirect(conn, to: path)
+  end
+
   def create(conn, %{"session" => %{"email" => user, "password" => pass}}) do
     case Linkhut.Web.Auth.login_by_email_and_pass(conn, user, pass) do
       {:ok, conn} ->
         conn
-        |> put_flash(:info, "Welcome back")
-        |> redirect(to: Routes.user_path(conn, :show))
+        |> login(to: target_path(conn))
 
       {:error, _reason, conn} ->
         conn
@@ -49,8 +52,31 @@ defmodule Linkhut.Web.SessionController do
   end
 
   @impl Guardian.Plug.ErrorHandler
-  def auth_error(conn, {type, _reason}, _opts) do
-    body = Jason.encode!(%{message: to_string(type)})
-    send_resp(conn, 401, body)
+  def auth_error(conn, {_type, _reason}, _opts) do
+    conn
+    |> store_path_in_session()
+    |> put_flash(:error, "Authentication required")
+    |> redirect(to: Routes.session_path(conn, :new))
+  end
+
+  defp store_path_in_session(conn) do
+    # Get HTTP method and url from conn
+    method = conn.method
+    path = conn.request_path
+
+    # If conditions apply store path in session, else return conn unmodified
+    case {method, !String.match?(path, ~r/session/)} do
+      {"GET", true} ->
+        put_session(conn, :login_redirect_path, path)
+
+      {_, _} ->
+        conn
+    end
+  end
+
+  defp target_path(conn) do
+    target_path = get_session(conn, :login_redirect_path) || "/"
+    delete_session(conn, :login_redirect_path)
+    target_path
   end
 end

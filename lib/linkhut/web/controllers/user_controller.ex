@@ -52,8 +52,8 @@ defmodule Linkhut.Web.UserController do
     end
   end
 
-  def update(conn, %{"id" => id, "user" => user_params}) do
-    user = Repo.get(User, id)
+  def update(conn, %{"user" => user_params}) do
+    user = Guardian.Plug.current_resource(conn)
     changeset = User.registration_changeset(user, user_params)
 
     cond do
