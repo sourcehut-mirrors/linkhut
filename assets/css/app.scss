@@ -76,7 +76,7 @@ fieldset {
     max-width: 34em;
     padding: 0;
 
-    & input {
+    & input, & textarea {
         border-color: $muted;
         border-style: solid;
         border-width: 1px;

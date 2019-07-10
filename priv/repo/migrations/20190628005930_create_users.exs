@@ -5,6 +5,7 @@ defmodule Linkhut.Repo.Migrations.CreateUsers do
     create table(:users) do
       add :username, :string
       add :email, :string
+      add :bio, :string
       add :password_hash, :string
 
       timestamps()

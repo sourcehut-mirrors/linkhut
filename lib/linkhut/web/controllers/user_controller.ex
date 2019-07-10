@@ -61,7 +61,7 @@ defmodule Linkhut.Web.UserController do
         case Repo.update(changeset) do
           {:ok, _user} ->
             conn
-            |> put_flash(:info, "User updated")
+            |> put_flash(:info, "Profile updated")
             |> redirect(to: Routes.user_path(conn, :show))
 
           {:error, changeset} ->

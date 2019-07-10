@@ -7,9 +7,9 @@
   <%= form_field f, :email, fn -> %>
       <%= text_input f, :email %>
   <% end %>
-  <label for="password">Password</label>
-  <%= form_field f, :password, fn -> %>
-      <%= password_input f, :password, placeholder: "" %>
+  <label for="bio">Bio</label>
+  <%= form_field f, :bio, fn -> %>
+      <%= textarea f, :bio, placeholder: "" %>
   <% end %>
   </fieldset>
   <%= submit "Save" %>

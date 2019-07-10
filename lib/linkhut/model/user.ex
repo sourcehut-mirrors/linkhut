@@ -10,6 +10,7 @@ defmodule Linkhut.Model.User do
   schema "users" do
     field :username, :string
     field :email, :string
+    field :bio, :string
     field :password, :string, virtual: true
     field :password_hash, :string
 
