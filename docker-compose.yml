@@ -1,0 +1,16 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:10-alpine
+    network_mode: bridge
+    environment:
+      PGDATA: /linkhut
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - "postgres-data:/linkhut"
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres-data:
