@@ -6,7 +6,7 @@ body {
     color: $foreground;
     font-family: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'helvetica neue', helvetica, ubuntu, roboto, noto, 'segoe ui', arial, sans-serif;
     font-size: .875rem;
-    max-width: 34em;
+    max-width: 100%;
     padding-left: $spacing-medium;
     padding-right: $spacing-medium;
 
@@ -14,8 +14,8 @@ body {
         font-size: 1rem;
     }
 
-    @media #{$large} {
-        max-width: 64rem;
+    @media #{$extra-large} {
+        max-width: 120rem;
     }
 }
 
