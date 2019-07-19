@@ -8,8 +8,8 @@ defmodule Linkhut.Web.Endpoint do
   plug Plug.Static,
     at: "/",
     from: :linkhut,
-    gzip: false,
-    only: ~w(css fonts images js favicon.svg robots.txt)
+    gzip: true,
+    only: ~w(css fonts images js favicon robots.txt)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
