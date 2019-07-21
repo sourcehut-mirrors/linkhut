@@ -1,18 +1,9 @@
 <h3>Registration</h3>
 <%= form_for @changeset, Routes.user_path(@conn, :create), fn f -> %>
   <fieldset>
-  <label for="username">Username</label>
-  <%= form_field f, :username, fn -> %>
-      <%= text_input f, :username, placeholder: "" %>
-  <% end %>
-  <label for="email">Email</label>
-  <%= form_field f, :email, fn -> %>
-      <%= text_input f, :email, placeholder: "" %>
-  <% end %>
-  <label for="password">Password</label>
-  <%= form_field f, :password, fn -> %>
-      <%= password_input f, :password, placeholder: "" %>
-  <% end %>
+  <%= input f, :username %>
+  <%= input f, :email %>
+  <%= input f, :password %>
   </fieldset>
   <%= submit "Submit" %>
 <% end %>

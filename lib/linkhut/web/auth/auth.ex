@@ -8,8 +8,8 @@ defmodule Linkhut.Web.Auth do
     |> Linkhut.Web.Auth.Guardian.Plug.sign_in(user, %{"typ" => "access"})
   end
 
-  def login_by_email_and_pass(conn, email, given_pass) do
-    user = Repo.get_by(User, email: email)
+  def login_by_username_and_pass(conn, username, given_pass) do
+    user = Repo.get_by(User, username: username)
 
     cond do
       user && verify_pass(given_pass, user.password_hash) ->

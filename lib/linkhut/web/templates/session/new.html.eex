@@ -1,14 +1,8 @@
 <h3>Sign in</h3>
 <%= form_for @conn, Routes.session_path(@conn, :create), [as: :session], fn f -> %>
   <fieldset>
-  <label for="email">Email</label>
-  <%= form_field f, :email, fn -> %>
-  <%= text_input f, :email, placeholder: "" %>
-  <% end %>
-  <label for="password">Password</label>
-  <%= form_field f, :password, fn -> %>
-      <%= password_input f, :password, placeholder: "" %>
-  <% end %>
+  <%= input f, :username %>
+  <%= input f, :password %>
   </fieldset>
   <%= submit "Submit" %>
 <% end %>

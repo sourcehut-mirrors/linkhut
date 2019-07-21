@@ -19,8 +19,8 @@ defmodule Linkhut.Web.SessionController do
     redirect(conn, to: path)
   end
 
-  def create(conn, %{"session" => %{"email" => user, "password" => pass}}) do
-    case Linkhut.Web.Auth.login_by_email_and_pass(conn, user, pass) do
+  def create(conn, %{"session" => %{"username" => username, "password" => pass}}) do
+    case Linkhut.Web.Auth.login_by_username_and_pass(conn, username, pass) do
       {:ok, conn} ->
         conn
         |> login(to: target_path(conn))

@@ -8,7 +8,23 @@ defmodule Linkhut.Web.FormHelpers do
   @doc """
   Wraps a form input in a div that carries information on why it failed validation
   """
-  def form_field(form, field, fun) do
+  def input(form, field, opts \\ []) do
+    name = Keyword.get(opts, :name, humanize(field))
+    type = Keyword.get(opts, :type, input_type(form, field))
+
+    generate_input(form, field, fn ->
+      [
+        label(form, field, name),
+        apply(
+          Phoenix.HTML.Form,
+          type,
+          [form, field, opts]
+        )
+      ]
+    end)
+  end
+
+  defp generate_input(form, field, fun) do
     cond do
       (errors = Keyword.get_values(form.errors, field)) && length(errors) > 0 ->
         html_escape([
