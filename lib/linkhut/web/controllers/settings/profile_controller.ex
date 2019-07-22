@@ -1,5 +1,4 @@
 defmodule Linkhut.Web.Settings.ProfileController do
-
   use Linkhut.Web, :controller
 
   plug :put_view, Linkhut.Web.SettingsView
@@ -51,5 +50,4 @@ defmodule Linkhut.Web.Settings.ProfileController do
         |> redirect(to: Routes.link_path(conn, :index))
     end
   end
-
 end

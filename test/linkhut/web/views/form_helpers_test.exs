@@ -28,7 +28,6 @@ defmodule Linkhut.Web.FormHelpersTest do
            <label for=\"test_schema_username\">Username</label>\
            <input id=\"test_schema_username\" name=\"test_schema[username]\" type=\"text\" value=\"foo\">\
            """
-
   end
 
   test "renders text input with errors" do
@@ -54,6 +53,5 @@ defmodule Linkhut.Web.FormHelpersTest do
            </ul>\
            </div>\
            """
-
   end
 end

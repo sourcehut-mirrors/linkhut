@@ -34,5 +34,4 @@ defmodule Linkhut.Web.Auth.RegistrationController do
         |> render("register.html", changeset: changeset)
     end
   end
-
 end
