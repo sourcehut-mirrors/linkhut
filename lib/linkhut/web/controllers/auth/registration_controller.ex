@@ -11,7 +11,7 @@ defmodule Linkhut.Web.Auth.RegistrationController do
     cond do
       GuardianPlug.current_resource(conn) ->
         conn
-        |> redirect(to: Routes.user_path(conn, :show))
+        |> redirect(to: Routes.profile_path(conn, :show))
 
       true ->
         conn

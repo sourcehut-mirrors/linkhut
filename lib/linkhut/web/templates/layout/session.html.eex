@@ -6,5 +6,5 @@
  <% end %>
 <% else %>
  <%= link "Log in", to: Routes.session_path(@conn, :new) %> <span>—</span>
- <%= link "Register", to: Routes.user_path(@conn, :new) %>
+ <%= link "Register", to: Routes.registration_path(@conn, :new) %>
 <% end %>

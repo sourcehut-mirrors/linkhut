@@ -1,5 +1,5 @@
 <h3>Registration</h3>
-<%= form_for @changeset, Routes.user_path(@conn, :create), fn f -> %>
+<%= form_for @changeset, Routes.registration_path(@conn, :create), fn f -> %>
   <fieldset>
   <%= input f, :username %>
   <%= input f, :email %>

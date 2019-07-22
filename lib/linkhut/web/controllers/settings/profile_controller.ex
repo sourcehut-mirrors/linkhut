@@ -5,7 +5,6 @@ defmodule Linkhut.Web.Settings.ProfileController do
 
   alias Linkhut.Model.User
   alias Linkhut.Repo
-  alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
 
   def index(conn, _params) do
     users = Repo.all(User)
@@ -37,7 +36,7 @@ defmodule Linkhut.Web.Settings.ProfileController do
           {:ok, _user} ->
             conn
             |> put_flash(:info, "Profile updated")
-            |> redirect(to: Routes.user_path(conn, :show))
+            |> redirect(to: Routes.profile_path(conn, :show))
 
           {:error, changeset} ->
             conn
