@@ -24,20 +24,22 @@ defmodule Linkhut.Web.Router do
     get "/", LinkController, :index
     get "/~:username", LinkController, :show
 
-    get "/register", UserController, :new
-    post "/register", UserController, :create
+    get "/register", Auth.RegistrationController, :new
+    post "/register", Auth.RegistrationController, :create
 
-    get "/login", SessionController, :new
-    post "/login", SessionController, :create
-    delete "/logout", SessionController, :delete
+    get "/login", Auth.SessionController, :new
+    post "/login", Auth.SessionController, :create
   end
 
   scope "/", Linkhut.Web do
     pipe_through [:browser, :ensure_auth]
 
-    get "/profile", UserController, :show
-    get "/users", UserController, :index
-    put "/profile", UserController, :update
+    get "/profile", Settings.ProfileController, :show
+    put "/profile", Settings.ProfileController, :update
+
+    get "/users", Settings.ProfileController, :index
+
+    delete "/logout", Auth.SessionController, :delete
   end
 
   # Other scopes may use custom stacks.

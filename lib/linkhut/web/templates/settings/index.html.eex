@@ -4,7 +4,7 @@
     <tr>
       <td><%= user.email %>
       <%= if user.id == current_user(@conn).id do %>
-       (<%= link "View", to: Routes.user_path(@conn, :show) %>)
+       (<%= link "View", to: Routes.profile_path(@conn, :show) %>)
       <% end %>
       </td>
     </tr>

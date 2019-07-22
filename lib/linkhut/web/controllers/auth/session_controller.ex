@@ -1,5 +1,7 @@
-defmodule Linkhut.Web.SessionController do
+defmodule Linkhut.Web.Auth.SessionController do
   use Linkhut.Web, :controller
+
+  plug :put_view, Linkhut.Web.AuthView
 
   alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
 
@@ -11,7 +13,7 @@ defmodule Linkhut.Web.SessionController do
 
       true ->
         conn
-        |> render("new.html")
+        |> render("login.html")
     end
   end
 
@@ -28,7 +30,7 @@ defmodule Linkhut.Web.SessionController do
       {:error, _reason, conn} ->
         conn
         |> put_flash(:error, "Wrong username/password")
-        |> render("new.html")
+        |> render("login.html")
     end
   end
 

@@ -5,7 +5,7 @@ defmodule Linkhut.Web.Plugs.AuthenticationPlug do
 
   use Guardian.Plug.Pipeline,
     otp_app: :linkhut,
-    error_handler: Linkhut.Web.SessionController,
+    error_handler: Linkhut.Web.Auth.SessionController,
     module: Linkhut.Web.Auth.Guardian
 
   # If there is a session token, validate it

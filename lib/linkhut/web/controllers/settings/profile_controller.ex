@@ -1,5 +1,9 @@
-defmodule Linkhut.Web.UserController do
+defmodule Linkhut.Web.Settings.ProfileController do
+
   use Linkhut.Web, :controller
+
+  plug :put_view, Linkhut.Web.SettingsView
+
   alias Linkhut.Model.User
   alias Linkhut.Repo
   alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
@@ -9,41 +13,13 @@ defmodule Linkhut.Web.UserController do
     render(conn, "index.html", users: users)
   end
 
-  def new(conn, _params) do
-    cond do
-      GuardianPlug.current_resource(conn) ->
-        conn
-        |> redirect(to: Routes.user_path(conn, :show))
-
-      true ->
-        conn
-        |> render("new.html", changeset: User.changeset(%User{}, %{}))
-    end
-  end
-
-  def create(conn, %{"user" => user_params}) do
-    changeset = User.registration_changeset(%User{}, user_params)
-
-    case Repo.insert(changeset) do
-      {:ok, user} ->
-        conn
-        |> Linkhut.Web.Auth.login(user)
-        |> put_flash(:info, "Welcome to linkhut!")
-        |> redirect(to: Routes.link_path(conn, :index))
-
-      {:error, changeset} ->
-        conn
-        |> render("new.html", changeset: changeset)
-    end
-  end
-
   def show(conn, _) do
     cond do
       user = Guardian.Plug.current_resource(conn) ->
         changeset = User.changeset(user, %{})
 
         conn
-        |> render("show.html", user: user, changeset: changeset)
+        |> render("profile.html", user: user, changeset: changeset)
 
       :error ->
         conn
@@ -66,7 +42,7 @@ defmodule Linkhut.Web.UserController do
 
           {:error, changeset} ->
             conn
-            |> render("show.html", user: user, changeset: changeset)
+            |> render("profile.html", user: user, changeset: changeset)
         end
 
       :error ->
@@ -75,4 +51,5 @@ defmodule Linkhut.Web.UserController do
         |> redirect(to: Routes.link_path(conn, :index))
     end
   end
+
 end
