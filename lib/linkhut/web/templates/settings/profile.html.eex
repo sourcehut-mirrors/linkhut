@@ -1,7 +1,7 @@
 <h3>Profile</h3>
 <%= form_for @changeset, Routes.profile_path(@conn, :update), fn f -> %>
   <fieldset>
-  <%= input f, :username, [name: "Username (you can't update this)", disabled: true] %>
+  <%= input f, :username, disabled: true %>
   <%= input f, :email %>
   <%= input f, :bio, [placeholder: "Tell something about yourself", type: :textarea] %>
   </fieldset>
