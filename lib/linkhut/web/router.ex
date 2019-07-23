@@ -39,6 +39,9 @@ defmodule Linkhut.Web.Router do
 
     get "/users", Settings.ProfileController, :index
 
+    get "/add", LinkController, :new
+    post "/add", LinkController, :create
+
     delete "/logout", Auth.SessionController, :delete
   end
 

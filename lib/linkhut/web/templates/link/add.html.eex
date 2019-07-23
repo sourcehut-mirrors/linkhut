@@ -1,0 +1,11 @@
+<h3>Save a new link</h3>
+<%= form_for @conn, Routes.link_path(@conn, :create), [id: "addLink"], fn f -> %>
+  <fieldset>
+  <%= input f, :url, type: :url_input %>
+  <%= input f, :title %>
+  <%= input f, :notes, type: :textarea, maxlength: 1028 %>
+  <%= input f, :tags %>
+  <%= input f, :is_private, type: :checkbox %>
+  </fieldset>
+  <%= submit "Submit" %>
+<% end %>

@@ -2,6 +2,7 @@ defmodule Linkhut.Web.FormHelpers do
   @moduledoc """
   Conveniences for translating and building error messages when validating forms
   """
+  require Logger
 
   use Phoenix.HTML
 
@@ -12,16 +13,14 @@ defmodule Linkhut.Web.FormHelpers do
     name = Keyword.get(opts, :name, humanize(field))
     type = Keyword.get(opts, :type, input_type(form, field))
 
-    generate_input(form, field, fn ->
-      [
-        label(form, field, name),
-        apply(
-          Phoenix.HTML.Form,
-          type,
-          [form, field, opts]
-        )
-      ]
-    end)
+    label = label(form, field, name)
+    input = apply(Phoenix.HTML.Form, type, [form, field, opts])
+
+    if type == :checkbox do
+      generate_input(form, field, fn -> [input, label] end)
+    else
+      generate_input(form, field, fn -> [label, input] end)
+    end
   end
 
   defp generate_input(form, field, fun) do

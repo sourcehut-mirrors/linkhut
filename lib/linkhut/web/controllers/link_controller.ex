@@ -6,6 +6,16 @@ defmodule Linkhut.Web.LinkController do
     |> render("index.html")
   end
 
+  def new(conn, _) do
+    conn
+    |> render("add.html")
+  end
+
+  def create(conn, _) do
+    conn
+    |> render("add.html")
+  end
+
   def show(conn, %{"username" => username}) do
     cond do
       String.match?(username, ~r/[A-Za-z]+/) ->

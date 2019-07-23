@@ -5,7 +5,8 @@ defmodule Linkhut.Repo.Migrations.CreateLinks do
     create table(:links, primary_key: false) do
       add :url, :string, primary_key: true
       add :user_id, references(:users, on_delete: :nothing), primary_key: true
-      add :description, :string
+      add :title, :string
+      add :notes, :string
       add :tags, {:array, :string}
       add :is_private, :boolean, default: false, null: false
       add :language, :string

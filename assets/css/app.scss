@@ -73,7 +73,6 @@ fieldset {
     border-width: 1px;
     border-style: solid;
     margin: 0;
-    max-width: 34em;
     padding: 0;
 
     & input, & textarea {
@@ -81,14 +80,21 @@ fieldset {
         border-style: solid;
         border-width: 1px;
         box-sizing: border-box;
-        display: block;
         margin-bottom: $spacing-small;
         padding: $spacing-small;
+    }
+
+    & input:not([type=checkbox]), & textarea {
+        display: block;
         width: 100%;
     }
 
+    & input[type=checkbox] {
+        margin-right: $spacing-small;
+    }
+
     & label {
-        display: block;
+        display: inline-block;
         font-size: .875rem;
         font-weight: 400;
         line-height: 1.5;
@@ -109,22 +115,32 @@ fieldset {
     }
 }
 
-form {
-    & button {
+form:not([itemprop="signout"]) {
+    max-width: 34em;
+
+    & button, a {
         background-color: transparent;
+        border-color: $muted;
         border-style: solid;
         border-width: 1px;
         display: inline-block;
+        float: right;
         font-weight: bold;
+        margin-left: $spacing-small;
         padding: $spacing-small $spacing-medium;
 
         &:hover {
             cursor: pointer;
+            text-decoration: none;
         }
     }
 }
 
-button, input {
+form#addLink {
+    max-width: 100%;
+}
+
+button, input:not([type=checkbox]) {
     -moz-appearance: none;
     -webkit-appearance: none;
 
@@ -166,10 +182,10 @@ nav form[itemprop="signout"] {
     padding: 0;
 
     & > button {
-        border: none;
-        padding: 0;
         background-color: transparent;
+        border: none;
         font-weight: normal;
+        padding: 0;
         @extend a;
     }
 }
