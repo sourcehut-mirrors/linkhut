@@ -25,7 +25,7 @@ defmodule Linkhut.Web.LinkController do
       true ->
         conn
         |> put_flash(:error, "Wrong username")
-        |> render("show.html", username: "")
+        |> redirect(to: Routes.link_path(conn, :index))
     end
   end
 end
