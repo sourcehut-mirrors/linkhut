@@ -7,18 +7,11 @@ defmodule Linkhut.Web.Settings.ProfileController do
   alias Linkhut.Repo
 
   def show(conn, _) do
-    cond do
-      user = Guardian.Plug.current_resource(conn) ->
-        changeset = User.changeset(user, %{})
+    user = Guardian.Plug.current_resource(conn)
+    changeset = User.changeset(user, %{})
 
-        conn
-        |> render("profile.html", user: user, changeset: changeset)
-
-      :error ->
-        conn
-        |> put_flash(:error, "No access")
-        |> redirect(to: Routes.link_path(conn, :index))
-    end
+    conn
+    |> render("profile.html", user: user, changeset: changeset)
   end
 
   def update(conn, %{"user" => user_params}) do
