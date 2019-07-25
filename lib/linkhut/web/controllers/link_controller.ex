@@ -1,6 +1,9 @@
 defmodule Linkhut.Web.LinkController do
   use Linkhut.Web, :controller
 
+  alias Linkhut.Model.Link
+  alias Linkhut.Repo
+
   def index(conn, _) do
     conn
     |> render("index.html")
@@ -11,9 +14,19 @@ defmodule Linkhut.Web.LinkController do
     |> render("add.html")
   end
 
-  def create(conn, _) do
-    conn
-    |> render("add.html")
+  def save(conn, %{"link" => link_params}) do
+    user = Guardian.Plug.current_resource(conn)
+    changeset = Link.changeset(%Link{user_id: user.id}, link_params)
+
+    case Repo.insert(changeset) do
+      {:ok, _} ->
+        conn
+        |> redirect(to: Routes.link_path(conn, :show, user.username))
+
+      {:error, changeset} ->
+        conn
+        |> render("add.html", changeset: changeset)
+    end
   end
 
   def show(conn, %{"username" => username}) do

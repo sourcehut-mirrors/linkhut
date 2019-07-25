@@ -1,8 +1,6 @@
 defmodule Linkhut.Web.Settings.ProfileControllerTest do
   use Linkhut.Web.ConnCase
 
-  import Linkhut.Web.Auth.Guardian
-
   describe "show/2" do
     test "Responds with user info if the user is logged in", %{conn: conn} do
       user = insert(:user)
