@@ -21,6 +21,8 @@ defmodule Linkhut.Web.ConnCase do
       use Phoenix.ConnTest
       alias Linkhut.Web.Router.Helpers, as: Routes
 
+      import Linkhut.Factory
+
       # The default endpoint for testing
       @endpoint Linkhut.Web.Endpoint
     end

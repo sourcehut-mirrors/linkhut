@@ -37,8 +37,6 @@ defmodule Linkhut.Web.Router do
     get "/profile", Settings.ProfileController, :show
     put "/profile", Settings.ProfileController, :update
 
-    get "/users", Settings.ProfileController, :index
-
     get "/add", LinkController, :new
     post "/add", LinkController, :create
 

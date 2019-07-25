@@ -35,6 +35,7 @@ defmodule Linkhut.MixProject do
     [
       {:argon2_elixir, "~> 2.0"},
       {:ecto_sql, "~> 3.0"},
+      {:ex_machina, "~> 2.3", only: :test},
       {:gettext, "~> 0.11"},
       {:guardian, "~> 1.0"},
       {:jason, "~> 1.0"},

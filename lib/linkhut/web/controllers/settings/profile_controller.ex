@@ -6,11 +6,6 @@ defmodule Linkhut.Web.Settings.ProfileController do
   alias Linkhut.Model.User
   alias Linkhut.Repo
 
-  def index(conn, _params) do
-    users = Repo.all(User)
-    render(conn, "index.html", users: users)
-  end
-
   def show(conn, _) do
     cond do
       user = Guardian.Plug.current_resource(conn) ->
