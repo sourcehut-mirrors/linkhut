@@ -12,7 +12,7 @@ defmodule Linkhut.Model.Link do
     field :is_private, :boolean, default: false
     field :language, :string
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

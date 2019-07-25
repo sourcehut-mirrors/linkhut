@@ -11,7 +11,7 @@ defmodule Linkhut.Repo.Migrations.CreateLinks do
       add :is_private, :boolean, default: false, null: false
       add :language, :string
 
-      timestamps()
+      timestamps(type: :utc_datetime)
     end
 
     create index(:links, [:url])

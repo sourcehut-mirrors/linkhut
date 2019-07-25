@@ -8,7 +8,7 @@ defmodule Linkhut.Repo.Migrations.CreateUsers do
       add :bio, :string
       add :password_hash, :string
 
-      timestamps()
+      timestamps(type: :utc_datetime)
     end
 
     create unique_index(:users, [:email])
