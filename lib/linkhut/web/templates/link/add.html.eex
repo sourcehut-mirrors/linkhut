@@ -1,5 +1,5 @@
 <h3>Save a new link</h3>
-<%= form_for @conn, Routes.link_path(@conn, :save), [as: :link, id: "addLink"], fn f -> %>
+<%= form_for @changeset, Routes.link_path(@conn, :save), [id: "addLink"], fn f -> %>
   <fieldset>
   <%= input f, :url, type: :url_input %>
   <%= input f, :title %>

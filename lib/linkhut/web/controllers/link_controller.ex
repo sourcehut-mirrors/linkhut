@@ -11,7 +11,7 @@ defmodule Linkhut.Web.LinkController do
 
   def new(conn, _) do
     conn
-    |> render("add.html")
+    |> render("add.html", changeset: Link.changeset(%Link{}, %{}))
   end
 
   def save(conn, %{"link" => link_params}) do
@@ -19,8 +19,9 @@ defmodule Linkhut.Web.LinkController do
     changeset = Link.changeset(%Link{user_id: user.id}, link_params)
 
     case Repo.insert(changeset) do
-      {:ok, _} ->
+      {:ok, link} ->
         conn
+        |> put_flash(:info, "Added link")
         |> redirect(to: Routes.link_path(conn, :show, user.username))
 
       {:error, changeset} ->

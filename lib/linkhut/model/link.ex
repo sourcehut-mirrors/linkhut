@@ -21,5 +21,6 @@ defmodule Linkhut.Model.Link do
     |> cast(attrs, [:url, :user_id, :title, :notes, :tags, :is_private])
     |> validate_required([:url, :user_id, :title, :notes, :tags, :is_private])
     |> validate_length(:notes, max: 1024)
+    |> unique_constraint(:url, name: :links_pkey)
   end
 end

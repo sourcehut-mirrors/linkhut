@@ -2,8 +2,6 @@ defmodule Linkhut.Web.FormHelpers do
   @moduledoc """
   Conveniences for translating and building error messages when validating forms
   """
-  require Logger
-
   use Phoenix.HTML
 
   @doc """
