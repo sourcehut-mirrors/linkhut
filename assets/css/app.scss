@@ -87,6 +87,11 @@ fieldset {
     & input:not([type=checkbox]), & textarea {
         display: block;
         width: 100%;
+
+        &:focus {
+            border-color: $navy;
+            box-shadow: 0 0 0 .2rem $light-blue;
+        }
     }
 
     & input[type=checkbox] {
