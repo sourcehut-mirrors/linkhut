@@ -90,7 +90,9 @@ fieldset {
     }
 
     & input[type=checkbox] {
+        margin-bottom: 0;
         margin-right: $spacing-small;
+        vertical-align: middle;
     }
 
     & label {
@@ -99,6 +101,7 @@ fieldset {
         font-weight: 400;
         line-height: 1.5;
         text-transform: uppercase;
+        vertical-align: middle;
     }
 
     & div.invalid {
@@ -135,10 +138,6 @@ form:not([itemprop="signout"]) {
             text-decoration: none;
         }
     }
-}
-
-form#addLink {
-    max-width: 100%;
 }
 
 button, input:not([type=checkbox]) {

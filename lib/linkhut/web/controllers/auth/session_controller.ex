@@ -74,7 +74,7 @@ defmodule Linkhut.Web.Auth.SessionController do
     path = conn.request_path
 
     # If conditions apply store path in session, else return conn unmodified
-    case {method, String.match?(path, ~r/^\/(add|profile)$/)} do
+    case {method, String.match?(path, ~r/^\/(add)$/)} do
       {"GET", true} ->
         put_session(conn, :login_redirect_path, path)
 
