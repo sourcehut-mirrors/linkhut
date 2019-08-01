@@ -1,5 +1,5 @@
 <%= if logged_in?(@conn) do %>
- <span>Logged in as <span class="strong"><%= current_user(@conn).username %></span></span> <span>—</span>
+ <span>Logged in as <%= link current_user(@conn).username, to: Routes.link_path(@conn, :show, current_user(@conn).username) %></span> <span>—</span>
  <%# Using a form instead of a link, since the route for signing out requires making a DELETE call and we don't want to rely on JS being activated %>
  <%= form_for :nil, Routes.session_path(@conn, :delete), [method: :delete, itemprop: "signout"], fn _f -> %>
   <%= submit "Log out" %>

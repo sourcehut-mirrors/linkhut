@@ -9,12 +9,19 @@ defmodule Linkhut.Web.Auth.SessionController do
     cond do
       GuardianPlug.current_resource(conn) ->
         conn
-        |> login(to: target_path(conn))
+        |> login
 
       true ->
         conn
         |> render("login.html")
     end
+  end
+
+  defp login(conn) do
+    target_path = get_session(conn, :login_redirect_path) || "/"
+    conn
+    |> delete_session(:login_redirect_path)
+    |> login(to: target_path)
   end
 
   defp login(conn, to: path) do
@@ -25,7 +32,7 @@ defmodule Linkhut.Web.Auth.SessionController do
     case Linkhut.Web.Auth.login_by_username_and_pass(conn, username, pass) do
       {:ok, conn} ->
         conn
-        |> login(to: target_path(conn))
+        |> login
 
       {:error, _reason, conn} ->
         conn
@@ -67,7 +74,7 @@ defmodule Linkhut.Web.Auth.SessionController do
     path = conn.request_path
 
     # If conditions apply store path in session, else return conn unmodified
-    case {method, !String.match?(path, ~r/session/)} do
+    case {method, String.match?(path, ~r/^\/(add|profile)$/)} do
       {"GET", true} ->
         put_session(conn, :login_redirect_path, path)
 
@@ -76,9 +83,4 @@ defmodule Linkhut.Web.Auth.SessionController do
     end
   end
 
-  defp target_path(conn) do
-    target_path = get_session(conn, :login_redirect_path) || "/"
-    delete_session(conn, :login_redirect_path)
-    target_path
-  end
 end
