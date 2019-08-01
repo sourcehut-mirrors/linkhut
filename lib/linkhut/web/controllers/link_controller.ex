@@ -19,7 +19,7 @@ defmodule Linkhut.Web.LinkController do
     changeset = Link.changeset(%Link{user_id: user.id}, link_params)
 
     case Repo.insert(changeset) do
-      {:ok, link} ->
+      {:ok, _link} ->
         conn
         |> put_flash(:info, "Added link")
         |> redirect(to: Routes.link_path(conn, :show, user.username))

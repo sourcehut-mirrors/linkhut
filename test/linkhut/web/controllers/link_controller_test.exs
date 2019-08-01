@@ -11,10 +11,12 @@ defmodule Linkhut.Web.LinkControllerTest do
     {:ok, token, _} = encode_and_sign(user, %{}, token_type: :access)
 
     redirect_path =
-    conn
-    |> put_req_header("authorization", "bearer: " <> token)
-    |> post(Routes.link_path(conn, :save), %{link: params_for(:link, tags: "test auto-generated", user_id: user.id)})
-    |> redirected_to(302)
+      conn
+      |> put_req_header("authorization", "bearer: " <> token)
+      |> post(Routes.link_path(conn, :save), %{
+        link: params_for(:link, tags: "test auto-generated", user_id: user.id)
+      })
+      |> redirected_to(302)
 
     assert redirect_path == "/~#{user.username}"
   end

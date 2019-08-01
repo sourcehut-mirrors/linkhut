@@ -19,6 +19,7 @@ defmodule Linkhut.Web.Auth.SessionController do
 
   defp login(conn) do
     target_path = get_session(conn, :login_redirect_path) || "/"
+
     conn
     |> delete_session(:login_redirect_path)
     |> login(to: target_path)
@@ -82,5 +83,4 @@ defmodule Linkhut.Web.Auth.SessionController do
         conn
     end
   end
-
 end

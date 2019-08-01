@@ -1,15 +1,20 @@
 // color palette
+$dark-green: #137752;
+$gray: #777777;
 $light-blue: #CDECFF;
+$light-green: #9EEBCF;
+$light-yellow: #FBF1A9;
 $navy: #001B44;
+$near-black: #111111;
 $red: #FF4136;
 $washed-red: #FFDFDF;
+$white: #FFFFFF;
 
-// theme colors
-$foreground: #000000;
-$background: #FFFFFF;
-
-$muted: #777777;
-$strong: #000000;
+  // theme colors
+$foreground: $near-black;
+$background: $white;
+$muted: $gray;
+$strong: $near-black;
 
 // spacing
 $spacing-small:  .5rem;
