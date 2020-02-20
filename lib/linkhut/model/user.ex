@@ -19,8 +19,8 @@ defmodule Linkhut.Model.User do
 
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:username, :email, :password])
-    |> validate_required([:username, :email, :password])
+    |> cast(attrs, [:username, :email, :bio])
+    |> validate_required([:username, :email])
     |> unique_constraint(:username)
     |> unique_constraint(:email)
     |> validate_format(:username, @username_format)

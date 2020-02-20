@@ -38,6 +38,7 @@ defmodule Linkhut.Web do
 
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
+      use PhoenixHtmlSanitizer, :basic_html
 
       import Linkhut.Web.FormHelpers
       import Linkhut.Web.Gettext

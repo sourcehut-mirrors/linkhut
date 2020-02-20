@@ -1,0 +1,15 @@
+<ul>
+<%= if logged_in?(@conn) do %>
+ <li><span>Logged in as <%= link current_user(@conn).username, to: Routes.link_path(@conn, :show, current_user(@conn).username) %></span></li>
+ <li><%= link "Settings", to: Routes.profile_path(@conn, :show) %></li>
+ <li>
+     <%# Using a form instead of a link, since the route for signing out requires making a DELETE call and we don't want to rely on JS being activated %>
+     <%= form_for :nil, Routes.session_path(@conn, :delete), [method: :delete, itemprop: "signout"], fn _f -> %>
+         <%= submit "Log out" %>
+     <% end %>
+ </li>
+<% else %>
+ <li><%= link "Log in", to: Routes.session_path(@conn, :new) %></li>
+ <li><%= link "Register", to: Routes.registration_path(@conn, :new) %></li>
+<% end %>
+</ul>

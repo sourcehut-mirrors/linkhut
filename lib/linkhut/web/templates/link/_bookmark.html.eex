@@ -1,0 +1,33 @@
+<div class="bookmark">
+        <div class="dateGroup">
+            <span title="<%= @link.inserted_at %>"><%= Timex.format!(@link.inserted_at, "{relative}", :relative) %></span>
+        </div>
+
+        <div class="data">
+            <h4><a class="taggedlink" href="<%= @link.url %>"><%= @link.title %></a></h4>
+            <div class="actions">
+                <h5 class="saverslabel" style="">PEOPLE</h5>
+                <div class="savers">
+                    <a class="nav" href="/url/<%= @link.url %>"><span class="navCount">1</span></a>
+                </div>
+            </div>
+            <div class="full-url">
+                <a rel="nofollow" href="<%= @link.url %>"><%= @link.url %></a>
+            </div>
+            <div class="description">
+                <%= sanitize(Earmark.as_html!(@link.notes)) %>
+            </div>
+            <div class="meta"><!-- FIXME --></div>
+            <div class="tagdisplay">
+                <h5 class="tagchainlabel">TAGS</h5>
+                <ul class="tagchain">
+                    <%= for tag <- @link.tags do %>
+                      <li>
+                        <a href="<%= gettext "~%{name}/%{tag}", name: @user.username, tag: tag %>"><%= tag %></a>
+                      </li>
+                    <% end %>
+                </ul>
+            </div>
+            <div class="clear"> </div>
+        </div>
+    </div>

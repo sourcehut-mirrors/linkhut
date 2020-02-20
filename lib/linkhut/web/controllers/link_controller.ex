@@ -1,7 +1,10 @@
 defmodule Linkhut.Web.LinkController do
   use Linkhut.Web, :controller
 
+  require Logger
+
   alias Linkhut.Model.Link
+  alias Linkhut.Model.User
   alias Linkhut.Repo
 
   def index(conn, _) do
@@ -31,10 +34,13 @@ defmodule Linkhut.Web.LinkController do
   end
 
   def show(conn, %{"username" => username}) do
+    user = Repo.get_by(User, username: username)
+    links = Linkhut.Model.links(user)
+
     cond do
-      String.match?(username, ~r/[A-Za-z]+/) ->
+      user ->
         conn
-        |> render("show.html", username: String.downcase(username))
+        |> render("user.html", user: user, links: links)
 
       true ->
         conn

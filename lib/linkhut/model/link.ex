@@ -1,4 +1,6 @@
 defmodule Linkhut.Model.Link do
+  alias Linkhut.Repo
+
   use Ecto.Schema
   import Ecto.Changeset
 

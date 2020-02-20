@@ -34,6 +34,7 @@ defmodule Linkhut.MixProject do
   defp deps do
     [
       {:argon2_elixir, "~> 2.0"},
+      {:earmark, "~> 1.3.5"},
       {:ecto_sql, "~> 3.0"},
       {:ex_machina, "~> 2.3", only: :test},
       {:gettext, "~> 0.11"},
@@ -42,10 +43,12 @@ defmodule Linkhut.MixProject do
       {:phoenix, "~> 1.4.7"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.11"},
+      {:phoenix_html_sanitizer, "~> 1.0.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_pubsub, "~> 1.1"},
       {:plug_cowboy, "~> 2.0"},
-      {:postgrex, ">= 0.0.0"}
+      {:postgrex, ">= 0.0.0"},
+      {:timex, "~> 3.5"}
     ]
   end
 

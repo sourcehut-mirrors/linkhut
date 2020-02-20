@@ -1,0 +1,9 @@
+<h1><%= gettext "~%{name}'s bookmarks", name: @user.username %></h1>
+<div id="content">
+  <section>
+    <%= render "_bookmarks.html", assigns %>
+  </section>
+  <%= render "_bio.html", assigns %>
+</div>
+
+

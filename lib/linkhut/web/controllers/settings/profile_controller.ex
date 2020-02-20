@@ -15,7 +15,7 @@ defmodule Linkhut.Web.Settings.ProfileController do
 
   def update(conn, %{"user" => user_params}) do
     user = Guardian.Plug.current_resource(conn)
-    changeset = User.registration_changeset(user, user_params)
+    changeset = User.changeset(user, user_params)
 
     cond do
       user == Guardian.Plug.current_resource(conn) ->

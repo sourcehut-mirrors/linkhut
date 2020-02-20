@@ -15,10 +15,10 @@
           <a class="brand" href="/">linkhut</a>
         </div>
         <div>
-          <%= render "session.html", conn: @conn %>
+          <%= render "_session.html", conn: @conn %>
         </div>
       </nav>
-      <%= render "alerts.html", conn: @conn %>
+      <%= render "_alerts.html", conn: @conn %>
     </header>
     <main>
       <%= render @view_module, @view_template, assigns %>

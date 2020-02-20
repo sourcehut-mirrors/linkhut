@@ -1,3 +1,0 @@
-<h1><%= gettext "Links for %{name}", name: @username %></h1>
-
-

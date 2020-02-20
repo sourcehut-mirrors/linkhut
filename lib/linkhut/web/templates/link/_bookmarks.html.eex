@@ -1,0 +1,1 @@
+<%= render_many @links, Linkhut.Web.LinkView, "_bookmark.html", assigns %>
