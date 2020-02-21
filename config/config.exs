@@ -36,7 +36,7 @@ config :linkhut, Linkhut.Web.Auth.Guardian,
 config :tidyt_ex,
   options: [
     {"TidyBodyOnly", "no"},
-    {"TidyIndentContent", "true"},
+    {"TidyIndentContent", "yes"},
     {"TidyWrapLen", "0"}
   ]
 
