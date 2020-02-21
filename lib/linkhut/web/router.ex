@@ -8,6 +8,7 @@ defmodule Linkhut.Web.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug Linkhut.Web.Plugs.AuthenticationPlug
+    plug Linkhut.Web.Plugs.PrettifyPlug
   end
 
   pipeline :ensure_auth do

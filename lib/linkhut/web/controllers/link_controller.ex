@@ -35,7 +35,7 @@ defmodule Linkhut.Web.LinkController do
 
   def show(conn, %{"username" => username}) do
     user = Repo.get_by(User, username: username)
-    links = Linkhut.Model.links(user)
+    links = Repo.links(user)
 
     cond do
       user ->
