@@ -22,22 +22,24 @@ defmodule Linkhut.Web.FormHelpers do
   end
 
   defp generate_input(form, field, fun) do
-    cond do
-      (errors = Keyword.get_values(form.errors, field)) && length(errors) > 0 ->
-        html_escape([
-          tag(:div, class: "invalid"),
-          fun.(),
-          content_tag(
-            :ul,
-            Enum.map(errors, fn error ->
-              content_tag(:li, translate_error(error), class: "invalid")
-            end)
-          ),
-          raw("</div>")
-        ])
+    errors = Keyword.get_values(form.errors, field)
 
-      true ->
-        html_escape([fun.()])
+    if length(errors) > 0 do
+      html_escape(
+        content_tag(:div, class: "invalid") do
+          [
+            fun.(),
+            content_tag(
+              :ul,
+              Enum.map(errors, fn error ->
+                content_tag(:li, translate_error(error), class: "invalid")
+              end)
+            )
+          ]
+        end
+      )
+    else
+      html_escape([fun.()])
     end
   end
 

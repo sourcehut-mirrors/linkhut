@@ -8,14 +8,12 @@ defmodule Linkhut.Web.Auth.RegistrationController do
   alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
 
   def new(conn, _params) do
-    cond do
-      GuardianPlug.current_resource(conn) ->
-        conn
-        |> redirect(to: Routes.profile_path(conn, :show))
-
-      true ->
-        conn
-        |> render("register.html", changeset: User.changeset(%User{}, %{}))
+    if GuardianPlug.current_resource(conn) do
+      conn
+      |> redirect(to: Routes.profile_path(conn, :show))
+    else
+      conn
+      |> render("register.html", changeset: User.changeset(%User{}, %{}))
     end
   end
 

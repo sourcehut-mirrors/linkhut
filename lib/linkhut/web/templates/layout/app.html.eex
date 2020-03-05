@@ -21,6 +21,7 @@
       <%= render "_alerts.html", conn: @conn %>
     </header>
     <main>
+      <%= render "_search.html", conn: @conn %>
       <%= render @view_module, @view_template, assigns %>
     </main>
     <footer>

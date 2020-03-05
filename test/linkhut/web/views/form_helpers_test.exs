@@ -24,9 +24,9 @@ defmodule Linkhut.Web.FormHelpersTest do
 
     html = Phoenix.HTML.safe_to_string(FormHelpers.input(form, :username))
 
-    assert html == """
-           <label for=\"test_schema_username\">Username</label>\
-           <input id=\"test_schema_username\" name=\"test_schema[username]\" type=\"text\" value=\"foo\">\
+    assert html == ~s"""
+           <label for="test_schema_username">Username</label>\
+           <input id="test_schema_username" name="test_schema[username]" type="text" value="foo">\
            """
   end
 
@@ -44,12 +44,12 @@ defmodule Linkhut.Web.FormHelpersTest do
 
     html = Phoenix.HTML.safe_to_string(FormHelpers.input(form, :username))
 
-    assert html == """
-           <div class=\"invalid\">\
-           <label for=\"test_schema_username\">Username</label>\
-           <input id=\"test_schema_username\" name=\"test_schema[username]\" type=\"text\" value=\"foo\">\
+    assert html == ~s"""
+           <div class="invalid">\
+           <label for="test_schema_username">Username</label>\
+           <input id="test_schema_username" name="test_schema[username]" type="text" value="foo">\
            <ul>\
-           <li class=\"invalid\">should be at least 4 character(s)</li>\
+           <li class="invalid">should be at least 4 character(s)</li>\
            </ul>\
            </div>\
            """

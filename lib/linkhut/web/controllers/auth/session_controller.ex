@@ -6,14 +6,12 @@ defmodule Linkhut.Web.Auth.SessionController do
   alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
 
   def new(conn, _) do
-    cond do
-      GuardianPlug.current_resource(conn) ->
-        conn
-        |> login
-
-      true ->
-        conn
-        |> render("login.html")
+    if GuardianPlug.current_resource(conn) do
+      conn
+      |> login
+    else
+      conn
+      |> render("login.html")
     end
   end
 

@@ -37,15 +37,13 @@ defmodule Linkhut.Web.LinkController do
     user = Repo.get_by(User, username: username)
     links = Repo.links(user)
 
-    cond do
-      user ->
-        conn
-        |> render("user.html", user: user, links: links)
-
-      true ->
-        conn
-        |> put_flash(:error, "Wrong username")
-        |> redirect(to: Routes.link_path(conn, :index))
+    if user do
+      conn
+      |> render("user.html", user: user, links: links)
+    else
+      conn
+      |> put_flash(:error, "Wrong username")
+      |> redirect(to: Routes.link_path(conn, :index))
     end
   end
 end

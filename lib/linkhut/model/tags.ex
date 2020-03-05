@@ -14,9 +14,10 @@ defmodule Linkhut.Model.Tags do
 
   @impl true
   def cast(tags) when is_list(tags) do
-    cond do
-      Enum.all?(tags, &is_binary(&1)) -> {:ok, tags}
-      true -> :error
+    if Enum.all?(tags, &is_binary(&1)) do
+      {:ok, tags}
+    else
+      :error
     end
   end
 

@@ -34,6 +34,7 @@ defmodule Linkhut.MixProject do
   defp deps do
     [
       {:argon2_elixir, "~> 2.0"},
+      {:credo, "~> 1.2", only: [:dev, :test], runtime: false},
       {:earmark, "~> 1.3.5"},
       {:ecto_sql, "~> 3.0"},
       {:ex_machina, "~> 2.3", only: :test},

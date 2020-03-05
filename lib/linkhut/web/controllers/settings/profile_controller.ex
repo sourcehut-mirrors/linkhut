@@ -17,23 +17,21 @@ defmodule Linkhut.Web.Settings.ProfileController do
     user = Guardian.Plug.current_resource(conn)
     changeset = User.changeset(user, user_params)
 
-    cond do
-      user == Guardian.Plug.current_resource(conn) ->
-        case Repo.update(changeset) do
-          {:ok, _user} ->
-            conn
-            |> put_flash(:info, "Profile updated")
-            |> redirect(to: Routes.profile_path(conn, :show))
+    if user do
+      case Repo.update(changeset) do
+        {:ok, _user} ->
+          conn
+          |> put_flash(:info, "Profile updated")
+          |> redirect(to: Routes.profile_path(conn, :show))
 
-          {:error, changeset} ->
-            conn
-            |> render("profile.html", user: user, changeset: changeset)
-        end
-
-      :error ->
-        conn
-        |> put_flash(:error, "No access")
-        |> redirect(to: Routes.link_path(conn, :index))
+        {:error, changeset} ->
+          conn
+          |> render("profile.html", user: user, changeset: changeset)
+      end
+    else
+      conn
+      |> put_flash(:error, "No access")
+      |> redirect(to: Routes.link_path(conn, :index))
     end
   end
 end
