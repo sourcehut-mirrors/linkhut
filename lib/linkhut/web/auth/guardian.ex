@@ -13,7 +13,7 @@ defmodule Linkhut.Web.Auth.Guardian do
   def resource_from_claims(claims) do
     id = claims["sub"]
 
-    if Repo.get(User, id) do
+    if user = Repo.get(User, id) do
       {:ok, user}
     else
       {:error, "User not found"}
