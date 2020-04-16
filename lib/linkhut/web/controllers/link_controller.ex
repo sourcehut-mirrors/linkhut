@@ -1,8 +1,6 @@
 defmodule Linkhut.Web.LinkController do
   use Linkhut.Web, :controller
 
-  require Logger
-
   alias Linkhut.Model.Link
   alias Linkhut.Model.User
   alias Linkhut.Repo
