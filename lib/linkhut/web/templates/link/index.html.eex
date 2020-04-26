@@ -1,2 +1,2 @@
-
+<%= render "_search.html", conn: @conn %>
 

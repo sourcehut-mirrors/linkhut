@@ -1,3 +1,0 @@
-<aside>
-    <%= sanitize(Earmark.as_html!(@user.bio)) %>
-</aside>

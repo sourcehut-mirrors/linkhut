@@ -1,9 +1,15 @@
-<h1><%= gettext "~%{name}'s bookmarks", name: @user.username %></h1>
+<%= render "_search.html", conn: @conn %>
 <div id="content">
   <section>
-    <%= render "_bookmarks.html", assigns %>
+    <h1><%= gettext "%{name}'s bookmarks", name: @user.username %></h1>
+    <%= Enum.map(@links, fn {date, links} -> %>
+    <div class="date-group">
+      <h4 class="date"><span><%= prettify(date) %></span></h4>
+      <%= render "_bookmarks.html", Map.put(assigns, :links, links) %>
+    </div>
+    <% end) %>
   </section>
-  <%= render "_bio.html", assigns %>
+  <%= render "_user-info.html", assigns %>
 </div>
 
 

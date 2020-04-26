@@ -8,13 +8,13 @@ defmodule Linkhut.Model.Tags do
   def cast(string) when is_binary(string) do
     string
     |> String.trim()
-    |> String.split([" ", ","])
+    |> String.split(~r{[, ]}, trim: true)
     |> cast
   end
 
   @impl true
   def cast(tags) when is_list(tags) do
-    if Enum.all?(tags, &is_binary(&1)) do
+    if Enum.all?(tags, &String.valid?/1) do
       {:ok, tags}
     else
       :error
@@ -32,4 +32,10 @@ defmodule Linkhut.Model.Tags do
 
   @impl true
   def dump(_), do: :error
+
+  @impl true
+  def equal?(term1, term2), do: term1 == term2
+
+  @impl true
+  def embed_as(_), do: :self
 end

@@ -1,0 +1,8 @@
+<aside>
+    <header><%= gettext "About %{name}", name: @user.username %></header>
+    <% if @user.bio do %>
+    <section>
+    <%= sanitize(Earmark.as_html!(@user.bio)) %>
+    </section>
+    <% end %>
+</aside>

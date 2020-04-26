@@ -3,6 +3,7 @@ defmodule Linkhut.Web.Auth.SessionController do
 
   plug :put_view, Linkhut.Web.AuthView
 
+  alias Linkhut.Web.Auth, as: Auth
   alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
 
   def new(conn, _) do
@@ -28,7 +29,7 @@ defmodule Linkhut.Web.Auth.SessionController do
   end
 
   def create(conn, %{"session" => %{"username" => username, "password" => pass}}) do
-    case Linkhut.Web.Auth.login_by_username_and_pass(conn, username, pass) do
+    case Auth.login_by_username_and_pass(conn, username, pass) do
       {:ok, conn} ->
         conn
         |> login
@@ -52,7 +53,7 @@ defmodule Linkhut.Web.Auth.SessionController do
   def auth_error(conn, {:invalid_token, _reason}, opts) do
     # The token is invalid, let's revoke it and sign out
     token = GuardianPlug.current_token(conn, opts)
-    Linkhut.Web.Auth.Guardian.revoke(token, opts)
+    Auth.Guardian.revoke(token, opts)
 
     conn
     |> GuardianPlug.sign_out()

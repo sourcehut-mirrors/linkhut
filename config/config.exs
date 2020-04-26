@@ -25,6 +25,10 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+config :mime, :types, %{
+  "application/xml" => ["xml"]
+}
+
 # Configures Guardian
 config :linkhut, Linkhut.Web.Auth.Guardian,
   issuer: "linkhut",

@@ -43,6 +43,7 @@ defmodule Linkhut.Web do
       import Linkhut.Web.FormHelpers
       import Linkhut.Web.Gettext
       import Linkhut.Web.ViewHelpers
+      alias Linkhut.Web.Auth.Guardian.Plug, as: GuardianPlug
       alias Linkhut.Web.Router.Helpers, as: Routes
     end
   end

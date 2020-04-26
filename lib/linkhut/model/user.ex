@@ -2,8 +2,6 @@ defmodule Linkhut.Model.User do
   use Ecto.Schema
   import Ecto.Changeset
 
-  require Logger
-
   @email_format ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
   @username_format ~r/^[a-zA-Z\d]{3,}$/
 

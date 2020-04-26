@@ -11,6 +11,10 @@ defmodule Linkhut.Web.Router do
     plug Linkhut.Web.Plugs.PrettifyPlug
   end
 
+  pipeline :feed do
+    plug :accepts, ["xml"]
+  end
+
   pipeline :ensure_auth do
     plug Guardian.Plug.EnsureAuthenticated
   end
@@ -39,9 +43,21 @@ defmodule Linkhut.Web.Router do
     put "/profile", Settings.ProfileController, :update
 
     get "/add", LinkController, :new
-    post "/add", LinkController, :save
+    post "/add", LinkController, :insert
+
+    get "/edit", LinkController, :edit
+    put "/edit", LinkController, :update
+
+    get "/delete", LinkController, :remove
+    put "/delete", LinkController, :delete
 
     delete "/logout", Auth.SessionController, :delete
+  end
+
+  scope "/feed", Linkhut.Web, as: :feed do
+    pipe_through :feed
+
+    get "/~:username", FeedController, :feed
   end
 
   # Other scopes may use custom stacks.

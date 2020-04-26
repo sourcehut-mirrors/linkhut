@@ -6,7 +6,7 @@ defmodule Linkhut.Repo.Migrations.CreateLinks do
       add :url, :string, primary_key: true
       add :user_id, references(:users, on_delete: :nothing), primary_key: true
       add :title, :string
-      add :notes, :string
+      add :notes, :text
       add :tags, {:array, :string}
       add :is_private, :boolean, default: false, null: false
       add :language, :string

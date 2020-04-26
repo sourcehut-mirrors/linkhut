@@ -17,7 +17,7 @@ defmodule Linkhut.Web.Settings.ProfileController do
     user = Guardian.Plug.current_resource(conn)
     changeset = User.changeset(user, user_params)
 
-    if user do
+    if user != nil do
       case Repo.update(changeset) do
         {:ok, _user} ->
           conn

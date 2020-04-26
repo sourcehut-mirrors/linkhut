@@ -1,0 +1,9 @@
+<h3>Remove link</h3>
+<%= form_for @changeset, Routes.link_path(@conn, :delete), fn f -> %>
+  <fieldset>
+  <%= hidden_input f, :url %>
+  <%= input f, :are_you_sure?, type: :checkbox %>
+  <%= submit "Delete" %>
+  </fieldset>
+<% end %>
+<%= render "_bookmark.html", assigns %>
