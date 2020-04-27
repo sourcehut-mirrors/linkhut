@@ -27,7 +27,7 @@ defmodule Linkhut.Repo do
   end
 
   def links_by_date(user, attrs \\ []) do
-    Enum.group_by(links(user, attrs), fn link -> DateTime.to_date(link.inserted_at) end)
+    Enum.chunk_by(links(user, attrs), fn link -> DateTime.to_date(link.inserted_at) end)
   end
 
   def link(url, user_id) do

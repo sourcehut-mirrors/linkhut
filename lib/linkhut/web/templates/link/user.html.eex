@@ -2,9 +2,9 @@
 <div id="content">
   <section>
     <h1><%= gettext "%{name}'s bookmarks", name: @user.username %></h1>
-    <%= Enum.map(@links, fn {date, links} -> %>
+    <%= Enum.map(@links, fn [head | _] = links -> %>
     <div class="date-group">
-      <h4 class="date"><span><%= prettify(date) %></span></h4>
+      <h4 class="date"><span><%= prettify(head.inserted_at) %></span></h4>
       <%= render "_bookmarks.html", Map.put(assigns, :links, links) %>
     </div>
     <% end) %>
