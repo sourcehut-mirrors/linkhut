@@ -33,7 +33,7 @@
             <ul class="tags">
                 <%= for tag <- @link.tags do %>
                   <li>
-                    <a href="<%= "#{@conn.request_path}/:#{tag}" %>"><%= tag %></a>
+                    <%= render "_tag.html", conn: @conn, tag: tag %>
                   </li>
                 <% end %>
             </ul>

@@ -1,7 +1,7 @@
 <%= render "_search.html", conn: @conn %>
+<h1><%= gettext "%{name}'s bookmarks", name: @user.username %></h1>
 <div id="content">
   <section>
-    <h1><%= gettext "%{name}'s bookmarks", name: @user.username %></h1>
     <%= Enum.map(@links, fn [head | _] = links -> %>
     <div class="date-group">
       <h4 class="date"><span><%= prettify(head.inserted_at) %></span></h4>

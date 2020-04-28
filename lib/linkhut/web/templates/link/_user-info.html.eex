@@ -1,8 +1,18 @@
 <aside>
-    <header><%= gettext "About %{name}", name: @user.username %></header>
-    <% if @user.bio do %>
-    <section>
-    <%= sanitize(Earmark.as_html!(@user.bio)) %>
-    </section>
+    <%= if length(@tags) > 0 do %>
+        <section>
+            <h5><%= gettext "%{name}'s tags", name: @user.username %></h5>
+            <ul class="tag-cloud">
+                <%= for [tag, _count] <- @tags do %>
+                <li><%= render "_tag.html", conn: @conn, tag: tag %></li>
+                <% end %>
+            </ul>
+        </section>
+    <% end %>
+    <%= if @user.bio != nil do %>
+        <section>
+            <h5><%= gettext "%{name}'s bio", name: @user.username %></h5>
+            <%= sanitize(Earmark.as_html!(@user.bio)) %>
+        </section>
     <% end %>
 </aside>

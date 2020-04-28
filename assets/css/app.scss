@@ -238,24 +238,47 @@ div#content {
     justify-content: space-between;
 
     & aside {
-        border-color: $light-gray;
-        border-radius: .125rem;
-        border-style: solid;
-        border-width: 1px;
         box-sizing: border-box;
         flex-grow: 1;
+        font-size: .825rem;
         min-width: 19.5em;
+        padding-left: $spacing-medium;
+        padding-right: $spacing-medium;
 
-        & header {
-            border-bottom-color: $light-gray;
-            border-bottom-style: solid;
-            border-bottom-width: 1px;
-            box-sizing: border-box;
-            font-weight: 500;
-            padding: $spacing-medium;
+        @media #{$not-small} {
+            width: 19.5em;
         }
+
+        & h5 {
+            border-top-color: $light-gray;
+            border-top-style: solid;
+            border-top-width: 1px;
+        }
+
         & section {
-            padding: $spacing-medium;
+            margin-bottom: $spacing-large;
+        }
+
+        & ul.tag-cloud {
+            display: inline;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+
+            & li {
+                display: inline-block;
+
+                & a {
+                    color: $purple;
+                    display: inline;
+
+                }
+
+                &:not(:last-child) a::after {
+                    content: ", ";
+                }
+            }
+
         }
     }
 

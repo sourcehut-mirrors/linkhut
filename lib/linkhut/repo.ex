@@ -4,8 +4,11 @@ defmodule Linkhut.Repo do
     adapter: Ecto.Adapters.Postgres
 
   import Ecto.Query
+
   alias Linkhut.Model.{Link, Tags, User}
   alias Linkhut.Repo
+
+  # links
 
   def links(user, attrs \\ [])
 
@@ -32,5 +35,16 @@ defmodule Linkhut.Repo do
 
   def link(url, user_id) do
     Repo.get_by(Link, url: url, user_id: user_id)
+  end
+
+  # tags
+
+  def tags(user, opts \\ [include_private?: false]) do
+    query = from(l in Link,
+      where: [user_id: ^user.id, is_private: ^opts[:include_private?]],
+      select: [fragment("unnest(?) as tag", l.tags), count("*")],
+      group_by: fragment("tag")
+    )
+    Repo.all(query)
   end
 end

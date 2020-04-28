@@ -45,7 +45,7 @@ defmodule Linkhut.Web.LinkController do
     end
   end
 
-  def update(conn, %{"link" => %{"url" => url}} = link_params) do
+  def update(conn, %{"link" => %{"url" => url} = link_params}) do
     user = Guardian.Plug.current_resource(conn)
     link = Repo.link(url, user.id)
     changeset = Link.changeset(link, link_params)
@@ -76,7 +76,7 @@ defmodule Linkhut.Web.LinkController do
     end
   end
 
-  def delete(conn, %{"link" => %{"url" => url, "are_you_sure?" => confirmed}} = link_params) do
+  def delete(conn, %{"link" => %{"url" => url, "are_you_sure?" => confirmed} = link_params}) do
     user = Guardian.Plug.current_resource(conn)
     link = Repo.link(url, user.id)
     changeset = Link.changeset(link, link_params)
@@ -106,7 +106,7 @@ defmodule Linkhut.Web.LinkController do
       links = Repo.links_by_date(user)
 
       conn
-      |> render("user.html", user: user, links: links)
+      |> render("user.html", user: user, links: links, tags: Repo.tags(user))
     else
       conn
       |> put_flash(:error, "Wrong username")
