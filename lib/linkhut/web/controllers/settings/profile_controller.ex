@@ -18,6 +18,7 @@ defmodule Linkhut.Web.Settings.ProfileController do
 
     if user != nil do
       changeset = User.changeset(user, user_params)
+
       case Repo.update(changeset) do
         {:ok, _user} ->
           conn

@@ -6,4 +6,4 @@
   <%= submit "Delete" %>
   </fieldset>
 <% end %>
-<%= render "_bookmark.html", assigns %>
+<%= render "_bookmark.html", Map.put(assigns, :hide_actions, true) %>

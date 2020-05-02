@@ -375,13 +375,21 @@ div.bookmark {
     .meta {
         display: flex;
         flex-direction: row;
-        justify-content: space-between;
         margin-top: 2px;
+
+        @media #{$not-small} {
+            justify-content: space-between;
+        }
 
         & h5.label {
             @media #{$not-small} {
                 display: none;
             }
+        }
+
+        & div.actions {
+            flex-shrink: 0;
+            margin-right: $spacing-medium;
         }
 
         & ul.actions {
@@ -406,10 +414,12 @@ div.bookmark {
         }
 
         & ul.tags {
-            display: inline;
             list-style: none;
             margin: 0;
             padding: 0;
+            @media #{$not-small} {
+                text-align: right;
+            }
 
             & li {
                 display: inline-block;
@@ -426,5 +436,18 @@ div.bookmark {
             }
 
         }
+    }
+}
+
+div.pagination {
+    border-top-color: $light-gray;
+    border-top-style: solid;
+    border-top-width: 1px;
+    margin-bottom: 0.5em;
+    padding-bottom: 1em;
+    padding-top: 2.5em;
+    text-align: center;
+    & p {
+        color: $muted
     }
 }

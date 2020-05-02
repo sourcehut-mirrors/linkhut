@@ -1,8 +1,6 @@
 defmodule Linkhut.Web.FeedController do
   use Linkhut.Web, :controller
 
-  alias Linkhut.Model.Link
-  alias Linkhut.Model.User
   alias Linkhut.Repo
 
   def feed(conn, %{"username" => username}) do

@@ -11,7 +11,18 @@ defmodule Linkhut.MixProject do
       dialyzer: [plt_add_deps: :transitive],
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+
+      # Docs
+      name: "linkhut",
+      source_url: "https://git.sr.ht/~mlb/linkhut",
+      homepage_url: "https://git.sr.ht/~mlb/linkhut",
+      docs: [
+        # The main page in the docs
+        main: "readme",
+        logo: "assets/static/images/favicon.svg",
+        extras: ["README.md"]
+      ]
     ]
   end
 
@@ -40,6 +51,7 @@ defmodule Linkhut.MixProject do
       {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
       {:earmark, "~> 1.3.5"},
       {:ecto_sql, "~> 3.0"},
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
       {:ex_machina, "~> 2.3", only: :test},
       {:gettext, "~> 0.11"},
       {:guardian, "~> 1.0"},

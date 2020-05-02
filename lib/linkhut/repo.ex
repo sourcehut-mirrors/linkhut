@@ -5,46 +5,58 @@ defmodule Linkhut.Repo do
 
   import Ecto.Query
 
-  alias Linkhut.Model.{Link, Tags, User}
+  alias Linkhut.Model.{Link, User}
+  alias Linkhut.Pagination
   alias Linkhut.Repo
 
   # links
 
-  def links(user, attrs \\ [])
-
-  def links(username, attrs) when is_binary(username) do
+  def links(username) when is_binary(username) do
     user = Repo.get_by(User, username: username)
-
-    if user do
-      links(user)
-    else
-      []
-    end
+    if user != nil, do: links(user_id: user.id), else: []
   end
 
-  def links(user, attrs) do
-    query = from(l in Link, where: l.user_id == ^user.id)
-
-    Repo.all(query)
+  def links(query) do
+    query_links(query)
+    |> Repo.all()
     |> Repo.preload(:user)
   end
 
-  def links_by_date(user, attrs \\ []) do
-    Enum.chunk_by(links(user, attrs), fn link -> DateTime.to_date(link.inserted_at) end)
+  def links(query, page: page) do
+    query_links(query)
+    |> Pagination.page(page, per_page: 20)
+    |> Map.update!(:entries, &Repo.preload(&1, :user))
+  end
+
+  def links_by_date(query, page: page) do
+    links(query, page: page)
+    |> Map.update!(
+      :entries,
+      &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
+    )
   end
 
   def link(url, user_id) do
     Repo.get_by(Link, url: url, user_id: user_id)
   end
 
+  defp query_links(where) do
+    from l in Link,
+      where: ^where
+  end
+
   # tags
 
-  def tags(user, opts \\ [include_private?: false]) do
-    query = from(l in Link,
-      where: [user_id: ^user.id, is_private: ^opts[:include_private?]],
+  def tags(query) do
+    query_tags(query)
+    |> Repo.all()
+  end
+
+  defp query_tags(where) do
+    from l in Link,
+      where: ^where,
       select: [fragment("unnest(?) as tag", l.tags), count("*")],
-      group_by: fragment("tag")
-    )
-    Repo.all(query)
+      group_by: fragment("tag"),
+      order_by: [desc: count("*"), asc: fragment("tag")]
   end
 end

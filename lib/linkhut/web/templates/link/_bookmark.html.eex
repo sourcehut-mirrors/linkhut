@@ -15,19 +15,21 @@
         <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
     </div>
     <div class="meta">
-        <div class="actions">
-            <h5 class="label"><%= gettext "Actions:" %></h5>
-            <ul class="actions">
-                <%= if GuardianPlug.current_resource(@conn) && @link.user_id == GuardianPlug.current_resource(@conn).id do %>
-                <li>
-                    <a href="<%= "/edit?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "edit" %></a>
-                </li>
-                <li>
-                    <a href="<%= "/delete?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "delete" %></a>
-                </li>
-                <% end %>
-            </ul>
-        </div>
+        <%= unless assigns[:hide_actions] do %>
+            <div class="actions">
+                <h5 class="label"><%= gettext "Actions:" %></h5>
+                <ul class="actions">
+                    <%= if GuardianPlug.current_resource(@conn) && @link.user_id == GuardianPlug.current_resource(@conn).id do %>
+                    <li>
+                        <a href="<%= "/edit?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "edit" %></a>
+                    </li>
+                    <li>
+                        <a href="<%= "/delete?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "delete" %></a>
+                    </li>
+                    <% end %>
+                </ul>
+            </div>
+        <% end %>
         <div class="tags">
             <h5 class="label"><%= gettext "Tags:" %></h5>
             <ul class="tags">

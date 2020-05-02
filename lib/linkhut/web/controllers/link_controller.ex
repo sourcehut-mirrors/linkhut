@@ -99,14 +99,15 @@ defmodule Linkhut.Web.LinkController do
     end
   end
 
-  def show(conn, %{"username" => username}) do
+  def show(conn, %{"username" => username} = params) do
+    page = Map.get(params, "p", 1)
     user = Repo.get_by(User, username: username)
 
     if user != nil do
-      links = Repo.links_by_date(user)
+      links = Repo.links_by_date([user_id: user.id], page: page)
 
       conn
-      |> render("user.html", user: user, links: links, tags: Repo.tags(user))
+      |> render("user.html", user: user, links: links, tags: Repo.tags(user_id: user.id))
     else
       conn
       |> put_flash(:error, "Wrong username")
