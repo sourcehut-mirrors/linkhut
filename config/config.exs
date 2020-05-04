@@ -15,7 +15,7 @@ config :linkhut, LinkhutWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "mlPw70YW1sAUSrz5sF/LPkteFQ7Q75zutsNjXVNNDOpTag5Opi0WjVGIESGmddDd",
   render_errors: [view: LinkhutWeb.ErrorView, accepts: ~w(html json)],
-  pubsub: [name: Linkhut.PubSub, adapter: Phoenix.PubSub.PG2]
+  pubsub_server: Linkhut.PubSub
 
 # Configures Elixir's Logger
 config :logger, :console,
