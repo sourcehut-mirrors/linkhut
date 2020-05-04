@@ -45,15 +45,16 @@ defmodule Linkhut.Pagination do
   alias Linkhut.Repo
 
   def page(query, page, per_page: per_page) when is_nil(page) do
-    page(query, 0, per_page: per_page)
+    page(query, 1, per_page: per_page)
   end
 
   def page(query, page, per_page: per_page) when is_binary(page) do
-    page = max(String.to_integer(page) - 1, 0)
+    page = String.to_integer(page)
     page(query, page, per_page: per_page)
   end
 
   def page(query, page, per_page: per_page) do
+    page = max(page - 1, 0)
     count = per_page + 1
 
     result =

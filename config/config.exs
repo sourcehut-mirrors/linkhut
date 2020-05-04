@@ -11,10 +11,10 @@ config :linkhut,
   ecto_repos: [Linkhut.Repo]
 
 # Configures the endpoint
-config :linkhut, Linkhut.Web.Endpoint,
+config :linkhut, LinkhutWeb.Endpoint,
   url: [host: "localhost"],
   secret_key_base: "mlPw70YW1sAUSrz5sF/LPkteFQ7Q75zutsNjXVNNDOpTag5Opi0WjVGIESGmddDd",
-  render_errors: [view: Linkhut.Web.ErrorView, accepts: ~w(html json)],
+  render_errors: [view: LinkhutWeb.ErrorView, accepts: ~w(html json)],
   pubsub: [name: Linkhut.PubSub, adapter: Phoenix.PubSub.PG2]
 
 # Configures Elixir's Logger
@@ -30,7 +30,7 @@ config :mime, :types, %{
 }
 
 # Configures Guardian
-config :linkhut, Linkhut.Web.Auth.Guardian,
+config :linkhut, LinkhutWeb.Auth.Guardian,
   issuer: "linkhut",
   secret_key: "secret"
 

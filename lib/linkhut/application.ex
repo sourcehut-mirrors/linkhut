@@ -11,7 +11,7 @@ defmodule Linkhut.Application do
       # Start the Ecto repository
       Linkhut.Repo,
       # Start the endpoint when the application starts
-      Linkhut.Web.Endpoint
+      LinkhutWeb.Endpoint
       # Starts a worker by calling: Linkhut.Worker.start_link(arg)
       # {Linkhut.Worker, arg},
     ]
@@ -25,7 +25,7 @@ defmodule Linkhut.Application do
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.
   def config_change(changed, _new, removed) do
-    Linkhut.Web.Endpoint.config_change(changed, removed)
+    LinkhutWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 end

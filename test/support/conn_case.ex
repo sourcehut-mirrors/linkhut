@@ -1,4 +1,4 @@
-defmodule Linkhut.Web.ConnCase do
+defmodule LinkhutWeb.ConnCase do
   @moduledoc """
   This module defines the test case to be used by
   tests that require setting up a connection.
@@ -19,13 +19,13 @@ defmodule Linkhut.Web.ConnCase do
     quote do
       # Import conveniences for testing with connections
       use Phoenix.ConnTest
-      alias Linkhut.Web.Router.Helpers, as: Routes
+      alias LinkhutWeb.Router.Helpers, as: Routes
 
-      import Linkhut.Web.Auth.Guardian
+      import LinkhutWeb.Auth.Guardian
       import Linkhut.Factory
 
       # The default endpoint for testing
-      @endpoint Linkhut.Web.Endpoint
+      @endpoint LinkhutWeb.Endpoint
     end
   end
 

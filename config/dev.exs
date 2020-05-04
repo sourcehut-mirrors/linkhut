@@ -15,7 +15,7 @@ config :linkhut, Linkhut.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we use it
 # with webpack to recompile .js and .css sources.
-config :linkhut, Linkhut.Web.Endpoint,
+config :linkhut, LinkhutWeb.Endpoint,
   http: [port: 4000],
   debug_errors: true,
   code_reloader: true,
@@ -55,13 +55,13 @@ config :linkhut, Linkhut.Web.Endpoint,
 # different ports.
 
 # Watch static and templates for browser reloading.
-config :linkhut, Linkhut.Web.Endpoint,
+config :linkhut, LinkhutWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/linkhut/web/{live,views}/.*(ex)$",
-      ~r"lib/linkhut/web/templates/.*(eex)$"
+      ~r"lib/linkhut_web/{live,views}/.*(ex)$",
+      ~r"lib/linkhut_web/templates/.*(eex)$"
     ]
   ]
 

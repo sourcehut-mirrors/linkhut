@@ -246,6 +246,7 @@ div#content {
         padding-right: $spacing-medium;
 
         @media #{$not-small} {
+            max-width: 19.5em;
             width: 19.5em;
         }
 
