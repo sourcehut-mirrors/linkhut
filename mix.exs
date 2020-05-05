@@ -21,7 +21,8 @@ defmodule Linkhut.MixProject do
         # The main page in the docs
         main: "readme",
         logo: "assets/static/images/favicon.svg",
-        extras: ["README.md"]
+        extras: ["README.md"],
+        source_url_pattern: "https://git.sr.ht/~mlb/linkhut/tree/master/%{path}#L%{line}"
       ]
     ]
   end
