@@ -32,7 +32,7 @@ defmodule Linkhut.MixProject do
   def application do
     [
       mod: {Linkhut.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -60,10 +60,13 @@ defmodule Linkhut.MixProject do
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.11"},
       {:phoenix_html_sanitizer, "~> 1.0.0"},
+      {:phoenix_live_dashboard, "~> 0.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
       {:plug_cowboy, "~> 2.1"},
       {:postgrex, ">= 0.0.0"},
+      {:telemetry_metrics, "~> 0.4"},
+      {:telemetry_poller, "~> 0.4"},
       {:tidy_ex, "~> 0.1.0-dev"},
       {:timex, "~> 3.5"}
     ]

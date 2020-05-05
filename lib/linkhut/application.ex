@@ -12,6 +12,8 @@ defmodule Linkhut.Application do
       {Phoenix.PubSub, name: Linkhut.PubSub},
       # Start the Ecto repository
       Linkhut.Repo,
+      # Start the telemetry module
+      LinkhutWeb.Telemetry,
       # Start the endpoint when the application starts
       LinkhutWeb.Endpoint
       # Starts a worker by calling: Linkhut.Worker.start_link(arg)

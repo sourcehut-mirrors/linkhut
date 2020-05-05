@@ -1,5 +1,6 @@
 defmodule LinkhutWeb.Router do
   use LinkhutWeb, :router
+  import Phoenix.LiveDashboard.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -8,7 +9,6 @@ defmodule LinkhutWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug LinkhutWeb.Plugs.AuthenticationPlug
-    plug LinkhutWeb.Plugs.PrettifyPlug
   end
 
   pipeline :feed do
@@ -21,6 +21,13 @@ defmodule LinkhutWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  if Mix.env() == :dev do
+    scope "/" do
+      pipe_through :browser
+      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
+    end
   end
 
   scope "/", LinkhutWeb do

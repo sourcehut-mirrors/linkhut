@@ -21,6 +21,8 @@ defmodule LinkhutWeb do
     quote do
       use Phoenix.Controller, namespace: LinkhutWeb
 
+      plug LinkhutWeb.Plugs.PrettifyPlug
+
       import Plug.Conn
       import LinkhutWeb.Gettext
       alias LinkhutWeb.Router.Helpers, as: Routes
