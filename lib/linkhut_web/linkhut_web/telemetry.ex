@@ -1,5 +1,4 @@
 defmodule LinkhutWeb.Telemetry do
-
   @moduledoc false
 
   use Supervisor
