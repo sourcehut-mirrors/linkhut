@@ -3,6 +3,7 @@ defmodule LinkhutWeb.FormHelpers do
   Conveniences for translating and building error messages when validating forms
   """
   use Phoenix.HTML
+  alias Phoenix.HTML.Form
 
   @doc """
   Wraps a form input in a div that carries information on why it failed validation
@@ -10,9 +11,10 @@ defmodule LinkhutWeb.FormHelpers do
   def input(form, field, opts \\ []) do
     name = Keyword.get(opts, :name, humanize(field))
     type = Keyword.get(opts, :type, input_type(form, field))
+    opts = Keyword.put_new(opts, :value, Form.input_value(form, field) |> value_to_string())
 
     label = label(form, field, name)
-    input = apply(Phoenix.HTML.Form, type, [form, field, opts])
+    input = apply(Form, type, [form, field, opts])
 
     if type == :checkbox do
       generate_input(form, field, fn -> [input, label] end)
@@ -42,6 +44,9 @@ defmodule LinkhutWeb.FormHelpers do
       html_escape([fun.()])
     end
   end
+
+  defp value_to_string(list) when is_list(list), do: Enum.join(list, " ")
+  defp value_to_string(value), do: value
 
   @doc """
   Translates an error message using gettext.

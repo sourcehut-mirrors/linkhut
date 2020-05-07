@@ -49,7 +49,7 @@ defmodule LinkhutWeb.Router do
   scope "/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/~:username", FeedController, :feed
+    get "/~:username", FeedController, :show
   end
 
   # Enables LiveDashboard only for development

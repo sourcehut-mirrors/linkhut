@@ -1,4 +1,8 @@
 defmodule Linkhut.Factory do
+  @moduledoc """
+  This module defines factories for creating test data to use in tests.
+  """
+
   use ExMachina.Ecto, repo: Linkhut.Repo
 
   def credential_factory do
@@ -17,7 +21,7 @@ defmodule Linkhut.Factory do
   end
 
   def link_factory do
-    %Linkhut.Model.Link{
+    %Linkhut.Links.Link{
       user_id: build(:user).id,
       url: sequence(:url, &"http://link-#{&1}.example.net"),
       title: sequence(:title, &"link-#{&1}"),

@@ -7,7 +7,7 @@ defmodule LinkhutWeb.Plugs.SetCurrentUser do
   @moduledoc false
 
   @impl true
-  def init(opts \\ []), do: opts
+  def init([]), do: false
 
   @impl true
   def call(conn, _) do

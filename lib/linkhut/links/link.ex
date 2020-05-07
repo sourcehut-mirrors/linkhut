@@ -1,15 +1,20 @@
-defmodule Linkhut.Model.Link do
+defmodule Linkhut.Links.Link do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
+
+  alias Linkhut.Accounts.User
+  alias Linkhut.Links.Tags
 
   @primary_key false
   schema "links" do
     field :url, :string, primary_key: true
     field :user_id, :id, primary_key: true
-    belongs_to :user, Linkhut.Accounts.User, define_field: false
+    belongs_to :user, User, define_field: false
     field :title, :string
     field :notes, :string
-    field :tags, Linkhut.Model.Tags
+    field :tags, Tags
     field :is_private, :boolean, default: false
     field :language, :string
 
@@ -24,20 +29,4 @@ defmodule Linkhut.Model.Link do
     |> validate_length(:notes, max: 1024)
     |> unique_constraint(:url, name: :links_pkey)
   end
-
-  @doc false
-  def changeset(link) do
-    changeset(link, %{})
-    |> (fn changeset ->
-          put_change(changeset, :tags, format_tags(get_field(changeset, :tags, [])))
-        end).()
-  end
-
-  @doc false
-  def changeset() do
-    changeset(%Linkhut.Model.Link{}, %{})
-  end
-
-  defp format_tags(tags) when is_list(tags), do: Enum.join(tags, " ")
-  defp format_tags(tags) when is_binary(tags), do: tags
 end

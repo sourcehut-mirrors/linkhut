@@ -1,4 +1,8 @@
 defmodule Linkhut.Pagination do
+  @moduledoc """
+  Provides pagination capabilities to Ecto queries.
+  """
+
   defmodule Page do
     @moduledoc """
     Defines a page.
@@ -38,8 +42,6 @@ defmodule Linkhut.Pagination do
       :count
     ]
   end
-
-  @moduledoc false
 
   import Ecto.Query
   alias Linkhut.Repo

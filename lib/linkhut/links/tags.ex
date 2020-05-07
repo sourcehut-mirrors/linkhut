@@ -1,4 +1,6 @@
-defmodule Linkhut.Model.Tags do
+defmodule Linkhut.Links.Tags do
+  @moduledoc false
+
   @behaviour Ecto.Type
 
   @impl true
