@@ -1,8 +1,8 @@
 defmodule LinkhutWeb.LinkController do
   use LinkhutWeb, :controller
 
+  alias Linkhut.Accounts
   alias Linkhut.Model.Link
-  alias Linkhut.Model.User
   alias Linkhut.Repo
 
   def index(conn, _) do
@@ -16,7 +16,7 @@ defmodule LinkhutWeb.LinkController do
   end
 
   def insert(conn, %{"link" => %{"url" => url} = link_params}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns[:current_user]
     changeset = Link.changeset(%Link{user_id: user.id, url: url}, link_params)
 
     case Repo.insert(changeset) do
@@ -32,7 +32,7 @@ defmodule LinkhutWeb.LinkController do
   end
 
   def edit(conn, %{"url" => url}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns[:current_user]
     link = Repo.link(url, user.id)
 
     if link != nil do
@@ -46,7 +46,7 @@ defmodule LinkhutWeb.LinkController do
   end
 
   def update(conn, %{"link" => %{"url" => url} = link_params}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns[:current_user]
     link = Repo.link(url, user.id)
     changeset = Link.changeset(link, link_params)
 
@@ -63,7 +63,7 @@ defmodule LinkhutWeb.LinkController do
   end
 
   def remove(conn, %{"url" => url}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns[:current_user]
     link = Repo.link(url, user.id)
 
     if link != nil do
@@ -77,7 +77,7 @@ defmodule LinkhutWeb.LinkController do
   end
 
   def delete(conn, %{"link" => %{"url" => url, "are_you_sure?" => confirmed} = link_params}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns[:current_user]
     link = Repo.link(url, user.id)
     changeset = Link.changeset(link, link_params)
 
@@ -101,7 +101,7 @@ defmodule LinkhutWeb.LinkController do
 
   def show(conn, %{"username" => username} = params) do
     page = Map.get(params, "p", 1)
-    user = Repo.get_by(User, username: username)
+    user = Accounts.get_user(username)
 
     if user != nil do
       links = Repo.links_by_date([user_id: user.id], page: page)

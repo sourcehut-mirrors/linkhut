@@ -21,7 +21,7 @@ defmodule LinkhutWeb do
     quote do
       use Phoenix.Controller, namespace: LinkhutWeb
 
-      plug LinkhutWeb.Plugs.PrettifyPlug
+      plug LinkhutWeb.Plugs.PrettifyHtml
 
       import Plug.Conn
       import LinkhutWeb.Gettext
@@ -44,8 +44,6 @@ defmodule LinkhutWeb do
 
       import LinkhutWeb.FormHelpers
       import LinkhutWeb.Gettext
-      import LinkhutWeb.ViewHelpers
-      alias LinkhutWeb.Auth.Guardian.Plug, as: GuardianPlug
       alias LinkhutWeb.Router.Helpers, as: Routes
     end
   end

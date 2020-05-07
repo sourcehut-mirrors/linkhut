@@ -19,7 +19,7 @@
             <div class="actions">
                 <h5 class="label"><%= gettext "Actions:" %></h5>
                 <ul class="actions">
-                    <%= if GuardianPlug.current_resource(@conn) && @link.user_id == GuardianPlug.current_resource(@conn).id do %>
+                    <%= if @logged_in? && @link.user_id == @current_user.id do %>
                     <li>
                         <a href="<%= "/edit?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "edit" %></a>
                     </li>

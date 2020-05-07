@@ -30,11 +30,6 @@ config :mime, :types, %{
   "application/xml" => ["xml"]
 }
 
-# Configures Guardian
-config :linkhut, LinkhutWeb.Auth.Guardian,
-  issuer: "linkhut",
-  secret_key: "secret"
-
 # Configures TidyEx
 # Note: there seems to be a typo in the application name (extra `t`: https://github.com/f34nk/tidy_ex/issues/5), this generates a warning at startup that is safe to ignore
 # Note: for a full list of settings: https://api.html-tidy.org/tidy/tidylib_api_5.6.0/group__public__enumerations.html#ga3a1401652599150188a168dade7dc150

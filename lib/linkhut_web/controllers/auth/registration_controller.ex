@@ -3,27 +3,25 @@ defmodule LinkhutWeb.Auth.RegistrationController do
 
   plug :put_view, LinkhutWeb.AuthView
 
-  alias Linkhut.Model.User
-  alias Linkhut.Repo
-  alias LinkhutWeb.Auth.Guardian.Plug, as: GuardianPlug
+  alias Linkhut.Accounts
+  alias Linkhut.Accounts.User
 
   def new(conn, _params) do
-    if GuardianPlug.current_resource(conn) do
+    if get_session(conn, :user_id) != nil do
       conn
       |> redirect(to: Routes.profile_path(conn, :show))
     else
       conn
-      |> render("register.html", changeset: User.changeset(%User{}, %{}))
+      |> render("register.html", changeset: Accounts.change_user(%User{}))
     end
   end
 
   def create(conn, %{"user" => user_params}) do
-    changeset = User.registration_changeset(%User{}, user_params)
-
-    case Repo.insert(changeset) do
+    case Accounts.create_user(user_params) do
       {:ok, user} ->
         conn
-        |> LinkhutWeb.Auth.login(user)
+        |> put_session(:user_id, user.id)
+        |> configure_session(renew: true)
         |> put_flash(:info, "Welcome to linkhut!")
         |> redirect(to: Routes.link_path(conn, :index))
 

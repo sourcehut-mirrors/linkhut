@@ -6,7 +6,7 @@ defmodule Linkhut.Model.Link do
   schema "links" do
     field :url, :string, primary_key: true
     field :user_id, :id, primary_key: true
-    belongs_to :user, Linkhut.Model.User, define_field: false
+    belongs_to :user, Linkhut.Accounts.User, define_field: false
     field :title, :string
     field :notes, :string
     field :tags, Linkhut.Model.Tags

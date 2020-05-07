@@ -1,30 +1,31 @@
-defmodule Linkhut.Model.User do
+defmodule Linkhut.Accounts.Credential do
+  @moduledoc false
+
   use Ecto.Schema
   import Ecto.Changeset
+  alias Linkhut.Accounts.User
 
   @email_format ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
-  @username_format ~r/^[a-zA-Z\d]{3,}$/
 
-  schema "users" do
-    field :username, :string
+  schema "credentials" do
     field :email, :string
-    field :bio, :string
     field :password, :string, virtual: true
     field :password_hash, :string
+    belongs_to :user, User
 
-    timestamps(type: :utc_datetime)
+    timestamps()
   end
 
-  def changeset(user, attrs) do
-    user
-    |> cast(attrs, [:username, :email, :bio])
-    |> validate_required([:username, :email])
-    |> unique_constraint(:username)
+  @doc false
+  def changeset(credential, attrs) do
+    credential
+    |> cast(attrs, [:email])
+    |> validate_required([:email])
     |> unique_constraint(:email)
-    |> validate_format(:username, @username_format)
     |> validate_format(:email, @email_format)
   end
 
+  @doc false
   def registration_changeset(user, attrs) do
     user
     |> changeset(attrs)

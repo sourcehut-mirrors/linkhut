@@ -8,26 +8,11 @@ defmodule LinkhutWeb.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug LinkhutWeb.Plugs.AuthenticationPlug
+    plug LinkhutWeb.Plugs.SetCurrentUser
   end
 
   pipeline :feed do
     plug :accepts, ["xml"]
-  end
-
-  pipeline :ensure_auth do
-    plug Guardian.Plug.EnsureAuthenticated
-  end
-
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
-  if Mix.env() == :dev do
-    scope "/" do
-      pipe_through :browser
-      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
-    end
   end
 
   scope "/", LinkhutWeb do
@@ -67,8 +52,60 @@ defmodule LinkhutWeb.Router do
     get "/~:username", FeedController, :feed
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", LinkhutWeb do
-  #   pipe_through :api
-  # end
+  # Enables LiveDashboard only for development
+  if Mix.env() == :dev do
+    scope "/" do
+      pipe_through :browser
+      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
+    end
+  end
+
+  defp ensure_auth(conn, _) do
+    if user = get_user(conn) do
+      assign(conn, :current_user, user)
+    else
+      auth_error!(conn)
+    end
+  end
+
+  defp get_user(conn) do
+    case conn.assigns[:current_user] do
+      nil ->
+        fetch_user(conn)
+
+      user ->
+        user
+    end
+  end
+
+  defp fetch_user(conn) do
+    if user_id = get_session(conn, :user_id) do
+      Linkhut.Accounts.get_user!(user_id)
+    else
+      nil
+    end
+  end
+
+  defp auth_error!(conn) do
+    conn
+    |> store_path_in_session()
+    |> put_flash(:error, "Login required")
+    |> redirect(to: "/login")
+    |> halt()
+  end
+
+  defp store_path_in_session(conn) do
+    # Get HTTP method and url from conn
+    method = conn.method
+    path = conn.request_path
+
+    # If conditions apply store path in session, else return conn unmodified
+    case {method, String.match?(path, ~r/^\/(add)$/)} do
+      {"GET", true} ->
+        put_session(conn, :login_redirect_path, path)
+
+      {_, _} ->
+        conn
+    end
+  end
 end

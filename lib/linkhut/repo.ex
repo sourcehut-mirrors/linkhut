@@ -5,7 +5,8 @@ defmodule Linkhut.Repo do
 
   import Ecto.Query
 
-  alias Linkhut.Model.{Link, User}
+  alias Linkhut.Accounts.User
+  alias Linkhut.Model.{Link}
   alias Linkhut.Pagination
   alias Linkhut.Repo
 

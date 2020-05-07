@@ -3,23 +3,20 @@ defmodule LinkhutWeb.Settings.ProfileController do
 
   plug :put_view, LinkhutWeb.SettingsView
 
-  alias Linkhut.Model.User
-  alias Linkhut.Repo
+  alias Linkhut.Accounts
 
   def show(conn, _) do
-    user = Guardian.Plug.current_resource(conn)
-    changeset = User.changeset(user, %{})
+    user = conn.assigns[:current_user]
+    changeset = Accounts.change_user(user)
 
-    render(conn, "profile.html", user: user, changeset: changeset)
+    render(conn, "profile.html", changeset: changeset)
   end
 
   def update(conn, %{"user" => user_params}) do
-    user = Guardian.Plug.current_resource(conn)
+    user = conn.assigns[:current_user]
 
     if user != nil do
-      changeset = User.changeset(user, user_params)
-
-      case Repo.update(changeset) do
+      case Accounts.update_user(user, user_params) do
         {:ok, _user} ->
           conn
           |> put_flash(:info, "Profile updated")

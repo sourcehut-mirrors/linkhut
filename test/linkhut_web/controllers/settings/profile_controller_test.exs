@@ -4,16 +4,15 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
   describe "show/2" do
     test "Responds with user info if the user is logged in", %{conn: conn} do
       user = insert(:user)
-      {:ok, token, _} = encode_and_sign(user, %{}, token_type: :access)
 
       response =
         conn
-        |> put_req_header("authorization", "bearer: " <> token)
+        |> assign(:current_user, user)
         |> get(Routes.profile_path(conn, :show))
         |> html_response(200)
 
       assert response =~ user.username
-      assert response =~ user.email
+      assert response =~ user.credential.email
       assert response =~ user.bio
     end
 

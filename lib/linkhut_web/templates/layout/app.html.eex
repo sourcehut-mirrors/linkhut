@@ -15,7 +15,7 @@
           <a class="brand" href="/">linkhut</a>
         </div>
         <div>
-          <%= render "_session.html", conn: @conn %>
+          <%= render "_session.html", assigns %>
         </div>
       </nav>
       <%= render "_alerts.html", conn: @conn %>

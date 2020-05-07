@@ -2,8 +2,10 @@
 <%= form_for @changeset, Routes.registration_path(@conn, :create), fn f -> %>
   <fieldset>
   <%= input f, :username %>
-  <%= input f, :email %>
-  <%= input f, :password %>
+  <%= inputs_for f, :credential, fn cf -> %>
+  <%= input cf, :email %>
+  <%= input cf, :password %>
+  <% end %>
   </fieldset>
   <%= submit "Submit" %>
 <% end %>

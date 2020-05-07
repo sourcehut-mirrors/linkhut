@@ -1,4 +1,4 @@
-defmodule LinkhutWeb.Plugs.PrettifyPlug do
+defmodule LinkhutWeb.Plugs.PrettifyHtml do
   @behaviour Plug
 
   @moduledoc """
