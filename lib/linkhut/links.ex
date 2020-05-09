@@ -75,20 +75,27 @@ defmodule Linkhut.Links do
     Link.changeset(link, attrs)
   end
 
-  def get_links(username) when is_binary(username) do
-    user = Repo.get_by(User, username: username)
-    if user != nil, do: get_all(user_id: user.id), else: []
-  end
+  @doc """
+  Returns the 20 most recent public links belonging to a given user.
 
-  def get_all(query) do
-    query_links(query)
-    |> Repo.all()
-    |> Repo.preload(:user)
+  Returns `[]` if no results were found
+
+  ## Examples
+
+      iex> get_public_links("user123")
+      [%Link{}]
+
+      iex> get_public_links("not_a_user")
+      []
+  """
+  def get_public_links(username) do
+    user = Repo.get_by(User, username: username)
+    if user != nil, do: get_page([user_id: user.id, is_private: false], page: 1).entries, else: []
   end
 
   def get_page(query, page: page) do
     query_links(query)
-    |> Pagination.page(page, per_page: 20)
+    |> Pagination.page(page, per_page: 1)
     |> Map.update!(:entries, &Repo.preload(&1, :user))
   end
 

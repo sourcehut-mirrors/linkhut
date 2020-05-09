@@ -15,4 +15,7 @@
             <%= sanitize(Earmark.as_html!(@user.bio)) %>
         </section>
     <% end %>
+    <section>
+        <h5><a class="feed-link" href="<%= Routes.feed_link_url(@conn, :show, @user.username)%>">RSS feed</a></h5>
+    </section>
 </aside>

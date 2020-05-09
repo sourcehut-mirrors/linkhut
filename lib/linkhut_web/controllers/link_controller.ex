@@ -104,7 +104,7 @@ defmodule LinkhutWeb.LinkController do
       links = Links.get_page_by_date([user_id: user.id], page: page)
 
       conn
-      |> render("user.html", user: user, links: links, tags: Links.get_tags(user_id: user.id))
+      |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
     else
       conn
       |> put_flash(:error, "Wrong username")

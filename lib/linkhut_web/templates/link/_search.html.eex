@@ -1,4 +1,0 @@
-<form id="searchform" action="/search" method="get">
-    <input id="query" type="text" name="q" value="" size="45" placeholder="Search for bookmarks..."/>
-    <input id="submit" type="submit" value="Search" />
-</form>

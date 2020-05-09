@@ -7,8 +7,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'helvetica neue', helvetica, ubuntu, roboto, noto, 'segoe ui', arial, sans-serif;
     font-size: .875rem;
     max-width: 100%;
-    padding-left: $spacing-medium;
-    padding-right: $spacing-medium;
 
     @media #{$not-small} {
         font-size: 1rem;
@@ -17,6 +15,15 @@ body {
     @media #{$extra-large} {
         max-width: 120rem;
     }
+}
+
+header, main, footer {
+    padding: $spacing-tiny;
+}
+
+main > div > * {
+    margin-left: $spacing-tiny;
+    margin-right: $spacing-tiny;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -171,8 +178,7 @@ nav {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    padding-bottom: $spacing-small;
-    padding-top: $spacing-small;
+    padding: $spacing-tiny;
 
     & a.brand {
         color: $foreground;
@@ -230,7 +236,7 @@ nav {
     }
 }
 
-div#content {
+div#content, div#controls {
     align-items: flex-start;
     display: flex;
     flex-direction: row;
@@ -242,8 +248,6 @@ div#content {
         flex-grow: 1;
         font-size: .825rem;
         min-width: 19.5em;
-        padding-left: $spacing-medium;
-        padding-right: $spacing-medium;
 
         @media #{$not-small} {
             max-width: 19.5em;
@@ -290,6 +294,22 @@ div#content {
 
     @media #{$not-small} {
         flex-wrap: nowrap;
+    }
+}
+
+div#controls {
+    div.actions {
+        border-color: transparent;
+        border-style: solid;
+        border-width: 1px;
+
+        @media #{$not-small} {
+            font-size: 1rem;
+        }
+
+        & .button {
+            width: 100%;
+        }
     }
 }
 
@@ -440,15 +460,49 @@ div.bookmark {
     }
 }
 
+a.button {
+    align-items: center;
+    border-style: solid;
+    border-width: 1px;
+    box-sizing: border-box;
+    display: inline-flex;
+    padding: $spacing-small $spacing-medium;
+    text-decoration: none;
+
+    & > span {
+        font-size: 100%;
+        padding-left: $spacing-small;
+        padding-right: $spacing-small;
+    }
+
+    & > svg {
+        width: 1rem;
+    }
+
+    &:hover {
+        cursor: pointer;
+        text-decoration: none;
+    }
+}
+
 div.pagination {
+    align-items: center;
     border-top-color: $light-gray;
     border-top-style: solid;
     border-top-width: 1px;
+    display: flex;
+    justify-content: center;
     margin-bottom: 0.5em;
     padding-bottom: 1em;
     padding-top: 2.5em;
-    text-align: center;
-    & p {
-        color: $muted
-    }
+}
+
+a.feed-link::before {
+    background-image: url("/images/feed.svg");
+    background-size: cover;
+    content: ' ';
+    display: inline-block;
+    height: 1.1em;
+    vertical-align: bottom;
+    width: 1.1em;
 }

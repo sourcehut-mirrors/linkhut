@@ -1,2 +1,2 @@
-<%= render "_search.html", conn: @conn %>
+<%= render "_controls.html", assigns %>
 

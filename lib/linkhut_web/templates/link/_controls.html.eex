@@ -1,0 +1,16 @@
+<div id="controls">
+<section>
+<fieldset>
+    <form id="searchform" action="/search" method="get">
+        <input id="query" type="text" name="q" value="" size="45" placeholder="Search for bookmarks..."/>
+    </form>
+    </fieldset>
+</section>
+<aside>
+<div class="actions">
+    <%= if @logged_in? do %>
+        <a class="button" href="<%= Routes.link_path(@conn, :new) %>"><span><%= gettext "Add a link" %></span></a>
+    <% end %>
+</div>
+</aside>
+</div>

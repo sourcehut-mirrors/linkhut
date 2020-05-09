@@ -46,10 +46,10 @@ defmodule LinkhutWeb.Router do
     delete "/logout", Auth.SessionController, :delete
   end
 
-  scope "/feed", LinkhutWeb, as: :feed do
+  scope "/", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/~:username", FeedController, :show
+    get "/~:username/feed.xml", LinkController, :show
   end
 
   # Enables LiveDashboard only for development
@@ -90,7 +90,7 @@ defmodule LinkhutWeb.Router do
     conn
     |> store_path_in_session()
     |> put_flash(:error, "Login required")
-    |> redirect(to: "/login")
+    |> redirect(to: LinkhutWeb.Router.Helpers.session_path(conn, :new))
     |> halt()
   end
 
