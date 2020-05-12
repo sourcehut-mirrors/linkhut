@@ -9,7 +9,7 @@
 <aside>
 <div class="actions">
     <%= if @logged_in? do %>
-        <a class="button" href="<%= Routes.link_path(@conn, :new) %>"><span><%= gettext "Add a link" %></span></a>
+        <a class="button primary" href="<%= Routes.link_path(@conn, :new) %>"><span><%= gettext "Add a link" %></span></a>
     <% end %>
 </div>
 </aside>

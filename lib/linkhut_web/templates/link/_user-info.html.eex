@@ -16,6 +16,14 @@
         </section>
     <% end %>
     <section>
-        <h5><a class="feed-link" href="<%= Routes.feed_link_url(@conn, :show, @user.username)%>">RSS feed</a></h5>
+        <h5>
+        <a class="feed-link" href="<%= Routes.feed_link_url(@conn, :show, @user.username)%>">
+            <svg data-icon="rss-feed" width="16" height="16" viewBox="0 0 256 256">
+                <circle cx="68" cy="189" r="24" />
+                <path d="M160 213h-34a82 82 0 0 0 -82 -82v-34a116 116 0 0 1 116 116z" />
+                <path d="M184 213A140 140 0 0 0 44 73 V 38a175 175 0 0 1 175 175z" />
+            </svg><%= gettext "RSS feed" %>
+        </a>
+        </h5>
     </section>
 </aside>

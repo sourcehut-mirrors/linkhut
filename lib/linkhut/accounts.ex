@@ -25,7 +25,6 @@ defmodule Linkhut.Accounts do
   def get_user!(id) when is_number(id) do
     User
     |> Repo.get!(id)
-    |> Repo.preload(:credential)
   end
 
   @doc """
@@ -45,7 +44,6 @@ defmodule Linkhut.Accounts do
   def get_user(username) when is_binary(username) do
     User
     |> Repo.get_by(username: username)
-    |> Repo.preload(:credential)
   end
 
   @doc """
@@ -81,6 +79,7 @@ defmodule Linkhut.Accounts do
   """
   def update_user(%User{} = user, attrs) do
     user
+    |> Repo.preload(:credential)
     |> User.changeset(attrs)
     |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
     |> Repo.update()
@@ -112,7 +111,9 @@ defmodule Linkhut.Accounts do
 
   """
   def change_user(%User{} = user, attrs \\ %{}) do
-    User.changeset(user, attrs)
+    user
+    |> Repo.preload(:credential)
+    |> User.changeset(attrs)
   end
 
   @doc """

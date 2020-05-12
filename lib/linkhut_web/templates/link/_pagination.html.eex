@@ -5,7 +5,7 @@
           <title>chevronLeft icon</title>
           <path d="M20 1 L24 5 L14 16 L24 27 L20 31 L6 16 z"></path>
         </svg>
-        <span><%= gettext "Prev" %></span>
+        <span><%= gettext "Previous" %></span>
     </a>
 <% end %>
 <%= if @page.has_next do %>

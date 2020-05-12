@@ -307,7 +307,7 @@ div#controls {
             font-size: 1rem;
         }
 
-        & .button {
+        & > .button {
             width: 100%;
         }
     }
@@ -434,34 +434,41 @@ div.bookmark {
             }
         }
 
-        & ul.tags {
-            list-style: none;
-            margin: 0;
-            padding: 0;
+        & > div.tags {
             @media #{$not-small} {
-                text-align: right;
+                margin-left: auto;
             }
 
-            & li {
-                display: inline-block;
+            & > ul.tags {
+                list-style: none;
+                margin: 0;
+                padding: 0;
 
-                & a {
-                    color: $purple;
-                    display: inline;
-
+                @media #{$not-small} {
+                    text-align: right;
                 }
 
-                &:not(:last-child) a::after {
-                    content: ", ";
+                & > li {
+                    display: inline-block;
+
+                    & > a {
+                        color: $purple;
+                        display: inline;
+
+                    }
+
+                    &:not(:last-child) > a::after {
+                        content: ", ";
+                    }
                 }
             }
-
         }
     }
 }
 
 a.button {
     align-items: center;
+    border-color: $near-black;
     border-style: solid;
     border-width: 1px;
     box-sizing: border-box;
@@ -473,15 +480,28 @@ a.button {
         font-size: 100%;
         padding-left: $spacing-small;
         padding-right: $spacing-small;
+        text-align: center;
+        width: 100%;
     }
 
     & > svg {
         width: 1rem;
     }
 
-    &:hover {
+    &:hover, &:focus {
         cursor: pointer;
         text-decoration: none;
+        box-shadow: 0 0 0 .2rem $light-blue;
+    }
+
+    &.primary {
+        border-color: $navy;
+        background-color: $blue;
+        color: $white;
+
+        &:hover, &:focus {
+            transition: box-shadow .15s ease-in-out;
+        }
     }
 }
 
@@ -491,17 +511,14 @@ div.pagination {
     border-top-style: solid;
     border-top-width: 1px;
     display: flex;
-    justify-content: center;
+    justify-content: space-evenly;
     margin-bottom: 0.5em;
     padding-bottom: 1em;
     padding-top: 2.5em;
 }
 
-a.feed-link::before {
-    background-image: url("/images/feed.svg");
-    background-size: cover;
-    content: ' ';
-    display: inline-block;
+a.feed-link > svg {
+    display: inline;
     height: 1.1em;
     vertical-align: bottom;
     width: 1.1em;

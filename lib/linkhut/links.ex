@@ -89,22 +89,23 @@ defmodule Linkhut.Links do
       []
   """
   def get_public_links(username) do
-    user = Repo.get_by(User, username: username)
-    if user != nil, do: get_page([user_id: user.id, is_private: false], page: 1).entries, else: []
+    Link
+    |> join(:left, [l], u in User, on: [id: l.user_id])
+    |> where([_, u], u.username == ^username)
+    |> where([l, _], l.is_private == false)
+    |> preload([_, _], [:user])
+    |> Pagination.page(1, per_page: 20)
   end
 
   def get_page(query, page: page) do
     query_links(query)
-    |> Pagination.page(page, per_page: 1)
+    |> Pagination.page(page, per_page: 20)
     |> Map.update!(:entries, &Repo.preload(&1, :user))
   end
 
   def get_page_by_date(query, page: page) do
     get_page(query, page: page)
-    |> Map.update!(
-      :entries,
-      &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
-    )
+    |> Pagination.chunk_by(fn link -> DateTime.to_date(link.inserted_at) end)
   end
 
   def get(url, user_id) do
