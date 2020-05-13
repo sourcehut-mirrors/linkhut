@@ -10,9 +10,11 @@ defmodule LinkhutWeb.LinkController do
     |> render("index.html")
   end
 
-  def new(conn, _) do
+  def new(conn, params) do
     conn
-    |> render("add.html", changeset: Links.change_link(%Link{}))
+    |> render("add.html",
+      changeset: Links.change_link(%Link{}, Map.take(params, ["url", "title", "tags"]))
+    )
   end
 
   def insert(conn, %{"link" => link_params}) do

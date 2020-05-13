@@ -43,9 +43,17 @@ h1, h2, h3, h4, h5, h6 {
     color: $fg-color;
     display: flex;
     justify-content: center;
+    margin-left: $spacing-tiny;
+    margin-right: $spacing-tiny;
     padding: $spacing-large;
-    & span {
+
+    & > span {
         line-height: 1.25;
+        margin-left: $spacing-small;
+    }
+
+    & > svg {
+        width: 1rem;
     }
 }
 

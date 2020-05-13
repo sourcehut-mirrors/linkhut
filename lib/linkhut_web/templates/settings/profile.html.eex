@@ -1,11 +1,13 @@
-<h3>Profile</h3>
-<%= form_for @changeset, Routes.profile_path(@conn, :update), fn f -> %>
-  <fieldset>
-  <%= input f, :username, disabled: true %>
-  <%= inputs_for f, :credential, fn cf -> %>
-      <%= input cf, :email %>
+<div>
+  <h3>Profile</h3>
+  <%= form_for @changeset, Routes.profile_path(@conn, :update), fn f -> %>
+    <fieldset>
+    <%= input f, :username, disabled: true %>
+    <%= inputs_for f, :credential, fn cf -> %>
+        <%= input cf, :email %>
+    <% end %>
+    <%= input f, :bio, [placeholder: "Tell something about yourself", type: :textarea] %>
+    </fieldset>
+    <%= submit "Save" %>
   <% end %>
-  <%= input f, :bio, [placeholder: "Tell something about yourself", type: :textarea] %>
-  </fieldset>
-  <%= submit "Save" %>
-<% end %>
+</div>

@@ -1,11 +1,13 @@
-<h3>Save a new link</h3>
-<%= form_for @changeset, Routes.link_path(@conn, :insert), fn f -> %>
-  <fieldset>
-  <%= input f, :url, type: :url_input %>
-  <%= input f, :title %>
-  <%= input f, :notes, type: :textarea, maxlength: 1024 %>
-  <%= input f, :tags %>
-  <%= input f, :is_private, type: :checkbox %>
-  </fieldset>
-  <%= submit "Submit" %>
-<% end %>
+<div>
+  <h3>Save a new link</h3>
+  <%= form_for @changeset, Routes.link_path(@conn, :insert), fn f -> %>
+    <fieldset>
+    <%= input f, :url, type: :url_input %>
+    <%= input f, :title %>
+    <%= input f, :notes, type: :textarea, maxlength: 1024 %>
+    <%= input f, :tags %>
+    <%= input f, :is_private, type: :checkbox %>
+    </fieldset>
+    <%= submit "Submit" %>
+  <% end %>
+</div>

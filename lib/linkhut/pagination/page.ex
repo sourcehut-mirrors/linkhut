@@ -13,10 +13,8 @@ defmodule Linkhut.Pagination.Page do
   * `count` - total number of elements
   """
 
-  @type element :: any
-
-  @type t :: %__MODULE__{
-          entries: [element()] | [],
+  @type t(data_type) :: %__MODULE__{
+          entries: [data_type] | [],
           has_next: boolean(),
           has_prev: boolean(),
           prev_page: integer(),

@@ -8,6 +8,24 @@ defmodule Linkhut.Accounts do
 
   alias Linkhut.Accounts.{Credential, User}
 
+  @typedoc """
+  A username.
+
+  The types `Accounts.username()` and `binary()` are equivalent to analysis tools.
+  Although, for those reading the documentation, `Accounts.username()` implies a username.
+  """
+  @type username :: binary
+
+  @typedoc """
+  A `User` struct.
+  """
+  @type user :: %User{}
+
+  @typedoc """
+  An `Ecto.Changeset` struct for the given `data_type`.
+  """
+  @type changeset(data_type) :: Ecto.Changeset.t(data_type)
+
   @doc """
   Gets a single user.
 
@@ -22,6 +40,7 @@ defmodule Linkhut.Accounts do
       ** (Ecto.NoResultsError)
 
   """
+  @spec get_user!(integer) :: user
   def get_user!(id) when is_number(id) do
     User
     |> Repo.get!(id)
@@ -41,6 +60,7 @@ defmodule Linkhut.Accounts do
       nil
 
   """
+  @spec get_user(username) :: user | nil
   def get_user(username) when is_binary(username) do
     User
     |> Repo.get_by(username: username)
@@ -58,6 +78,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec create_user(%{optional(any) => any}) :: {:ok, user} | {:error, changeset(user)}
   def create_user(attrs \\ %{}) do
     %User{}
     |> User.changeset(attrs)
@@ -77,6 +98,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec update_user(user, %{optional(any) => any}) :: {:ok, user} | {:error, changeset(user)}
   def update_user(%User{} = user, attrs) do
     user
     |> Repo.preload(:credential)
@@ -97,6 +119,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec delete_user(user) :: {:ok, user} | {:error, changeset(user)}
   def delete_user(%User{} = user) do
     Repo.delete(user)
   end
@@ -110,6 +133,7 @@ defmodule Linkhut.Accounts do
       %Ecto.Changeset{data: %User{}}
 
   """
+  @spec change_user(user, %{optional(any) => any}) :: changeset(user)
   def change_user(%User{} = user, attrs \\ %{}) do
     user
     |> Repo.preload(:credential)

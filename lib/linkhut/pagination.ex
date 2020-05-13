@@ -56,7 +56,7 @@ defmodule Linkhut.Pagination do
       %Page{entries: [[1], [2, 2], [3], [4, 4, 6, 8]]}
 
   """
-  @spec chunk_by(Page.t(), (Page.element() -> any)) :: Page.t()
+  @spec chunk_by(Page.t(any), (any -> any)) :: Page.t([any])
   def chunk_by(%Page{} = page, fun) do
     page |> Map.update!(:entries, &Enum.chunk_by(&1, fun))
   end
