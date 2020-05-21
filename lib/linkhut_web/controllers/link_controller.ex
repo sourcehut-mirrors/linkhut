@@ -4,6 +4,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Accounts
   alias Linkhut.Links
   alias Linkhut.Links.Link
+  alias Linkhut.Search
 
   def index(conn, _) do
     conn
@@ -98,9 +99,16 @@ defmodule LinkhutWeb.LinkController do
     end
   end
 
-  def show(conn, %{"username" => username} = params) do
+  def show(conn, %{"query" => query} = params) do
     page = Map.get(params, "p", 1)
-    user = Accounts.get_user(username)
+
+    user =
+      query
+      |> Enum.join(" ")
+      |> Search.parse()
+      |> Enum.find(fn {x, _} -> x == :user end)
+      |> (fn {_, y} -> y end).()
+      |> Accounts.get_user()
 
     if user != nil do
       links = Links.get_page_by_date([user_id: user.id], page: page)

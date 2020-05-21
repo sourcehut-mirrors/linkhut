@@ -1,14 +1,18 @@
 defmodule LinkhutWeb.Plugs.SetCurrentUser do
   @behaviour Plug
 
+  @moduledoc """
+  Plug responsible for setting the currently logged in `User` to the "assigns" storage under the key `:current_user`.
+  """
+
   import Plug.Conn
   alias Linkhut.Accounts
 
-  @moduledoc false
-
+  @doc false
   @impl true
   def init([]), do: false
 
+  @doc false
   @impl true
   def call(conn, _) do
     if user = get_user(conn) do

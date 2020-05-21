@@ -47,9 +47,9 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
-  Gets a single user by its username
+  Gets a single user by its username.
 
-  Returns `nil` if no result was found
+  Returns `nil` if no result was found.
 
   ## Examples
 
@@ -172,7 +172,7 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
-  Gets a single user by username and verifies the given password matches the stored hash
+  Gets a single user by username and verifies the given password matches the stored hash.
 
   ## Examples
 
@@ -184,7 +184,12 @@ defmodule Linkhut.Accounts do
 
   """
   def authenticate_by_username_password(username, password) do
-    case get_user(username) do
+    user =
+      username
+      |> get_user()
+      |> Repo.preload(:credential)
+
+    case user do
       %User{} = user ->
         if verify_pass(password, user.credential.password_hash) do
           {:ok, user}

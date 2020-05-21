@@ -11,21 +11,12 @@ defmodule LinkhutWeb.Router do
     plug LinkhutWeb.Plugs.SetCurrentUser
   end
 
-  pipeline :feed do
-    plug :accepts, ["xml"]
+  pipeline :ensure_auth do
+    plug LinkhutWeb.Plugs.EnsureAuth
   end
 
-  scope "/", LinkhutWeb do
-    pipe_through :browser
-
-    get "/", LinkController, :index
-    get "/~:username", LinkController, :show
-
-    get "/register", Auth.RegistrationController, :new
-    post "/register", Auth.RegistrationController, :create
-
-    get "/login", Auth.SessionController, :new
-    post "/login", Auth.SessionController, :create
+  pipeline :feed do
+    plug :accepts, ["xml"]
   end
 
   scope "/", LinkhutWeb do
@@ -46,10 +37,24 @@ defmodule LinkhutWeb.Router do
     delete "/logout", Auth.SessionController, :delete
   end
 
-  scope "/", LinkhutWeb, as: :feed do
+  scope "/", LinkhutWeb do
+    pipe_through :browser
+
+    get "/", LinkController, :index
+
+    get "/register", Auth.RegistrationController, :new
+    post "/register", Auth.RegistrationController, :create
+
+    get "/login", Auth.SessionController, :new
+    post "/login", Auth.SessionController, :create
+
+    get "/*query", LinkController, :show
+  end
+
+  scope "/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/~:username/feed.xml", LinkController, :show
+    get "/*query", LinkController, :show
   end
 
   # Enables LiveDashboard only for development
@@ -57,55 +62,6 @@ defmodule LinkhutWeb.Router do
     scope "/" do
       pipe_through :browser
       live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
-    end
-  end
-
-  defp ensure_auth(conn, _) do
-    if user = get_user(conn) do
-      assign(conn, :current_user, user)
-    else
-      auth_error!(conn)
-    end
-  end
-
-  defp get_user(conn) do
-    case conn.assigns[:current_user] do
-      nil ->
-        fetch_user(conn)
-
-      user ->
-        user
-    end
-  end
-
-  defp fetch_user(conn) do
-    if user_id = get_session(conn, :user_id) do
-      Linkhut.Accounts.get_user!(user_id)
-    else
-      nil
-    end
-  end
-
-  defp auth_error!(conn) do
-    conn
-    |> store_path_in_session()
-    |> put_flash(:error, "Login required")
-    |> redirect(to: LinkhutWeb.Router.Helpers.session_path(conn, :new))
-    |> halt()
-  end
-
-  defp store_path_in_session(conn) do
-    # Get HTTP method and url from conn
-    method = conn.method
-    path = conn.request_path
-
-    # If conditions apply store path in session, else return conn unmodified
-    case {method, String.match?(path, ~r/^\/(add)$/)} do
-      {"GET", true} ->
-        put_session(conn, :login_redirect_path, path)
-
-      {_, _} ->
-        conn
     end
   end
 end

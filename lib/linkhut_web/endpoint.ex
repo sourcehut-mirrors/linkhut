@@ -39,6 +39,7 @@ defmodule LinkhutWeb.Endpoint do
     key: "_linkhut_key",
     signing_salt: "i2qrSlZN"
 
+  plug LinkhutWeb.Plugs.FeedRedirect
   plug LinkhutWeb.Router
 
   socket "/live", Phoenix.LiveView.Socket

@@ -48,7 +48,7 @@ defmodule Linkhut.Pagination do
   @doc """
   Splits entries on every element for which `fun` returns a new value.
 
-  Returns a page where `entries` is a list of lists
+  Returns a page where `entries` is a list of lists.
 
   ## Examples
 

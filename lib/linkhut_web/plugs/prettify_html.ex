@@ -7,15 +7,16 @@ defmodule LinkhutWeb.Plugs.PrettifyHtml do
   """
 
   @doc false
+  @impl true
   def init(opts \\ []), do: opts
 
   @doc false
+  @impl true
   def call(conn, _opts) do
     Plug.Conn.register_before_send(conn, &prettify_body/1)
   end
 
-  @doc false
-  def prettify_body(%Plug.Conn{} = conn) do
+  defp prettify_body(%Plug.Conn{} = conn) do
     case List.keyfind(conn.resp_headers, "content-type", 0) do
       {_, "text/html" <> _} ->
         body =
