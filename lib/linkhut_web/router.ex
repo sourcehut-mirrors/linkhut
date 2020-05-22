@@ -19,6 +19,12 @@ defmodule LinkhutWeb.Router do
     plug :accepts, ["xml"]
   end
 
+  scope "/feed", LinkhutWeb, as: :feed do
+    pipe_through :feed
+
+    get "/*query", LinkController, :show
+  end
+
   scope "/", LinkhutWeb do
     pipe_through [:browser, :ensure_auth]
 
@@ -37,10 +43,16 @@ defmodule LinkhutWeb.Router do
     delete "/logout", Auth.SessionController, :delete
   end
 
+  # Enables LiveDashboard only for development
+  if Mix.env() == :dev do
+    scope "/" do
+      pipe_through :browser
+      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
+    end
+  end
+
   scope "/", LinkhutWeb do
     pipe_through :browser
-
-    get "/", LinkController, :index
 
     get "/register", Auth.RegistrationController, :new
     post "/register", Auth.RegistrationController, :create
@@ -48,20 +60,7 @@ defmodule LinkhutWeb.Router do
     get "/login", Auth.SessionController, :new
     post "/login", Auth.SessionController, :create
 
+    get "/", LinkController, :index
     get "/*query", LinkController, :show
-  end
-
-  scope "/feed", LinkhutWeb, as: :feed do
-    pipe_through :feed
-
-    get "/*query", LinkController, :show
-  end
-
-  # Enables LiveDashboard only for development
-  if Mix.env() == :dev do
-    scope "/" do
-      pipe_through :browser
-      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
-    end
   end
 end

@@ -5,6 +5,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Links
   alias Linkhut.Links.Link
   alias Linkhut.Search
+  alias Linkhut.Search.Term
 
   def index(conn, _) do
     conn
@@ -102,13 +103,15 @@ defmodule LinkhutWeb.LinkController do
   def show(conn, %{"query" => query} = params) do
     page = Map.get(params, "p", 1)
 
-    user =
-      query
-      |> Enum.join(" ")
-      |> Search.parse()
-      |> Enum.find(fn {x, _} -> x == :user end)
-      |> (fn {_, y} -> y end).()
-      |> Accounts.get_user()
+    links_for(conn, Enum.map(query, &to_term/1), page)
+  end
+
+  defp to_term("~" <> username), do: Term.user(username)
+  defp to_term(":" <> tag), do: Term.tag(tag)
+  defp to_term(word), do: Term.word(word)
+
+  defp links_for(conn, [{:user, username}], page) do
+    user = Accounts.get_user(username)
 
     if user != nil do
       links = Links.get_page_by_date([user_id: user.id], page: page)
@@ -120,5 +123,13 @@ defmodule LinkhutWeb.LinkController do
       |> put_flash(:error, "Wrong username")
       |> redirect(to: Routes.link_path(conn, :index))
     end
+  end
+
+  defmodule RouteNotFound do
+    defexception [:message, plug_status: 404]
+  end
+
+  defp links_for(_, terms, _) do
+    raise RouteNotFound, "#{inspect(terms)}"
   end
 end

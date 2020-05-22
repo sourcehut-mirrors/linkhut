@@ -1,17 +1,16 @@
 defmodule LinkhutWeb.ErrorView do
   use LinkhutWeb, :view
 
+  use Phoenix.HTML
+
   # If you want to customize a particular status code
   # for a certain format, you may uncomment below.
   # def render("500.html", _assigns) do
   #   "Internal Server Error"
   # end
 
-  def render("404.html", _assigns) do
-    """
-    <h1>404 Not Found</h1>
-    <a href="/">Take me home</a>
-    """
+  def render("404.xml", _assigns) do
+    "Not Found"
   end
 
   # By default, Phoenix returns the status message from

@@ -255,11 +255,11 @@ div#content, div#controls {
         box-sizing: border-box;
         flex-grow: 1;
         font-size: .825rem;
-        min-width: 19.5em;
+        min-width: 19.5rem;
 
         @media #{$not-small} {
-            max-width: 19.5em;
-            width: 19.5em;
+            max-width: 19.5rem;
+            width: 19.5rem;
         }
 
         & h5 {

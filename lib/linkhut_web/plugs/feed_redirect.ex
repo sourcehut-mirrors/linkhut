@@ -18,15 +18,14 @@ defmodule LinkhutWeb.Plugs.FeedRedirect do
 
   @doc false
   @impl true
-  def call(%Plug.Conn{path_info: path_segments} = conn, _opts) do
-    if redirects?(List.last(path_segments)) do
-      conn
-      |> redirect(to: RouteHelpers.feed_link_path(conn, :show, List.delete_at(path_segments, -1)))
-    else
-      conn
-    end
+  def call(%Plug.Conn{path_info: path_segments} = conn, opts) do
+    call(conn, List.last(path_segments), opts)
   end
 
-  defp redirects?("feed.xml"), do: true
-  defp redirects?(segment), do: false
+  defp call(%Plug.Conn{path_info: path_segments} = conn, "feed.xml", _) do
+    conn
+    |> redirect(to: RouteHelpers.feed_link_path(conn, :show, List.delete_at(path_segments, -1)))
+  end
+
+  defp call(conn, _, _), do: conn
 end

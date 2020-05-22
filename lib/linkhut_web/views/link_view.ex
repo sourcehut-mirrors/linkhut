@@ -28,8 +28,8 @@ defmodule LinkhutWeb.LinkView do
   end
 
   def render("user.xml", %{conn: conn, user: user, links: links}) do
-    feed_url = Routes.feed_link_url(conn, :show, [user.username])
-    html_url = Routes.link_url(conn, :show, [user.username])
+    feed_url = Routes.feed_link_url(conn, :show, ["~" <> user.username])
+    html_url = Routes.link_url(conn, :show, ["~" <> user.username])
 
     Feed.new(
       feed_url,
@@ -41,24 +41,27 @@ defmodule LinkhutWeb.LinkView do
     |> Feed.entries(
       links.entries
       |> Enum.flat_map(fn links -> links end)
-      |> Enum.map(fn link -> feed_entry(link) end)
+      |> Enum.map(fn link -> feed_entry(link, html_url) end)
     )
     |> Feed.build()
     |> Atomex.generate_document()
   end
 
-  defp feed_entry(%{
-         url: url,
-         title: title,
-         notes: notes,
-         tags: tags,
-         inserted_at: inserted_at,
-         user: user
-       }) do
+  defp feed_entry(
+         %{
+           url: url,
+           title: title,
+           notes: notes,
+           tags: tags,
+           inserted_at: inserted_at,
+           user: user
+         },
+         html_url
+       ) do
     Entry.new(url, inserted_at, title)
     |> Entry.link(url, rel: "alternate")
     |> Entry.content(notes)
-    |> Entry.author(user.username, uri: LinkhutWeb.Endpoint.url() <> "/~#{user.username}")
+    |> Entry.author(user.username, uri: html_url)
     |> (fn entry ->
           Enum.reduce(tags, entry, fn tag, entry -> Entry.category(entry, tag, label: tag) end)
         end).()

@@ -23,12 +23,12 @@ defmodule Linkhut.Search.Parser do
   defp do_parse(string, acc \\ [])
   defp do_parse("", acc), do: acc
   defp do_parse(~s( ) <> rest, acc), do: do_parse(rest, acc)
-  defp do_parse(~s(") <> rest, acc), do: do_parse(rest, acc, {:quote, ""})
-  defp do_parse(~s(~) <> rest, acc), do: do_parse(rest, acc, {:user, ""})
-  defp do_parse(~s(:) <> rest, acc), do: do_parse(rest, acc, {:tag, ""})
+  defp do_parse(~s(") <> rest, acc), do: do_parse(rest, acc, Term.quote())
+  defp do_parse(~s(~) <> rest, acc), do: do_parse(rest, acc, Term.user())
+  defp do_parse(~s(:) <> rest, acc), do: do_parse(rest, acc, Term.tag())
 
   defp do_parse(<<char::binary-size(1), rest::binary>>, acc) do
-    do_parse(rest, acc, {:word, char})
+    do_parse(rest, acc, Term.word(char))
   end
 
   defp do_parse("", acc, token), do: acc ++ [token]
@@ -38,7 +38,7 @@ defmodule Linkhut.Search.Parser do
   end
 
   defp do_parse(~s(") <> rest, acc, {:quote, val}) do
-    do_parse(rest, acc ++ [{:quote, String.trim(val)}])
+    do_parse(rest, acc ++ [Term.quote(String.trim(val))])
   end
 
   defp do_parse(~s(") <> rest, acc, token) do
@@ -46,6 +46,6 @@ defmodule Linkhut.Search.Parser do
   end
 
   defp do_parse(<<char::binary-size(1), rest::binary>>, acc, {type, val}) do
-    do_parse(rest, acc, {type, val <> char})
+    do_parse(rest, acc, Term.term(type, val <> char))
   end
 end
