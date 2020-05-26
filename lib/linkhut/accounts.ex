@@ -49,26 +49,6 @@ defmodule Linkhut.Accounts do
   @doc """
   Gets a single user by its username.
 
-  Returns `nil` if no result was found.
-
-  ## Examples
-
-      iex> get_user("foo")
-      %User{}
-
-      iex> get_user!("bar")
-      nil
-
-  """
-  @spec get_user(username) :: user | nil
-  def get_user(username) when is_binary(username) do
-    User
-    |> Repo.get_by(username: username)
-  end
-
-  @doc """
-  Gets a single user by its username.
-
   Raises `Ecto.NoResultsError` if the User does not exist.
 
   ## Examples
@@ -84,6 +64,26 @@ defmodule Linkhut.Accounts do
   def get_user!(username) when is_binary(username) do
     User
     |> Repo.get_by!(username: username)
+  end
+
+  @doc """
+  Gets a single user by its username.
+
+  Returns `nil` if no result was found.
+
+  ## Examples
+
+      iex> get_user("foo")
+      %User{}
+
+      iex> get_user!("bar")
+      nil
+
+  """
+  @spec get_user(username) :: user | nil
+  def get_user(username) when is_binary(username) do
+    User
+    |> Repo.get_by(username: username)
   end
 
   @doc """

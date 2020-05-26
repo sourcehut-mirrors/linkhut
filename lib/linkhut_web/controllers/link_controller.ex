@@ -5,7 +5,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Links
   alias Linkhut.Links.Link
   alias Linkhut.Search
-  alias Linkhut.Search.Term
+  alias Linkhut.Search.Query
 
   def index(conn, _) do
     conn
@@ -56,7 +56,7 @@ defmodule LinkhutWeb.LinkController do
       {:ok, link} ->
         conn
         |> put_flash(:info, "Saved link: #{link.url}")
-        |> redirect(to: Routes.link_path(conn, :show, user.username))
+        |> redirect(to: Routes.link_path(conn, :show, ["~" <> user.username]))
 
       {:error, changeset} ->
         conn
@@ -87,7 +87,7 @@ defmodule LinkhutWeb.LinkController do
         {:ok, link} ->
           conn
           |> put_flash(:info, "Deleted link: #{link.url}")
-          |> redirect(to: Routes.link_path(conn, :show, user.username))
+          |> redirect(to: Routes.link_path(conn, :show, ["~" <> user.username]))
 
         {:error, changeset} ->
           conn
@@ -109,16 +109,12 @@ defmodule LinkhutWeb.LinkController do
   def show(conn, %{"segments" => segments} = params) when is_list(segments) do
     page = Map.get(params, "p", 1)
 
-    links_for(conn, Enum.map(segments, &to_term/1), page)
+    links_for(conn, Search.parse(segments), page)
   end
 
-  defp to_term("~" <> username), do: Term.user(username)
-  defp to_term(":" <> tag), do: Term.tag(tag)
-  defp to_term(word), do: Term.word(word)
-
-  defp links_for(conn, [{:user, username} | _], page) do
+  defp links_for(conn, %Query{users: [username | _]} = query, page) do
     user = Accounts.get_user!(username)
-    links = Links.get_page_by_date([user_id: user.id], page: page)
+    links = Links.get_page_by_date(query, page: page)
 
     conn
     |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))

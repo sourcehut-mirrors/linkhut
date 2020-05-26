@@ -9,6 +9,12 @@ defmodule Linkhut.Links do
   alias Linkhut.Links.Link
   alias Linkhut.Pagination
   alias Linkhut.Repo
+  alias Linkhut.Search.Query
+
+  @typedoc """
+  A `Link` struct.
+  """
+  @type link :: %Link{}
 
   @doc """
   Creates a link.
@@ -75,46 +81,74 @@ defmodule Linkhut.Links do
     Link.changeset(link, attrs)
   end
 
-  @doc """
-  Returns the 20 most recent public links belonging to a given user.
-
-  Returns `[]` if no results were found
-
-  ## Examples
-
-      iex> get_public_links("user123")
-      [%Link{}]
-
-      iex> get_public_links("not_a_user")
-      []
-  """
-  def get_public_links(username) do
-    Link
-    |> join(:left, [l], u in User, on: [id: l.user_id])
-    |> where([_, u], u.username == ^username)
-    |> where([l, _], l.is_private == false)
-    |> preload([_, _], [:user])
-    |> Pagination.page(1, per_page: 20)
-  end
-
   def get_page(query, page: page) do
     query_links(query)
     |> Pagination.page(page, per_page: 20)
     |> Map.update!(:entries, &Repo.preload(&1, :user))
   end
 
+  def get(url, user_id) do
+    Repo.get_by(Link, url: url, user_id: user_id)
+  end
+
+  @doc """
+  Finds links that match the given query.
+
+  **BEWARE**: At this moment the search logic is not logical.
+  """
   def get_page_by_date(query, page: page) do
     get_page(query, page: page)
     |> Pagination.chunk_by(fn link -> DateTime.to_date(link.inserted_at) end)
   end
 
-  def get(url, user_id) do
-    Repo.get_by(Link, url: url, user_id: user_id)
+  @spec query_links(Query.t()) :: Elixir.Ecto.Query.t()
+  defp query_links(search_query) do
+    Link
+    # |> quotes(search_query.quotes)
+    # |> tags(search_query.tags)
+    |> users(search_query.users)
+    |> words(search_query.words)
   end
 
-  defp query_links(where) do
-    from l in Link,
-      where: ^where
+  defp users(query, users) when is_nil(users), do: query
+  defp users(query, []), do: query
+
+  defp users(query, [username]) do
+    query
+    |> join(:inner, [l], u in User, on: [id: l.user_id])
+    |> where([_, u], u.username == ^username)
+  end
+
+  defp users(query, users) do
+    queries = Enum.map(users, &links_for_user/1)
+
+    links =
+      Enum.reduce(queries, select(Link, [l], l.url), fn subquery, query ->
+        intersect_all(query, ^subquery)
+      end)
+
+    query
+    |> where([l], l.url in subquery(links))
+  end
+
+  defp links_for_user(username) do
+    Link
+    |> join(:inner, [l], u in User, on: [id: l.user_id])
+    |> where([_, u], u.username == ^username)
+    |> where([l, _], l.is_private == false)
+    |> select([l], l.url)
+  end
+
+  defp words(query, words) when is_nil(words), do: query
+  defp words(query, []), do: query
+
+  defp words(query, words) do
+    query
+    |> where(
+      [l],
+      fragment("to_tsvector(?) @@ to_tsquery(?)", l.title, ^Enum.join(words, " | ")) or
+        fragment("to_tsvector(?) @@ to_tsquery(?)", l.notes, ^Enum.join(words, " & "))
+    )
   end
 
   # tags
