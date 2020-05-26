@@ -67,6 +67,26 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
+  Gets a single user by its username.
+
+  Raises `Ecto.NoResultsError` if the User does not exist.
+
+  ## Examples
+
+      iex> get_user!("foo")
+      %User{}
+
+      iex> get_user!("bar")
+      ** (Ecto.NoResultsError)
+
+  """
+  @spec get_user!(username) :: user | nil
+  def get_user!(username) when is_binary(username) do
+    User
+    |> Repo.get_by!(username: username)
+  end
+
+  @doc """
   Creates a user.
 
   ## Examples

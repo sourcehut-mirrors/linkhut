@@ -22,7 +22,7 @@ defmodule LinkhutWeb.Router do
   scope "/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/*query", LinkController, :show
+    get "/*segments", LinkController, :show
   end
 
   scope "/", LinkhutWeb do
@@ -61,6 +61,7 @@ defmodule LinkhutWeb.Router do
     post "/login", Auth.SessionController, :create
 
     get "/", LinkController, :index
-    get "/*query", LinkController, :show
+    get "/search", LinkController, :search
+    get "/*segments", LinkController, :show
   end
 end

@@ -26,7 +26,7 @@ defmodule LinkhutWeb.LinkController do
       {:ok, link} ->
         conn
         |> put_flash(:info, "Added link: #{link.url}")
-        |> redirect(to: Routes.link_path(conn, :show, user.username))
+        |> redirect(to: Routes.link_path(conn, :show, ["~" <> user.username]))
 
       {:error, changeset} ->
         conn
@@ -100,29 +100,28 @@ defmodule LinkhutWeb.LinkController do
     end
   end
 
-  def show(conn, %{"query" => query} = params) do
+  def search(conn, %{"query" => query} = params) when is_binary(query) do
+    conn
+    |> assign(:query, query)
+    |> show(Map.put(params, "segments", String.split(query, ~r{\s}, trim: true)))
+  end
+
+  def show(conn, %{"segments" => segments} = params) when is_list(segments) do
     page = Map.get(params, "p", 1)
 
-    links_for(conn, Enum.map(query, &to_term/1), page)
+    links_for(conn, Enum.map(segments, &to_term/1), page)
   end
 
   defp to_term("~" <> username), do: Term.user(username)
   defp to_term(":" <> tag), do: Term.tag(tag)
   defp to_term(word), do: Term.word(word)
 
-  defp links_for(conn, [{:user, username}], page) do
-    user = Accounts.get_user(username)
+  defp links_for(conn, [{:user, username} | _], page) do
+    user = Accounts.get_user!(username)
+    links = Links.get_page_by_date([user_id: user.id], page: page)
 
-    if user != nil do
-      links = Links.get_page_by_date([user_id: user.id], page: page)
-
-      conn
-      |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
-    else
-      conn
-      |> put_flash(:error, "Wrong username")
-      |> redirect(to: Routes.link_path(conn, :index))
-    end
+    conn
+    |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
   end
 
   defmodule RouteNotFound do

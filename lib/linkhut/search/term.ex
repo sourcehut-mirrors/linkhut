@@ -85,4 +85,28 @@ defmodule Linkhut.Search.Term do
   """
   @spec word(String.t()) :: word()
   def word(value \\ ""), do: term(:word, value)
+
+  @doc """
+  Returns the type of the term
+
+  ### Examples
+
+      iex> type({:word, "foo"})
+      :word
+
+  """
+  @spec type(t()) :: atom()
+  def type({type, _}), do: type
+
+  @doc """
+  Returns the value of the term
+
+  ### Examples
+
+      iex> value({:word, "foo"})
+      "foo"
+
+  """
+  @spec value(t()) :: String.t()
+  def value({_, value}), do: value
 end

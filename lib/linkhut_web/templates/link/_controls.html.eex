@@ -2,15 +2,15 @@
 <section>
 <fieldset>
     <form id="searchform" action="/search" method="get">
-        <input id="query" type="text" name="q" value="" size="45" placeholder="Search for bookmarks..."/>
+        <input id="query" type="text" name="query" value="<%= assigns[:query] %>" size="45" placeholder="Search for bookmarks..."/>
     </form>
     </fieldset>
 </section>
+<%= if @logged_in? do %>
 <aside>
-<div class="actions">
-    <%= if @logged_in? do %>
-        <a class="button primary" href="<%= Routes.link_path(@conn, :new) %>"><span><%= gettext "Add a link" %></span></a>
-    <% end %>
-</div>
+    <div class="actions">
+        <a class="button primary" href="<%= Routes.link_path(@conn, :new) %>"><span><%= gettext "Add a bookmark" %></span></a>
+    </div>
 </aside>
+<% end %>
 </div>
