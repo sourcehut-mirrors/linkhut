@@ -93,8 +93,6 @@ defmodule Linkhut.Links do
 
   @doc """
   Finds links that match the given query.
-
-  **BEWARE**: At this moment the search logic is not logical.
   """
   def get_page_by_date(query, page: page) do
     get_page(query, page: page)
@@ -103,47 +101,56 @@ defmodule Linkhut.Links do
 
   @spec query_links(Query.t()) :: Elixir.Ecto.Query.t()
   defp query_links(search_query) do
+    matched =
+      Link
+      |> select([:url, :user_id])
+      |> intersect_all(^match_quotes(search_query.quotes))
+      |> intersect_all(^match_tags(search_query.tags))
+      |> intersect_all(^match_users(search_query.users))
+      |> intersect_all(^match_words(search_query.words))
+
     Link
-    # |> quotes(search_query.quotes)
-    # |> tags(search_query.tags)
-    |> users(search_query.users)
-    |> words(search_query.words)
+    |> join(:inner, [l], m in subquery(matched), on: l.url == m.url and l.user_id == m.user_id)
   end
 
-  defp users(query, users) when is_nil(users), do: query
-  defp users(query, []), do: query
-
-  defp users(query, [username]) do
-    query
-    |> join(:inner, [l], u in User, on: [id: l.user_id])
-    |> where([_, u], u.username == ^username)
-  end
-
-  defp users(query, users) do
-    queries = Enum.map(users, &links_for_user/1)
-
-    links =
-      Enum.reduce(queries, select(Link, [l], l.url), fn subquery, query ->
-        intersect_all(query, ^subquery)
-      end)
-
-    query
-    |> where([l], l.url in subquery(links))
-  end
-
-  defp links_for_user(username) do
+  defp match_all() do
     Link
-    |> join(:inner, [l], u in User, on: [id: l.user_id])
-    |> where([_, u], u.username == ^username)
-    |> where([l, _], l.is_private == false)
-    |> select([l], l.url)
+    |> select([:url, :user_id])
+    |> where(is_private: false)
   end
 
-  defp words(query, words) when is_nil(words), do: query
-  defp words(query, []), do: query
+  defp match_quotes(quotes) when is_nil(quotes) or length(quotes) == 0, do: match_all()
 
-  defp words(query, words) do
-    query
+  defp match_quotes(quotes) do
+    Enum.reduce(quotes, match_all(), fn quote, query ->
+      query
+      |> where(
+        [l],
+        fragment("to_tsvector(?) @@ plainto_tsquery(?)", l.title, ^quote) or
+          fragment("to_tsvector(?) @@ plainto_tsquery(?)", l.notes, ^quote)
+      )
+    end)
+  end
+
+  defp match_tags(tags) when is_nil(tags) or length(tags) == 0, do: match_all()
+
+  defp match_tags(tags) do
+    match_all()
+    |> where([l], fragment("? @> ARRAY[?]::varchar[]", l.tags, ^Enum.join(tags, ",")))
+  end
+
+  defp match_users(users) when is_nil(users) or length(users) == 0, do: match_all()
+
+  defp match_users(users) do
+    match_all()
+    |> join(:inner, [l], u in User, on: [id: l.user_id])
+    |> where([_, u], u.username in ^users)
+  end
+
+  defp match_words(words) when is_nil(words) or length(words) == 0, do: match_all()
+
+  defp match_words(words) do
+    match_all()
     |> where(
       [l],
       fragment("to_tsvector(?) @@ to_tsquery(?)", l.title, ^Enum.join(words, " | ")) or
