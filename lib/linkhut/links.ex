@@ -126,8 +126,8 @@ defmodule Linkhut.Links do
       query
       |> where(
         [l],
-        fragment("to_tsvector(?) @@ plainto_tsquery(?)", l.title, ^quote) or
-          fragment("to_tsvector(?) @@ plainto_tsquery(?)", l.notes, ^quote)
+        fragment("to_tsvector(?) @@ phraseto_tsquery(?)", l.title, ^quote) or
+          fragment("to_tsvector(?) @@ phraseto_tsquery(?)", l.notes, ^quote)
       )
     end)
   end

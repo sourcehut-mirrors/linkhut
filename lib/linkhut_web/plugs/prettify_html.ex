@@ -16,7 +16,7 @@ defmodule LinkhutWeb.Plugs.PrettifyHtml do
     Plug.Conn.register_before_send(conn, &prettify_body/1)
   end
 
-  defp prettify_body(%Plug.Conn{} = conn) do
+  defp prettify_body(%Plug.Conn{status: status} = conn) when status in [200] do
     case List.keyfind(conn.resp_headers, "content-type", 0) do
       {_, "text/html" <> _} ->
         body =
@@ -30,4 +30,6 @@ defmodule LinkhutWeb.Plugs.PrettifyHtml do
         conn
     end
   end
+
+  defp prettify_body(conn), do: conn
 end
