@@ -56,7 +56,7 @@ defmodule Linkhut.MixProject do
       {:ex_machina, "~> 2.3", only: :test},
       {:gettext, "~> 0.11"},
       {:jason, "~> 1.0"},
-      {:phoenix, "~> 1.5.0"},
+      {:phoenix, "~> 1.5.3"},
       {:phoenix_ecto, "~> 4.0"},
       {:phoenix_html, "~> 2.11"},
       {:phoenix_html_sanitizer, "~> 1.0.0"},
