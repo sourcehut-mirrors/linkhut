@@ -67,6 +67,26 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
+  Gets a single user.
+
+  Returns `nil` if the User doesn't exist.
+
+  ## Examples
+
+      iex> get_user!(123)
+      %User{}
+
+      iex> get_user!(456)
+      nil
+
+  """
+  @spec get_user(integer) :: user
+  def get_user(id) when is_number(id) do
+    User
+    |> Repo.get(id)
+  end
+
+  @doc """
   Gets a single user by its username.
 
   Returns `nil` if no result was found.

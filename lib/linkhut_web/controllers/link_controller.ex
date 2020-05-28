@@ -26,7 +26,7 @@ defmodule LinkhutWeb.LinkController do
       {:ok, link} ->
         conn
         |> put_flash(:info, "Added link: #{link.url}")
-        |> redirect(to: Routes.link_path(conn, :show, ["~" <> user.username]))
+        |> redirect(to: Routes.link_path(conn, :show, user.username))
 
       {:error, changeset} ->
         conn
@@ -56,7 +56,7 @@ defmodule LinkhutWeb.LinkController do
       {:ok, link} ->
         conn
         |> put_flash(:info, "Saved link: #{link.url}")
-        |> redirect(to: Routes.link_path(conn, :show, ["~" <> user.username]))
+        |> redirect(to: Routes.link_path(conn, :show, user.username))
 
       {:error, changeset} ->
         conn
@@ -87,7 +87,7 @@ defmodule LinkhutWeb.LinkController do
         {:ok, link} ->
           conn
           |> put_flash(:info, "Deleted link: #{link.url}")
-          |> redirect(to: Routes.link_path(conn, :show, ["~" <> user.username]))
+          |> redirect(to: Routes.link_path(conn, :show, user.username))
 
         {:error, changeset} ->
           conn
@@ -106,25 +106,32 @@ defmodule LinkhutWeb.LinkController do
     |> show(Map.put(params, "segments", String.split(query, ~r{\s}, trim: true)))
   end
 
-  def show(conn, %{"segments" => segments} = params) when is_list(segments) do
+  def show(conn, %{"username" => username, "tags" => tags} = params) do
     page = Map.get(params, "p", 1)
 
-    links_for(conn, Search.parse(segments), page)
-  end
-
-  defp links_for(conn, %Query{users: [username | _]} = query, page) do
     user = Accounts.get_user!(username)
-    links = Links.get_page_by_date(query, page: page)
+    links = Links.get_page_by_date(%Query{users: [username], tags: tags}, page: page)
 
     conn
     |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
   end
 
-  defmodule RouteNotFound do
-    defexception [:message, plug_status: 404]
+  def show(conn, %{"username" => username} = params) do
+    page = Map.get(params, "p", 1)
+
+    user = Accounts.get_user!(username)
+    links = Links.get_page_by_date(%Query{users: [username]}, page: page)
+
+    conn
+    |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
   end
 
-  defp links_for(_, terms, _) do
-    raise RouteNotFound, "#{inspect(terms)}"
+  def show(conn, %{"tags" => tags} = params) do
+    page = Map.get(params, "p", 1)
+
+    links = Links.get_page_by_date(%Query{tags: tags}, page: page)
+
+    conn
+    |> render("index.html", links: links)
   end
 end

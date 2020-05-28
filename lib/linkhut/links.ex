@@ -9,7 +9,7 @@ defmodule Linkhut.Links do
   alias Linkhut.Links.Link
   alias Linkhut.Pagination
   alias Linkhut.Repo
-  alias Linkhut.Search.Query
+  alias Linkhut.Search
 
   @typedoc """
   A `Link` struct.
@@ -82,7 +82,7 @@ defmodule Linkhut.Links do
   end
 
   def get_page(query, page: page) do
-    query_links(query)
+    Search.search(query)
     |> Pagination.page(page, per_page: 20)
     |> Map.update!(:entries, &Repo.preload(&1, :user))
   end
@@ -97,65 +97,6 @@ defmodule Linkhut.Links do
   def get_page_by_date(query, page: page) do
     get_page(query, page: page)
     |> Pagination.chunk_by(fn link -> DateTime.to_date(link.inserted_at) end)
-  end
-
-  @spec query_links(Query.t()) :: Elixir.Ecto.Query.t()
-  defp query_links(search_query) do
-    matched =
-      Link
-      |> select([:url, :user_id])
-      |> intersect_all(^match_quotes(search_query.quotes))
-      |> intersect_all(^match_tags(search_query.tags))
-      |> intersect_all(^match_users(search_query.users))
-      |> intersect_all(^match_words(search_query.words))
-
-    Link
-    |> join(:inner, [l], m in subquery(matched), on: l.url == m.url and l.user_id == m.user_id)
-  end
-
-  defp match_all() do
-    Link
-    |> select([:url, :user_id])
-    |> where(is_private: false)
-  end
-
-  defp match_quotes(quotes) when is_nil(quotes) or length(quotes) == 0, do: match_all()
-
-  defp match_quotes(quotes) do
-    Enum.reduce(quotes, match_all(), fn quote, query ->
-      query
-      |> where(
-        [l],
-        fragment("to_tsvector(?) @@ phraseto_tsquery(?)", l.title, ^quote) or
-          fragment("to_tsvector(?) @@ phraseto_tsquery(?)", l.notes, ^quote)
-      )
-    end)
-  end
-
-  defp match_tags(tags) when is_nil(tags) or length(tags) == 0, do: match_all()
-
-  defp match_tags(tags) do
-    match_all()
-    |> where([l], fragment("? @> ARRAY[?]::varchar[]", l.tags, ^Enum.join(tags, ",")))
-  end
-
-  defp match_users(users) when is_nil(users) or length(users) == 0, do: match_all()
-
-  defp match_users(users) do
-    match_all()
-    |> join(:inner, [l], u in User, on: [id: l.user_id])
-    |> where([_, u], u.username in ^users)
-  end
-
-  defp match_words(words) when is_nil(words) or length(words) == 0, do: match_all()
-
-  defp match_words(words) do
-    match_all()
-    |> where(
-      [l],
-      fragment("to_tsvector(?) @@ to_tsquery(?)", l.title, ^Enum.join(words, " | ")) or
-        fragment("to_tsvector(?) @@ to_tsquery(?)", l.notes, ^Enum.join(words, " & "))
-    )
   end
 
   # tags

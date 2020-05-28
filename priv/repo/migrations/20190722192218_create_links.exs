@@ -9,7 +9,7 @@ defmodule Linkhut.Repo.Migrations.CreateLinks do
       add :notes, :text
       add :tags, {:array, :string}
       add :is_private, :boolean, default: false, null: false
-      add :language, :string
+      add :language, :string, default: "english"
 
       timestamps(type: :utc_datetime)
     end

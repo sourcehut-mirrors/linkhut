@@ -36,7 +36,7 @@ defmodule LinkhutWeb.Plugs.EnsureAuth do
 
   defp fetch_user(conn) do
     if user_id = get_session(conn, :user_id) do
-      Accounts.get_user!(user_id)
+      Accounts.get_user(user_id)
     else
       nil
     end

@@ -7,7 +7,7 @@ defmodule LinkhutWeb.Auth.RegistrationController do
   alias Linkhut.Accounts.User
 
   def new(conn, _params) do
-    if get_session(conn, :user_id) != nil do
+    if get_session(conn, :current_user) != nil do
       conn
       |> redirect(to: Routes.profile_path(conn, :show))
     else

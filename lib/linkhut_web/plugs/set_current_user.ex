@@ -23,6 +23,7 @@ defmodule LinkhutWeb.Plugs.SetCurrentUser do
       conn
       |> assign(:current_user, nil)
       |> assign(:logged_in?, false)
+      |> delete_session(:user_id)
     end
   end
 
@@ -38,7 +39,7 @@ defmodule LinkhutWeb.Plugs.SetCurrentUser do
 
   defp fetch_user(conn) do
     if user_id = get_session(conn, :user_id) do
-      Accounts.get_user!(user_id)
+      Accounts.get_user(user_id)
     else
       nil
     end

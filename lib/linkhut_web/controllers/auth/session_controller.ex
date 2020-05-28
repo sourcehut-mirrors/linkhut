@@ -6,7 +6,7 @@ defmodule LinkhutWeb.Auth.SessionController do
   alias Linkhut.Accounts
 
   def new(conn, _) do
-    if get_session(conn, :user_id) do
+    if get_session(conn, :current_user) != nil do
       conn
       |> redirect(to: get_session(conn, :login_redirect_path) || "/")
     else

@@ -22,7 +22,9 @@ defmodule LinkhutWeb.Router do
   scope "/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/*segments", LinkController, :show
+    get "/~:username", LinkController, :show
+    get "/~:username/*tags", LinkController, :show
+    get "/*tags", LinkController, :show
   end
 
   scope "/", LinkhutWeb do
@@ -45,7 +47,7 @@ defmodule LinkhutWeb.Router do
 
   # Enables LiveDashboard only for development
   if Mix.env() == :dev do
-    scope "/" do
+    scope "/admin" do
       pipe_through :browser
       live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
     end
@@ -62,6 +64,8 @@ defmodule LinkhutWeb.Router do
 
     get "/", LinkController, :index
     get "/search", LinkController, :search
-    get "/*segments", LinkController, :show
+    get "/~:username", LinkController, :show
+    get "/~:username/*tags", LinkController, :show
+    get "/*tags", LinkController, :show
   end
 end

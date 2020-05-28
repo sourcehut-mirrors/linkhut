@@ -9,15 +9,10 @@ defmodule Linkhut.Search.Query do
           quotes: [String.t()],
           tags: [String.t()],
           users: [String.t()],
-          words: [String.t()]
+          words: String.t()
         }
 
-  defstruct [
-    :quotes,
-    :users,
-    :words,
-    :tags
-  ]
+  defstruct quotes: [], users: [], words: "", tags: []
 
   @spec query([Term.t()]) :: t()
   def query(terms) do
@@ -28,10 +23,10 @@ defmodule Linkhut.Search.Query do
 
   defp new(map) do
     %__MODULE__{
-      quotes: map[:quote],
-      tags: map[:tag],
-      users: map[:user],
-      words: map[:word]
+      quotes: if(q = map[:quote], do: q, else: []),
+      tags: if(t = map[:tag], do: t, else: []),
+      users: if(u = map[:user], do: u, else: []),
+      words: if(w = map[:word], do: Enum.join(w, " "), else: "")
     }
   end
 end
