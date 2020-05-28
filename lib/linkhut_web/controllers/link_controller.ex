@@ -4,8 +4,9 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Accounts
   alias Linkhut.Links
   alias Linkhut.Links.Link
+  alias Linkhut.Pagination
   alias Linkhut.Search
-  alias Linkhut.Search.Query
+  alias Linkhut.Search.Context
 
   def index(conn, _) do
     conn
@@ -78,7 +79,7 @@ defmodule LinkhutWeb.LinkController do
     end
   end
 
-  def delete(conn, %{"link" => %{"url" => url, "are_you_sure?" => confirmed} = _params}) do
+  def delete(conn, %{"link" => %{"url" => url, "are_you_sure?" => confirmed}}) do
     user = conn.assigns[:current_user]
     link = Links.get(url, user.id)
 
@@ -100,38 +101,32 @@ defmodule LinkhutWeb.LinkController do
     end
   end
 
-  def search(conn, %{"query" => query} = params) when is_binary(query) do
-    conn
-    |> assign(:query, query)
-    |> show(Map.put(params, "segments", String.split(query, ~r{\s}, trim: true)))
+  def show(conn, %{"username" => username, "tags" => tags, "query" => query, "p" => page}) do
+    context = %Context{from: username, tagged_with: tags}
+
+    context =
+      case conn.assigns[:current_user] do
+        nil -> context
+        current_user -> %{context | visible_as: current_user.username}
+      end
+
+    links =
+      Search.search(context, query)
+      |> Pagination.page(page, per_page: 20)
+      |> Pagination.chunk_by(fn link -> DateTime.to_date(link.inserted_at) end)
+
+    if username do
+      user = Accounts.get_user!(username)
+
+      conn
+      |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id), query: query)
+    else
+      conn
+      |> render("index.html", links: links)
+    end
   end
 
-  def show(conn, %{"username" => username, "tags" => tags} = params) do
-    page = Map.get(params, "p", 1)
-
-    user = Accounts.get_user!(username)
-    links = Links.get_page_by_date(%Query{users: [username], tags: tags}, page: page)
-
-    conn
-    |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
-  end
-
-  def show(conn, %{"username" => username} = params) do
-    page = Map.get(params, "p", 1)
-
-    user = Accounts.get_user!(username)
-    links = Links.get_page_by_date(%Query{users: [username]}, page: page)
-
-    conn
-    |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id))
-  end
-
-  def show(conn, %{"tags" => tags} = params) do
-    page = Map.get(params, "p", 1)
-
-    links = Links.get_page_by_date(%Query{tags: tags}, page: page)
-
-    conn
-    |> render("index.html", links: links)
+  def show(conn, params) do
+    show(conn, Map.merge(%{"username" => nil, "tags" => [], "query" => "", "p" => 1}, params))
   end
 end

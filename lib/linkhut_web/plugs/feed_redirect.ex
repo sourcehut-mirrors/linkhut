@@ -22,9 +22,14 @@ defmodule LinkhutWeb.Plugs.FeedRedirect do
     call(conn, List.last(path_segments), opts)
   end
 
+  defp call(%Plug.Conn{path_info: ["~" <> username | tail]} = conn, "feed.xml", _) do
+    conn
+    |> redirect(to: RouteHelpers.feed_link_path(conn, :show, username, List.delete_at(tail, -1)))
+  end
+
   defp call(%Plug.Conn{path_info: path_segments} = conn, "feed.xml", _) do
     conn
-    |> redirect(to: RouteHelpers.feed_link_path(conn, :show, List.delete_at(path_segments, -1)))
+    |> redirect(to: RouteHelpers.feed_tags_path(conn, :show, List.delete_at(path_segments, -1)))
   end
 
   defp call(conn, _, _), do: conn

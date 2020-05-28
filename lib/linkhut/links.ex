@@ -7,9 +7,7 @@ defmodule Linkhut.Links do
 
   alias Linkhut.Accounts.User
   alias Linkhut.Links.Link
-  alias Linkhut.Pagination
   alias Linkhut.Repo
-  alias Linkhut.Search
 
   @typedoc """
   A `Link` struct.
@@ -81,22 +79,8 @@ defmodule Linkhut.Links do
     Link.changeset(link, attrs)
   end
 
-  def get_page(query, page: page) do
-    Search.search(query)
-    |> Pagination.page(page, per_page: 20)
-    |> Map.update!(:entries, &Repo.preload(&1, :user))
-  end
-
   def get(url, user_id) do
     Repo.get_by(Link, url: url, user_id: user_id)
-  end
-
-  @doc """
-  Finds links that match the given query.
-  """
-  def get_page_by_date(query, page: page) do
-    get_page(query, page: page)
-    |> Pagination.chunk_by(fn link -> DateTime.to_date(link.inserted_at) end)
   end
 
   # tags

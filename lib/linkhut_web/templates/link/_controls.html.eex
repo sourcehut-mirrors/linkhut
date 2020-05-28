@@ -1,7 +1,7 @@
 <div id="controls">
 <section>
 <fieldset>
-    <form id="searchform" action="/search" method="get">
+    <form id="searchform" action="<%= @conn.request_path %>" method="get">
         <input id="query" type="text" name="query" value="<%= assigns[:query] %>" size="45" placeholder="Search for bookmarks..."/>
     </form>
     </fieldset>

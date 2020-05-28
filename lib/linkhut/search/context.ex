@@ -2,13 +2,12 @@ defmodule Linkhut.Search.Context do
   @moduledoc """
   A search context reduces the universe of links that a search query is evaluated against.
   """
-  alias Linkhut.Accounts.User
 
   @type t() :: %__MODULE__{
-          user: %User{},
-          tags: [String.t()],
-          issuer: %User{}
+          from: String.t(),
+          tagged_with: [String.t()],
+          visible_as: String.t()
         }
 
-  defstruct [:user, :tags, :issuer]
+  defstruct [:from, :tagged_with, :visible_as]
 end

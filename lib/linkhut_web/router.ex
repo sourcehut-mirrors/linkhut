@@ -24,7 +24,7 @@ defmodule LinkhutWeb.Router do
 
     get "/~:username", LinkController, :show
     get "/~:username/*tags", LinkController, :show
-    get "/*tags", LinkController, :show
+    get "/*tags", LinkController, :show, as: :tags
   end
 
   scope "/", LinkhutWeb do
@@ -63,9 +63,8 @@ defmodule LinkhutWeb.Router do
     post "/login", Auth.SessionController, :create
 
     get "/", LinkController, :index
-    get "/search", LinkController, :search
     get "/~:username", LinkController, :show
     get "/~:username/*tags", LinkController, :show
-    get "/*tags", LinkController, :show
+    get "/*tags", LinkController, :show, as: :tags
   end
 end

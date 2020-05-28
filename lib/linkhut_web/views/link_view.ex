@@ -28,8 +28,8 @@ defmodule LinkhutWeb.LinkView do
   end
 
   def render("user.xml", %{conn: conn, user: user, links: links}) do
-    feed_url = Routes.feed_link_url(conn, :show, ["~" <> user.username])
-    html_url = Routes.link_url(conn, :show, ["~" <> user.username])
+    feed_url = Routes.feed_link_url(conn, :show, user.username)
+    html_url = Routes.link_url(conn, :show, user.username)
 
     Feed.new(
       feed_url,
