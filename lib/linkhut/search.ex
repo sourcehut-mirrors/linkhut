@@ -7,7 +7,48 @@ defmodule Linkhut.Search do
 
   alias Linkhut.Accounts.User
   alias Linkhut.Links.Link
-  alias Linkhut.Search.{Parser, Query}
+  alias Linkhut.Search.{Context, Parser, Query}
+
+  def search(context, query, _params \\ []) do
+    links_for_context(context)
+    |> where([l, _], fragment("? @@ phraseto_tsquery(?)", l.search_vector, ^query))
+    |> preload([_, u], [user: u])
+  end
+
+  def links_for_context(%Context{user: user, tags: tags, issuer: owner}) do
+    Link
+    |> join(:inner, [l], u in assoc(l, :user))
+    |> with_user(user)
+    |> with_tags(tags)
+    |> with_private_links_belonging_to(owner)
+  end
+
+  defp with_user(query, user) when is_nil(user), do: query
+
+  defp with_user(query, user) do
+    query
+    |> where([_, u], u.username == ^user)
+  end
+
+  defp with_tags(query, tags) when is_nil(tags) or length(tags) == 0, do: query
+
+  defp with_tags(query, tags) do
+    query
+    |> where(
+      [l, _],
+      fragment("? @> string_to_array(?, ',')::varchar[]", l.tags, ^Enum.join(tags, ","))
+    )
+  end
+
+  defp with_private_links_belonging_to(query, user) when is_nil(user) do
+    query
+    |> where(is_private: false)
+  end
+
+  defp with_private_links_belonging_to(query, user) do
+    query
+    |> where([l, u], l.is_private == false or u.username == ^user)
+  end
 
   @doc """
   Parses a list of terms.
