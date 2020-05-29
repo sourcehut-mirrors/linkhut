@@ -22,6 +22,7 @@ defmodule LinkhutWeb.Router do
   scope "/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
+    get "/", LinkController, :index
     get "/~:username", LinkController, :show
     get "/~:username/*tags", LinkController, :show
     get "/*tags", LinkController, :show, as: :tags

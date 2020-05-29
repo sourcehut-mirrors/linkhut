@@ -7,10 +7,6 @@ defmodule Linkhut.Pagination do
   alias Linkhut.Pagination.Page
   alias Linkhut.Repo
 
-  def page(query, page, per_page: per_page) when is_nil(page) do
-    page(query, 1, per_page: per_page)
-  end
-
   def page(query, page, per_page: per_page) when is_binary(page) do
     page = String.to_integer(page)
     page(query, page, per_page: per_page)
@@ -43,21 +39,5 @@ defmodule Linkhut.Pagination do
       count: total_count,
       entries: Enum.slice(result, 0, count - 1)
     }
-  end
-
-  @doc """
-  Splits entries on every element for which `fun` returns a new value.
-
-  Returns a page where `entries` is a list of lists.
-
-  ## Examples
-
-      iex> chunk_by(%Page{entries: [1, 2, 2, 3, 4, 4, 6, 8]}, &(rem(&1, 2) == 1))
-      %Page{entries: [[1], [2, 2], [3], [4, 4, 6, 8]]}
-
-  """
-  @spec chunk_by(Page.t(any), (any -> any)) :: Page.t([any])
-  def chunk_by(%Page{} = page, fun) do
-    page |> Map.update!(:entries, &Enum.chunk_by(&1, fun))
   end
 end

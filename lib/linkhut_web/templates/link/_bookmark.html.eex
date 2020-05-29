@@ -7,6 +7,16 @@
         <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
     </div>
     <div class="meta">
+        <div class="tags">
+            <h5 class="label"><%= gettext "Tags:" %></h5>
+            <ul class="tags">
+                <%= for tag <- @link.tags do %>
+                  <li>
+                    <a href="<%= "#{@conn.request_path}/#{tag}" %>"><%= tag %></a>
+                  </li>
+                <% end %>
+            </ul>
+        </div>
         <%= if @logged_in? do %>
             <div class="actions">
                 <h5 class="label"><%= gettext "Actions:" %></h5>
@@ -22,15 +32,6 @@
                 </ul>
             </div>
         <% end %>
-        <div class="tags">
-            <h5 class="label"><%= gettext "Tags:" %></h5>
-            <ul class="tags">
-                <%= for tag <- @link.tags do %>
-                  <li>
-                    <a href="<%= "#{@conn.request_path}/#{tag}" %>"><%= tag %></a>
-                  </li>
-                <% end %>
-            </ul>
-        </div>
     </div>
 </div>
+<hr/>

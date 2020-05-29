@@ -113,13 +113,21 @@ defmodule LinkhutWeb.LinkController do
     links =
       Search.search(context, query)
       |> Pagination.page(page, per_page: 20)
-      |> Pagination.chunk_by(fn link -> DateTime.to_date(link.inserted_at) end)
+      |> Map.update!(
+        :entries,
+        &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
+      )
 
     if username do
       user = Accounts.get_user!(username)
 
       conn
-      |> render(:user, user: user, links: links, tags: Links.get_tags(user_id: user.id), query: query)
+      |> render(:user,
+        user: user,
+        links: links,
+        tags: Links.get_tags(user_id: user.id),
+        query: query
+      )
     else
       conn
       |> render("index.html", links: links)

@@ -5,16 +5,16 @@ body {
     background-color: $background;
     color: $foreground;
     font-family: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'helvetica neue', helvetica, ubuntu, roboto, noto, 'segoe ui', arial, sans-serif;
-    font-size: .875rem;
+    font-size: 1rem;
     max-width: 100%;
-
-    @media #{$not-small} {
-        font-size: 1rem;
-    }
 
     @media #{$extra-large} {
         max-width: 120rem;
     }
+}
+
+hr {
+    display: none;
 }
 
 header, main, footer {
@@ -130,7 +130,7 @@ fieldset {
 
     & label {
         display: inline-block;
-        font-size: .875rem;
+        font-size: $font-small;
         font-weight: 400;
         line-height: 1.5;
         text-transform: uppercase;
@@ -209,7 +209,7 @@ nav {
     & ul {
         display: inline-flex;
         flex-direction: row;
-        font-size: .875rem;
+        font-size: $font-small;
         list-style-type: none;
         margin: 0;
         padding: 0;
@@ -253,8 +253,9 @@ div#content, div#controls {
 
     & aside {
         box-sizing: border-box;
+        flex-basis: 19.5rem;
         flex-grow: 1;
-        font-size: .825rem;
+        flex-shrink: 0;
         min-width: 19.5rem;
 
         @media #{$not-small} {
@@ -274,6 +275,7 @@ div#content, div#controls {
 
         & ul.tag-cloud {
             display: inline;
+            font-size: $font-tiny;
             list-style: none;
             margin: 0;
             padding: 0;
@@ -297,7 +299,9 @@ div#content, div#controls {
 
     & section {
         box-sizing: border-box;
+        flex-shrink: 1;
         flex-grow: 1;
+        min-width: 0;
     }
 
     @media #{$not-small} {
@@ -310,10 +314,6 @@ div#controls {
         border-color: transparent;
         border-style: solid;
         border-width: 1px;
-
-        @media #{$not-small} {
-            font-size: 1rem;
-        }
 
         & > .button {
             width: 100%;
@@ -334,7 +334,6 @@ div.date-group {
         border-top-style: solid;
         border-top-width: 1px;
         color: $muted;
-        font-size: 95%;
         font-weight: lighter;
         line-height: 1.2;
         margin-bottom: 2px;
@@ -357,7 +356,7 @@ div.date-group {
 div.bookmarks {
     display: block flex;
     flex-direction: column;
-    flex-grow: 1;
+    min-width: 0;
 }
 
 div.bookmark {
@@ -369,27 +368,36 @@ div.bookmark {
 
     & h4 {
         font-weight: normal;
-        overflow: hidden;
         margin-bottom: 2px;
 
-        & a {
+        & > a {
             color: $blue;
+            display: inline-block;
+            max-width: 100%;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
             vertical-align: baseline;
+            white-space: nowrap;
         }
     }
     & .full-url {
-        font-size: small;
+        font-size: $font-tiny;
         margin-bottom: $spacing-tiny;
-        text-overflow: ellipsis;
         word-break: break-word;
 
-        & a {
+        & > a {
             color: $dark-green;
+            display: inline-block;
+            max-width: 100%;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
             vertical-align: baseline;
+            white-space: nowrap;
         }
     }
 
     & .description {
+        font-size: $font-small;
         height: auto;
         line-height: 1.4em;
         overflow: hidden;
@@ -403,7 +411,7 @@ div.bookmark {
 
     .meta {
         display: flex;
-        flex-direction: row;
+        flex-direction: row-reverse;
         margin-top: 2px;
 
         @media #{$not-small} {
@@ -416,28 +424,28 @@ div.bookmark {
             }
         }
 
-        & div.actions {
+        & > div.actions {
             flex-shrink: 0;
             margin-right: $spacing-medium;
-        }
 
-        & ul.actions {
-            display: inline;
-            list-style: none;
-            margin: 0;
-            padding: 0;
+            & > ul.actions {
+                display: inline;
+                list-style: none;
+                margin: 0;
+                padding: 0;
 
-            & li {
-                color: $muted;
-                display: inline-block;
-
-                & a {
+                & > li {
                     color: $muted;
-                    text-transform: uppercase;
-                }
+                    display: inline-block;
 
-                &:not(:first-child)::before {
-                    content: "\007C";
+                    & > a {
+                        color: $muted;
+                        text-transform: uppercase;
+                    }
+
+                    &:not(:first-child)::before {
+                        content: "\007C";
+                    }
                 }
             }
         }
@@ -448,6 +456,7 @@ div.bookmark {
             }
 
             & > ul.tags {
+                font-size: $font-tiny;
                 list-style: none;
                 margin: 0;
                 padding: 0;
@@ -485,7 +494,6 @@ a.button {
     text-decoration: none;
 
     & > span {
-        font-size: 100%;
         padding-left: $spacing-small;
         padding-right: $spacing-small;
         text-align: center;

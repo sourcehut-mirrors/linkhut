@@ -79,8 +79,23 @@ defmodule Linkhut.Links do
     Link.changeset(link, attrs)
   end
 
+  @doc """
+  Returns a Link for a given url and user id.
+
+  Returns `nil` if no result is found.
+
+  ## Examples
+
+      iex> get("http://example.com", 123)
+      %Link{}
+
+      iex> get("http://example.com", 456)
+      nil
+  """
+  @spec get(String.t(), integer()) :: link()
   def get(url, user_id) do
-    Repo.get_by(Link, url: url, user_id: user_id)
+    Link
+    |> Repo.get_by(url: url, user_id: user_id)
   end
 
   # tags

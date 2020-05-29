@@ -16,7 +16,7 @@ defmodule LinkhutWeb.LinkView do
       days_ago < 1 ->
         "Today"
 
-      days_ago == 1 ->
+      days_ago <= 2 ->
         LinkhutWeb.Gettext.gettext("Yesterday")
 
       days_ago < 10 ->
@@ -27,6 +27,9 @@ defmodule LinkhutWeb.LinkView do
     end
   end
 
+  @doc """
+  Renders a feed of links under a user context
+  """
   def render("user.xml", %{conn: conn, user: user, links: links}) do
     feed_url = Routes.feed_link_url(conn, :show, user.username)
     html_url = Routes.link_url(conn, :show, user.username)
