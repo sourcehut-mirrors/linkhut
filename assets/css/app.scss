@@ -412,6 +412,7 @@ div.bookmark {
     .meta {
         display: flex;
         flex-direction: row-reverse;
+        justify-content: flex-end;
         margin-top: 2px;
 
         @media #{$not-small} {
