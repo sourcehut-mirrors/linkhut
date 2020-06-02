@@ -50,23 +50,13 @@ defmodule LinkhutWeb.LinkView do
     |> Atomex.generate_document()
   end
 
-  defp feed_entry(
-         %{
-           url: url,
-           title: title,
-           notes: notes,
-           tags: tags,
-           inserted_at: inserted_at,
-           user: user
-         },
-         html_url
-       ) do
-    Entry.new(url, inserted_at, title)
-    |> Entry.link(url, rel: "alternate")
-    |> Entry.content(notes)
-    |> Entry.author(user.username, uri: html_url)
+  defp feed_entry(link, html_url) do
+    Entry.new(link.url, link.inserted_at, link.title)
+    |> Entry.link(link.url, rel: "alternate")
+    |> Entry.content(link.notes)
+    |> Entry.author(link.user.username, uri: html_url)
     |> (fn entry ->
-          Enum.reduce(tags, entry, fn tag, entry -> Entry.category(entry, tag, label: tag) end)
+          Enum.reduce(link.tags, entry, fn tag, entry -> Entry.category(entry, tag, label: tag) end)
         end).()
     |> Entry.build()
   end
