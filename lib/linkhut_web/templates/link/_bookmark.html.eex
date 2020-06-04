@@ -23,10 +23,10 @@
                 <ul class="actions">
                     <%= if !assigns[:hide_actions] && @link.user_id == @current_user.id do %>
                     <li>
-                        <a href="<%= "/edit?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "edit" %></a>
+                        <a href="<%= Routes.link_path(@conn, :edit, url: @link.url) %>"><%= gettext "edit" %></a>
                     </li>
                     <li>
-                        <a href="<%= "/delete?#{URI.encode_query(%{url: @link.url})}" %>"><%= gettext "delete" %></a>
+                        <a href="<%= Routes.link_path(@conn, :delete, url: @link.url) %>"><%= gettext "delete" %></a>
                     </li>
                     <% end %>
                 </ul>
