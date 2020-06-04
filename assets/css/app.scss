@@ -356,6 +356,7 @@ div.date-group {
 div.bookmarks {
     display: block flex;
     flex-direction: column;
+    flex-grow: 1;
     min-width: 0;
 }
 
