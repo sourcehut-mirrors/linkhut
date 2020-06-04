@@ -3,10 +3,10 @@ defmodule LinkhutWeb.Plugs.FeedRedirect do
 
   @moduledoc """
   A simple plug that looks for the last element of the path segments and if it matches `feed.xml` then redirects the
-  request to the `/feed` scope.
+  request to the `/_/feed` scope.
 
   Phoenix routes can only be made to match on prefixes, however it's easier for humans to append `/feed.xml` at the end
-  of a URL instead of inserting `/feed` right in the middle of it.
+  of a URL instead of inserting `/_/feed` right in the middle of it.
   """
 
   import Phoenix.Controller, only: [redirect: 2]

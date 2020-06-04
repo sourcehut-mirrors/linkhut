@@ -19,7 +19,7 @@ defmodule LinkhutWeb.Router do
     plug :accepts, ["xml"]
   end
 
-  scope "/feed", LinkhutWeb, as: :feed do
+  scope "/_/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
     get "/", LinkController, :index
@@ -28,7 +28,7 @@ defmodule LinkhutWeb.Router do
     get "/*tags", LinkController, :show, as: :tags
   end
 
-  scope "/", LinkhutWeb do
+  scope "/_", LinkhutWeb do
     pipe_through [:browser, :ensure_auth]
 
     get "/profile", Settings.ProfileController, :show
@@ -48,13 +48,13 @@ defmodule LinkhutWeb.Router do
 
   # Enables LiveDashboard only for development
   if Mix.env() == :dev do
-    scope "/admin" do
+    scope "/_/admin" do
       pipe_through :browser
       live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
     end
   end
 
-  scope "/", LinkhutWeb do
+  scope "/_", LinkhutWeb do
     pipe_through :browser
 
     get "/register", Auth.RegistrationController, :new
@@ -62,6 +62,11 @@ defmodule LinkhutWeb.Router do
 
     get "/login", Auth.SessionController, :new
     post "/login", Auth.SessionController, :create
+
+  end
+
+  scope "/", LinkhutWeb do
+    pipe_through :browser
 
     get "/", LinkController, :index
     get "/~:username", LinkController, :show

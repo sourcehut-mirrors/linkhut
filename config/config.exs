@@ -13,6 +13,7 @@ config :linkhut,
 # Configures the endpoint
 config :linkhut, LinkhutWeb.Endpoint,
   url: [host: "localhost"],
+  static_url: [path: "/_"],
   secret_key_base: "mlPw70YW1sAUSrz5sF/LPkteFQ7Q75zutsNjXVNNDOpTag5Opi0WjVGIESGmddDd",
   render_errors: [view: LinkhutWeb.ErrorView, accepts: ~w(html json xml)],
   pubsub_server: Linkhut.PubSub,

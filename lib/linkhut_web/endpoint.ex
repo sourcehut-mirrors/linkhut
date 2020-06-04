@@ -3,7 +3,7 @@ defmodule LinkhutWeb.Endpoint do
 
   # Serve at "/" the static files from "priv/static" directory.
   plug Plug.Static,
-    at: "/",
+    at: "/_/",
     from: :linkhut,
     gzip: true,
     only: ~w(css fonts images js robots.txt)
