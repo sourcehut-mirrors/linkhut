@@ -1,4 +1,4 @@
-# Linkhut
+# linkhut
 
 To start your linkhut server:
 

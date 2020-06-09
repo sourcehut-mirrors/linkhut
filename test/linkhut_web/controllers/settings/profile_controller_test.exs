@@ -22,7 +22,7 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
         |> get(Routes.profile_path(conn, :show))
         |> redirected_to(302)
 
-      assert redirect_path == "/login"
+      assert redirect_path == "/_/login"
     end
   end
 end

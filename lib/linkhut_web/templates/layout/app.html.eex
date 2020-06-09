@@ -23,6 +23,10 @@
     <main>
       <%= @inner_content %>
     </main>
+    <hr>
+    <footer>
+        <div><span>linkhut is open source software. You can contribute and report issues on SourceHut at <a href="https://sr.ht/~mlb/linkhut">~mlb/linkhut</a> (v<%= version() %>)</span></div>
+    </footer>
     <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
   </body>
 </html>

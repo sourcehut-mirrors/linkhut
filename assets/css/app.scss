@@ -1,9 +1,15 @@
 @import "~normalize.css/normalize.css";
 @import "variables";
 
+html, body {
+    height: 100%;
+}
+
 body {
     background-color: $background;
     color: $foreground;
+    display: flex;
+    flex-direction: column;
     font-family: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'helvetica neue', helvetica, ubuntu, roboto, noto, 'segoe ui', arial, sans-serif;
     font-size: 1rem;
     max-width: 100%;
@@ -21,9 +27,11 @@ header, main, footer {
     padding: $spacing-tiny;
 }
 
-main > div > * {
-    margin-left: $spacing-tiny;
-    margin-right: $spacing-tiny;
+main, footer {
+    & > div > * {
+        margin-left: $spacing-tiny;
+        margin-right: $spacing-tiny;
+    }
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -31,6 +39,16 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1.2;
     margin-bottom: .5rem;
     margin-top: 0;
+}
+
+footer {
+    color: $muted;
+    font-size: $font-tiny;
+    margin-top: auto;
+    & a {
+        color: $muted;
+        text-decoration: underline;
+    }
 }
 
 .strong {
