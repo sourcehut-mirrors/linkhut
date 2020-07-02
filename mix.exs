@@ -67,7 +67,6 @@ defmodule Linkhut.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 0.4"},
       {:telemetry_poller, "~> 0.4"},
-      {:tidy_ex, "~> 0.1.0-dev"},
       {:timex, "~> 3.5"}
     ]
   end
