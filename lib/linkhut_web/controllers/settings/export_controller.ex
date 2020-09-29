@@ -16,7 +16,9 @@ defmodule LinkhutWeb.Settings.ExportController do
     user = conn.assigns[:current_user]
     links = Dump.export(user)
 
-    bookmarks = render(conn, "bookmarks.netscape", links: links)
-    send_download(conn, {:binary, bookmarks}, [filename: "bookmarks.html", content_type: "html"])
+    bookmarks = Phoenix.View.render(LinkhutWeb.SettingsView, "bookmarks.netscape", links: links)
+
+    conn
+    |> send_download({:binary, bookmarks}, [filename: "bookmarks.html", content_type: "html"])
   end
 end
