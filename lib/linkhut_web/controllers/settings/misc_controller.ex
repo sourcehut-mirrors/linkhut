@@ -6,8 +6,6 @@ defmodule LinkhutWeb.Settings.MiscController do
   """
   plug :put_view, LinkhutWeb.SettingsView
 
-  alias Linkhut.Dump
-
   def show(conn, _) do
     render(conn, "misc.html")
   end
