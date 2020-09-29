@@ -1,0 +1,11 @@
+<%= render "_menu.html", conn: @conn %>
+<div>
+    <h4>Bookmarklet:</h4>
+    <p>
+    When you click on this bookmarklet, it will submit the page you're on.
+    To install, drag this button to your browser's toolbar:
+    <div style="text-align: center">
+        <a class="button" href="<%= bookmarklet(@conn) %>">post to linkhut</a>
+    </div>
+    </p>
+</div>

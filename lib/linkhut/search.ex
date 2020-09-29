@@ -13,12 +13,14 @@ defmodule Linkhut.Search do
   def search(context, "", _params) do
     links_for_context(context)
     |> preload([_, u], user: u)
+    |> order_by(desc: :inserted_at)
   end
 
   def search(context, query, _params) do
     links_for_context(context)
     |> where([l, _], fragment("? @@ phraseto_tsquery(?)", l.search_vector, ^query))
     |> preload([_, u], user: u)
+    |> order_by(desc: :inserted_at)
   end
 
   def links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as}) do

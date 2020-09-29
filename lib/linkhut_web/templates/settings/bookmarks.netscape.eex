@@ -1,0 +1,13 @@
+<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<!-- This is an automatically generated file.
+It will be read and overwritten.
+Do Not Edit! -->
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+<%= for link <- @links do %>
+<DT><A HREF="<%= "#{link.url}" %>" ADD_DATE="<%= "#{DateTime.to_unix(link.inserted_at, :second)}" %>" PRIVATE="<%= "#{link.is_private}" %>" TAGS="<%= "#{Enum.join(link.tags, ",")}" %>"><%= "#{link.title}" %></A>
+<DD><%= "#{link.notes}" %>
+<% end %>
+</DL><p>

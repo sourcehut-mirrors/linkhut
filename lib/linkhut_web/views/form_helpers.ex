@@ -10,7 +10,7 @@ defmodule LinkhutWeb.FormHelpers do
   """
   def input(form, field, opts \\ []) do
     name = Keyword.get(opts, :name, humanize(field))
-    type = Keyword.get(opts, :type, input_type(form, field))
+    {type, opts} = Keyword.pop(opts, :type, input_type(form, field))
     opts = Keyword.put_new(opts, :value, Form.input_value(form, field) |> value_to_string())
 
     label = label(form, field, name)

@@ -1,0 +1,67 @@
+<%= render "_menu.html", conn: @conn %>
+<div>
+  <p>
+    Import bookmarks in the <a class="doc" href="https://en.wikipedia.org/wiki/Bookmark_(digital)#Storage">Netscape format</a>.
+  </p>
+  <%= form_for :upload, Routes.import_path(@conn, :upload), [multipart: true], fn f -> %>
+    <fieldset>
+    <%= input f, :file, type: :file_input %>
+    </fieldset>
+    <%= submit "Import" %>
+  <% end %>
+  <hr>
+  <%= if assigns[:imported] != nil do %>
+    <%= if (count = Enum.count(@imported, fn {key, _} -> key == :ok end)) > 0 do %>
+    <details class="success">
+        <summary><%= "Imported #{count} links" %></summary>
+        <dl>
+        <%= for {:ok, link} <- @imported do %>
+            <dt><span><%= link.title %></span></dt>
+            <dd>
+                <div class="full-url"><span><%= link.url %></span></div>
+                <ul class="actions">
+                    <li>
+                        <a href="<%= Routes.link_path(@conn, :edit, url: link.url) %>"><%= gettext "edit" %></a>
+                    </li>
+                    <li>
+                        <a href="<%= Routes.link_path(@conn, :delete, url: link.url) %>"><%= gettext "delete" %></a>
+                    </li>
+                </ul>
+            </dd>
+        <% end %>
+        </dl>
+    </details>
+    <% end %>
+    <%= if (count = Enum.count(@imported, fn {key, _} -> key == :error end)) > 0 do %>
+    <details class="error">
+        <summary><%= "Failed to import #{count} links" %></summary>
+        <dl>
+        <%= for {:error, item} <- @imported do %>
+            <%= case item do %>
+            <% %Ecto.Changeset{} -> %>
+                <dt><span><%= item.changes[:title] %></span></dt>
+                <dd>
+                    <div class="full-url"><span><%= item.changes.url %></span></div>
+                    <ul>
+                    <%= for {key, {msg, _}} <- item.errors do %>
+                        <li><%= "#{key}: #{msg}"%></li>
+                    <% end %>
+                    </ul>
+                    <ul class="actions">
+                        <li>
+                            <a href="<%= Routes.link_path(@conn, :new, Map.drop(item.changes, [:inserted_at])) %>"><%= gettext "add" %></a>
+                        </li>
+                    </ul>
+                </dd>
+            <% _ -> %>
+                <dt>Failed to parse entry</dt>
+                <dd>
+                    <pre><%= "#{item}" %></pre>
+                </dd>
+            <% end %>
+        <% end %>
+        </dl>
+    </details>
+    <% end %>
+  <% end %>
+</div>

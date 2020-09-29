@@ -98,8 +98,18 @@ defmodule Linkhut.Links do
     |> Repo.get_by(url: url, user_id: user_id)
   end
 
+  @doc """
+  Returns all Links belonging to the given user.
+  """
+  def all(%User{} = user) do
+    Repo.all(from l in Link, where: l.user_id == ^user.id, order_by: [desc: l.inserted_at])
+  end
+
   # tags
 
+  @doc """
+  Returns a set of tags associated with a given link query
+  """
   def get_tags(query) do
     query_tags(query)
     |> Repo.all()

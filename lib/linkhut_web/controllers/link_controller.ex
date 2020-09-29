@@ -16,7 +16,7 @@ defmodule LinkhutWeb.LinkController do
   def new(conn, params) do
     conn
     |> render("add.html",
-      changeset: Links.change_link(%Link{}, Map.take(params, ["url", "title", "tags"]))
+      changeset: Links.change_link(%Link{}, Map.take(params, ["url", "title", "tags", "notes"]))
     )
   end
 

@@ -31,6 +31,14 @@ defmodule LinkhutWeb.Router do
   scope "/_", LinkhutWeb do
     pipe_through [:browser, :ensure_auth]
 
+    get "/import", Settings.ImportController, :show
+    post "/import", Settings.ImportController, :upload
+
+    get "/export", Settings.ExportController, :show
+    get "/download", Settings.ExportController, :download
+
+    get "/misc", Settings.MiscController, :show
+
     get "/profile", Settings.ProfileController, :show
     put "/profile", Settings.ProfileController, :update
 
@@ -62,7 +70,6 @@ defmodule LinkhutWeb.Router do
 
     get "/login", Auth.SessionController, :new
     post "/login", Auth.SessionController, :create
-
   end
 
   scope "/", LinkhutWeb do

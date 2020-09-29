@@ -13,3 +13,4 @@
  <li><%= link "Register", to: Routes.registration_path(@conn, :new) %></li>
 <% end %>
 </ul>
+<hr/>

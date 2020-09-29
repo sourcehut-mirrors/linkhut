@@ -56,7 +56,9 @@ defmodule LinkhutWeb.LinkView do
     |> Entry.content(link.notes)
     |> Entry.author(link.user.username, uri: html_url)
     |> (fn entry ->
-          Enum.reduce(link.tags, entry, fn tag, entry -> Entry.category(entry, tag, label: tag) end)
+          Enum.reduce(link.tags, entry, fn tag, entry ->
+            Entry.category(entry, tag, label: tag)
+          end)
         end).()
     |> Entry.build()
   end

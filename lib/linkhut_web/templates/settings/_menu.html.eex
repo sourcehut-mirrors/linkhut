@@ -1,0 +1,10 @@
+<div class="navigation">
+    <h2 class="navigation-header">Settings</h2>
+    <ul class="navigation-tabs">
+    <%= nav_link(@conn, gettext("Profile"), to: Routes.profile_path(@conn, :show), wrap_with: :li) %>
+    <%= nav_link(@conn, gettext("Import"), to: Routes.import_path(@conn, :show), wrap_with: :li) %>
+    <%= nav_link(@conn, gettext("Export"), to: Routes.export_path(@conn, :show), wrap_with: :li) %>
+    <%= nav_link(@conn, gettext("Misc"), to: Routes.misc_path(@conn, :show), wrap_with: :li) %>
+    </ul>
+</div>
+<hr/>

@@ -24,7 +24,7 @@ defmodule Linkhut.Links.Link do
   @doc false
   def changeset(link, attrs) do
     link
-    |> cast(attrs, [:url, :user_id, :title, :notes, :tags, :is_private])
+    |> cast(attrs, [:url, :user_id, :title, :notes, :tags, :is_private, :inserted_at])
     |> validate_required([:url, :user_id, :title, :notes, :tags, :is_private])
     |> validate_length(:notes, max: 1024)
     |> unique_constraint(:url, name: :links_pkey)

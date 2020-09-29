@@ -75,6 +75,60 @@ footer {
     }
 }
 
+@mixin link-title() {
+    font-weight: normal;
+    margin-bottom: 2px;
+
+    & > a, & > span {
+        color: $blue;
+        display: inline-block;
+        max-width: 100%;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+        vertical-align: baseline;
+        white-space: nowrap;
+    }
+}
+
+@mixin link-url() {
+    font-size: $font-tiny;
+    margin-bottom: $spacing-tiny;
+    word-break: break-word;
+
+    & > a, & > span {
+        color: $dark-green;
+        display: inline-block;
+        max-width: 100%;
+        overflow-x: hidden;
+        text-overflow: ellipsis;
+        vertical-align: baseline;
+        white-space: nowrap;
+    }
+}
+
+@mixin link-actions() {
+    & > ul.actions {
+        display: inline;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        & > li {
+            color: $muted;
+            display: inline-block;
+
+            & > a {
+                color: $muted;
+                text-transform: uppercase;
+            }
+
+            &:not(:first-child)::before {
+                content: "\007C";
+            }
+        }
+    }
+}
+
 div.info {
     @include banner($navy, $light-blue);
 }
@@ -83,7 +137,7 @@ div.error {
     @include banner($red, $washed-red);
 }
 
-a {
+a:not(.doc, .normal) {
     color: $foreground;
     text-decoration: none;
     transition: color .15s ease-in;
@@ -186,6 +240,12 @@ form:not([itemprop="signout"]) {
             cursor: pointer;
             text-decoration: none;
         }
+    }
+
+    &:after {
+        content: '';
+        display: block;
+        clear: both;
     }
 }
 
@@ -386,33 +446,11 @@ div.bookmark {
     padding-top: 4px;
 
     & h4 {
-        font-weight: normal;
-        margin-bottom: 2px;
-
-        & > a {
-            color: $blue;
-            display: inline-block;
-            max-width: 100%;
-            overflow-x: hidden;
-            text-overflow: ellipsis;
-            vertical-align: baseline;
-            white-space: nowrap;
-        }
+        @include link-title();
     }
-    & .full-url {
-        font-size: $font-tiny;
-        margin-bottom: $spacing-tiny;
-        word-break: break-word;
 
-        & > a {
-            color: $dark-green;
-            display: inline-block;
-            max-width: 100%;
-            overflow-x: hidden;
-            text-overflow: ellipsis;
-            vertical-align: baseline;
-            white-space: nowrap;
-        }
+    & > .full-url {
+        @include link-url();
     }
 
     & .description {
@@ -448,26 +486,7 @@ div.bookmark {
             flex-shrink: 0;
             margin-right: $spacing-medium;
 
-            & > ul.actions {
-                display: inline;
-                list-style: none;
-                margin: 0;
-                padding: 0;
-
-                & > li {
-                    color: $muted;
-                    display: inline-block;
-
-                    & > a {
-                        color: $muted;
-                        text-transform: uppercase;
-                    }
-
-                    &:not(:first-child)::before {
-                        content: "\007C";
-                    }
-                }
-            }
+            @include link-actions();
         }
 
         & > div.tags {
@@ -558,4 +577,105 @@ a.feed-link > svg {
     height: 1.1em;
     vertical-align: bottom;
     width: 1.1em;
+}
+
+details {
+    border-radius: 4px;
+    border: 1px solid $light-gray;
+
+    & > summary, & > dl {
+        padding: $spacing-small;
+    }
+
+    &[open] > summary {
+        border-bottom: 1px solid $light-gray;
+    }
+
+    &.error > summary {
+        background-color: $light-red;
+    }
+
+    &.success > summary {
+        background-color: $light-green;
+    }
+
+    & > dl {
+        margin-top: 0;
+
+        & > dt {
+            border-top: 1px solid $light-gray;
+
+            @include link-title();
+        }
+
+        & > dd {
+            margin-left: 0;
+            margin-bottom: $spacing-small;
+
+            & > pre {
+                background-color: $near-black;
+                color: $white;
+                font-size: $font-tiny;
+                overflow-x: auto;
+                white-space: pre-wrap;
+            }
+
+            & > .full-url {
+                @include link-url();
+            }
+
+            @include link-actions();
+        }
+    }
+}
+
+div.navigation {
+    display: flex;
+    flex-direction: column;
+
+    & > .navigation-header {
+        display: inline-block;
+        margin-bottom: 0;
+    }
+
+    & > ul.navigation-tabs {
+        border-bottom-color: $light-gray;
+        border-bottom-style: solid;
+        border-bottom-width: 0.2rem;
+        display: inline-flex;
+        flex-direction: column;
+        flex-grow: 1;
+        flex-wrap: nowrap;
+        margin: $spacing-tiny;
+        padding: 0;
+        width: inherit;
+
+        @media #{$not-small} {
+            flex-direction: row;
+        }
+
+        & > li {
+            border-radius: 0;
+            border: none;
+            cursor: pointer;
+            padding: 0.2rem 1rem 0;
+            list-style: none;
+
+            &.active, &:hover {
+                background-color: $light-gray;
+            }
+
+            & > a {
+                text-decoration: none;
+            }
+        }
+    }
+
+    & + hr + div {
+        margin-top: 1em;
+    }
+
+    @media #{$not-small} {
+        flex-direction: row;
+    }
 }
