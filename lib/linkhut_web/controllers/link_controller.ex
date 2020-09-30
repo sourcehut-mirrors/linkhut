@@ -126,11 +126,12 @@ defmodule LinkhutWeb.LinkController do
         user: user,
         links: links,
         tags: Links.get_tags(user_id: user.id),
-        query: query
+        query: query,
+        context: context
       )
     else
       conn
-      |> render("index.html", links: links)
+      |> render("index.html", links: links, context: context)
     end
   end
 

@@ -11,11 +11,12 @@
   <body>
     <header>
       <nav>
-        <div>
-          <a class="brand" href="/">linkhut</a>
-        </div>
-        <div>
+        <div class="session">
           <%= render "_session.html", assigns %>
+        </div>
+        <div class="breadcrumbs">
+          <a class="brand" href="/">linkhut</a>
+          <%= render "_context.html", assigns %>
         </div>
       </nav>
       <%= render "_alerts.html", conn: @conn %>

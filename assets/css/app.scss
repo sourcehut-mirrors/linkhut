@@ -19,7 +19,7 @@ body {
     }
 }
 
-hr {
+hr, .no-css-label {
     display: none;
 }
 
@@ -137,7 +137,7 @@ div.error {
     @include banner($red, $washed-red);
 }
 
-a:not(.doc, .normal) {
+a:not(.doc) {
     color: $foreground;
     text-decoration: none;
     transition: color .15s ease-in;
@@ -262,26 +262,14 @@ button, input:not([type=checkbox]) {
 nav {
     color: $muted;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: row-reverse;
+    flex-wrap: nowrap;
     justify-content: space-between;
+    line-height: 1rem;
     padding: $spacing-tiny;
 
-    & a.brand {
-        color: $foreground;
-        font-weight: bold;
-        opacity: 1;
-        transition: opacity .15s ease-in;
-
-        &:hover, &:focus {
-            opacity: .5;
-            text-decoration: none;
-            transition: opacity .15s ease-in;
-        }
-
-        &:active {
-            opacity: .8;
-            transition: opacity .15s ease-out;
-        }
+    & div.session {
+        flex-shrink: 0;
     }
 
     & ul {
@@ -295,7 +283,10 @@ nav {
         & li {
             display: inline-flex;
             list-style: none outside none;
-            margin-left: $spacing-tiny;
+
+            &:not(:first-child) {
+                margin-left: $spacing-tiny;
+            }
 
             &:not(:first-child)::before {
                 content: "\007C";
@@ -315,6 +306,99 @@ nav {
 
                     &:hover {
                         cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+
+    & > div.breadcrumbs {
+        display: inline-flex;
+        flex-grow: 0;
+
+        & > a.brand {
+            color: $foreground;
+            flex-grow: 0;
+            flex-shrink: 0;
+            font-weight: bold;
+            opacity: 1;
+            transition: opacity .15s ease-in;
+
+            // {{{ hack for degrading to favicon on small screens
+            font-size: 0;
+
+            @media #{$not-small} {
+                font-size: $font-normal;
+            }
+
+            &::before {
+                background-image: url("/_/images/favicon.svg");
+                background-size: contain;
+                display: inline-block;
+                height: 1rem;
+                width: 1rem;
+                content: " ";
+
+                @media #{$not-small} {
+                  display: none;
+                }
+            }
+            // }}}
+
+            &:hover, &:focus {
+                opacity: .5;
+                text-decoration: none;
+                transition: opacity .15s ease-in;
+            }
+
+            &:active {
+                opacity: .8;
+                transition: opacity .15s ease-out;
+            }
+        }
+
+        & > div.context {
+            display: inline-flex;
+            flex-grow: 0;
+            flex-wrap: wrap;
+            font-size: $font-small;
+
+            & > span.user {
+                flex-grow: 0;
+
+                &::before {
+                    color: $dark-red;
+                    content: "\002F";
+                    font-size: $font-normal;
+                    margin-left: $spacing-tiny;
+                    margin-right: $spacing-tiny;
+                }
+
+                & a::before {
+                    color: $dark-blue;
+                    content: "\007E";
+
+                }
+            }
+
+            & ul.tags {
+                display: inline-flex;
+                flex-grow: 0;
+                flex-wrap: wrap;
+
+                & > li {
+
+                    &:first-child::before {
+                        color: $dark-blue;
+                        content: "\002F";
+                        font-size: $font-normal;
+                        margin-left: $spacing-tiny;
+                        margin-right: $spacing-tiny;
+                    }
+
+                    &:not(:first-child)::before {
+                        content: "\002B";
+                        color: $dark-green;
                     }
                 }
             }
