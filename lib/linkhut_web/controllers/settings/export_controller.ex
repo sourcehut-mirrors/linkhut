@@ -19,6 +19,6 @@ defmodule LinkhutWeb.Settings.ExportController do
     bookmarks = Phoenix.View.render(LinkhutWeb.SettingsView, "bookmarks.netscape", links: links)
 
     conn
-    |> send_download({:binary, bookmarks}, [filename: "bookmarks.html", content_type: "html"])
+    |> send_download({:binary, bookmarks}, filename: "bookmarks.html", content_type: "html")
   end
 end

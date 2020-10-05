@@ -26,7 +26,7 @@
     </main>
     <hr>
     <footer>
-        <div><span>linkhut is open source software. You can contribute and report issues on SourceHut at <a href="https://sr.ht/~mlb/linkhut">~mlb/linkhut</a> (v<%= version() %>)</span></div>
+        <div><p>linkhut is open source software. You can contribute and report issues on SourceHut at <a href="https://sr.ht/~mlb/linkhut">~mlb/linkhut</a> (v<%= version() %>)</p></div>
     </footer>
     <script type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
   </body>

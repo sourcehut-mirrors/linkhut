@@ -9,5 +9,4 @@ defmodule LinkhutWeb.Settings.MiscController do
   def show(conn, _) do
     render(conn, "misc.html")
   end
-
 end

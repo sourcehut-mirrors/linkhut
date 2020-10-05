@@ -92,6 +92,7 @@ footer {
 
 @mixin link-url() {
     font-size: $font-tiny;
+    line-height: 1rem;
     margin-bottom: $spacing-tiny;
     word-break: break-word;
 
@@ -273,6 +274,7 @@ nav {
     }
 
     & ul {
+        align-items: baseline;
         display: inline-flex;
         flex-direction: row;
         font-size: $font-small;
@@ -281,6 +283,7 @@ nav {
         padding: 0;
 
         & li {
+            align-items: baseline;
             display: inline-flex;
             list-style: none outside none;
 
@@ -361,7 +364,6 @@ nav {
             display: inline-flex;
             flex-grow: 0;
             flex-wrap: wrap;
-            font-size: $font-small;
 
             & > span.user {
                 flex-grow: 0;
@@ -374,19 +376,25 @@ nav {
                     margin-right: $spacing-tiny;
                 }
 
-                & a::before {
+                & > a::before {
                     color: $dark-blue;
                     content: "\007E";
+                }
 
+                & > a {
+                    font-size: $font-small;
                 }
             }
 
             & ul.tags {
-                display: inline-flex;
                 flex-grow: 0;
                 flex-wrap: wrap;
 
                 & > li {
+
+                    & > a {
+                        font-size: $font-small;
+                    }
 
                     &:first-child::before {
                         color: $dark-blue;
@@ -484,7 +492,7 @@ div#controls {
 }
 
 div.date-group {
-    display: block flex;
+    display: flex;
     flex-direction: column;
 
     @media #{$not-small} {

@@ -19,5 +19,4 @@ defmodule LinkhutWeb.Settings.ImportController do
     conn
     |> render("import.html", imported: imported)
   end
-
 end

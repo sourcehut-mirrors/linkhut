@@ -12,7 +12,7 @@
             <ul class="tags">
                 <%= for tag <- @link.tags do %>
                   <li>
-                    <a href="<%= "#{@conn.request_path}/#{tag}" %>"><%= tag %></a>
+                    <a href="<%= with_tag_link(@conn, tag) %>"><%= tag %></a>
                   </li>
                 <% end %>
             </ul>

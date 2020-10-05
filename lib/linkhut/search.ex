@@ -35,7 +35,7 @@ defmodule Linkhut.Search do
 
   defp from_user(query, user) do
     query
-    |> where([_, u], u.username == ^user)
+    |> where([_, u], u.id == ^user.id)
   end
 
   defp tagged_with(query, tags) when is_nil(tags) or tags == [], do: query

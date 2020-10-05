@@ -8,11 +8,6 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Search
   alias Linkhut.Search.Context
 
-  def index(conn, _) do
-    conn
-    |> render("index.html")
-  end
-
   def new(conn, params) do
     conn
     |> render("add.html",
@@ -27,7 +22,7 @@ defmodule LinkhutWeb.LinkController do
       {:ok, link} ->
         conn
         |> put_flash(:info, "Added link: #{link.url}")
-        |> redirect(to: Routes.link_path(conn, :show, user.username))
+        |> redirect(to: Routes.user_path(conn, :show, user.username))
 
       {:error, changeset} ->
         conn
@@ -45,7 +40,7 @@ defmodule LinkhutWeb.LinkController do
     else
       conn
       |> put_flash(:error, "Couldn't find link for #{url}")
-      |> redirect(to: Routes.link_path(conn, :index))
+      |> redirect(to: Routes.link_path(conn, :show))
     end
   end
 
@@ -57,7 +52,7 @@ defmodule LinkhutWeb.LinkController do
       {:ok, link} ->
         conn
         |> put_flash(:info, "Saved link: #{link.url}")
-        |> redirect(to: Routes.link_path(conn, :show, user.username))
+        |> redirect(to: Routes.user_path(conn, :show, user.username))
 
       {:error, changeset} ->
         conn
@@ -75,7 +70,7 @@ defmodule LinkhutWeb.LinkController do
     else
       conn
       |> put_flash(:error, "Couldn't find link for #{url}")
-      |> redirect(to: Routes.link_path(conn, :index))
+      |> redirect(to: Routes.link_path(conn, :show))
     end
   end
 
@@ -88,7 +83,7 @@ defmodule LinkhutWeb.LinkController do
         {:ok, link} ->
           conn
           |> put_flash(:info, "Deleted link: #{link.url}")
-          |> redirect(to: Routes.link_path(conn, :show, user.username))
+          |> redirect(to: Routes.user_path(conn, :show, user.username))
 
         {:error, changeset} ->
           conn
@@ -102,40 +97,42 @@ defmodule LinkhutWeb.LinkController do
   end
 
   def show(conn, %{"username" => username, "tags" => tags, "query" => query, "p" => page}) do
-    context = %Context{from: username, tagged_with: tags}
+    user = Accounts.get_user!(username)
 
+    show(conn, %Context{from: user, tagged_with: MapSet.to_list(MapSet.new(tags))}, query, page)
+  end
+
+  def show(conn, %{"tags" => tags, "query" => query, "p" => page}) do
+    show(conn, %Context{tagged_with: MapSet.to_list(MapSet.new(tags))}, query, page)
+  end
+
+  def show(conn, params) do
+    show(conn, Map.merge(%{"tags" => [], "query" => "", "p" => 1}, params))
+  end
+
+  defp show(conn, context, query, page) do
     context =
       case conn.assigns[:current_user] do
         nil -> context
         current_user -> %{context | visible_as: current_user.username}
       end
 
+    search_query = Search.search(context, query)
+
     links =
-      Search.search(context, query)
+      search_query
       |> Pagination.page(page, per_page: 20)
       |> Map.update!(
         :entries,
         &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
       )
 
-    if username do
-      user = Accounts.get_user!(username)
-
-      conn
-      |> render(:user,
-        user: user,
-        links: links,
-        tags: Links.get_tags(user_id: user.id),
-        query: query,
-        context: context
-      )
-    else
-      conn
-      |> render("index.html", links: links, context: context)
-    end
-  end
-
-  def show(conn, params) do
-    show(conn, Map.merge(%{"username" => nil, "tags" => [], "query" => "", "p" => 1}, params))
+    conn
+    |> render(:index,
+      links: links,
+      tags: Links.get_tags(search_query),
+      query: query,
+      context: context
+    )
   end
 end

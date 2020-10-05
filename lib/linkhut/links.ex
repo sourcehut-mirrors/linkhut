@@ -105,19 +105,27 @@ defmodule Linkhut.Links do
     Repo.all(from l in Link, where: l.user_id == ^user.id, order_by: [desc: l.inserted_at])
   end
 
+  @doc """
+  Returns all non-private links
+  """
+  def all() do
+    from l in Link,
+      where: not l.is_private,
+      order_by: [desc: l.inserted_at]
+  end
+
   # tags
 
   @doc """
   Returns a set of tags associated with a given link query
   """
   def get_tags(query) do
-    query_tags(query)
+    query_tags(query |> exclude(:preload))
     |> Repo.all()
   end
 
-  defp query_tags(where) do
-    from l in Link,
-      where: ^where,
+  defp query_tags(query) do
+    from l in subquery(query),
       select: [fragment("unnest(?) as tag", l.tags), count("*")],
       group_by: fragment("tag"),
       order_by: [desc: count("*"), asc: fragment("tag")]

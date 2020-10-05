@@ -22,10 +22,10 @@ defmodule LinkhutWeb.Router do
   scope "/_/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/", LinkController, :index
-    get "/~:username", LinkController, :show
-    get "/~:username/*tags", LinkController, :show
-    get "/*tags", LinkController, :show, as: :tags
+    get "/", LinkController, :show, as: :recent
+    get "/~:username", LinkController, :show, as: :user
+    get "/~:username/*tags", LinkController, :show, as: :user_tags
+    get "/*tags", LinkController, :show
   end
 
   scope "/_", LinkhutWeb do
@@ -75,9 +75,9 @@ defmodule LinkhutWeb.Router do
   scope "/", LinkhutWeb do
     pipe_through :browser
 
-    get "/", LinkController, :index
-    get "/~:username", LinkController, :show
-    get "/~:username/*tags", LinkController, :show
-    get "/*tags", LinkController, :show, as: :tags
+    get "/", LinkController, :show, as: :recent
+    get "/~:username", LinkController, :show, as: :user
+    get "/~:username/*tags", LinkController, :show, as: :user_tags
+    get "/*tags", LinkController, :show
   end
 end
