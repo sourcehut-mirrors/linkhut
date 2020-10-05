@@ -1,12 +1,14 @@
 defmodule LinkhutWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :linkhut
 
-  # Serve at "/" the static files from "priv/static" directory.
+  # Only static asset that gets served from "/" is robots.txt anything else is considered a dynamic path
+  plug Plug.Static, at: "/", from: :linkhut, gzip: true, only: ~w(robots.txt)
+  # Serve at "/_/" the static files from "priv/static" directory.
   plug Plug.Static,
     at: "/_/",
     from: :linkhut,
     gzip: true,
-    only: ~w(css fonts images js robots.txt)
+    only: ~w(css fonts images js)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
