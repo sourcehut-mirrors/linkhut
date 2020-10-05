@@ -16,7 +16,7 @@ defmodule Linkhut.Links.Tags do
 
   @impl true
   def cast(tags) when is_list(tags) do
-    if Enum.all?(tags, &String.valid?/1) do
+    if Enum.all?(tags, &valid?/1) do
       {:ok, tags}
     else
       :error
@@ -40,4 +40,6 @@ defmodule Linkhut.Links.Tags do
 
   @impl true
   def embed_as(_), do: :self
+
+  defp valid?(tag), do: String.valid?(tag) && String.length(tag) <= 128
 end
