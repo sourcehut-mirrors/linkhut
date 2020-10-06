@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :linkhut
 
-  # Only static asset that gets served from "/" is robots.txt anything else is considered a dynamic path
-  plug Plug.Static, at: "/", from: :linkhut, gzip: true, only: ~w(robots.txt)
   # Serve at "/_/" the static files from "priv/static" directory.
   plug Plug.Static,
     at: "/_/",
