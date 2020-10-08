@@ -8,6 +8,9 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Search
   alias Linkhut.Search.Context
 
+  @links_per_page 20
+  @related_tags_limit 1000
+
   def new(conn, params) do
     conn
     |> render("add.html",
@@ -121,7 +124,7 @@ defmodule LinkhutWeb.LinkController do
 
     links =
       search_query
-      |> Pagination.page(page, per_page: 20)
+      |> Pagination.page(page, per_page: @links_per_page)
       |> Map.update!(
         :entries,
         &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
@@ -130,7 +133,7 @@ defmodule LinkhutWeb.LinkController do
     conn
     |> render(:index,
       links: links,
-      tags: Links.get_tags(search_query),
+      tags: Links.get_tags(search_query, limit: @related_tags_limit),
       query: query,
       context: context
     )

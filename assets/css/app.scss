@@ -79,11 +79,11 @@ footer {
     font-weight: normal;
     margin-bottom: 2px;
 
-    & > a, & > span {
+    & > a {
         color: $blue;
         display: inline-block;
         max-width: 100%;
-        overflow-x: hidden;
+        overflow: hidden;
         text-overflow: ellipsis;
         vertical-align: baseline;
         white-space: nowrap;
@@ -537,15 +537,33 @@ div.bookmark {
     padding-bottom: 2px;
     padding-top: 4px;
 
-    & h4 {
-        @include link-title();
+    & > .title {
+        display: flex;
+        justify-content: space-between;
+        max-width: 100%;
+
+        & > h4 {
+            flex-grow: 1;
+            flex-shrink: 1;
+            min-width: 10%;
+
+            @include link-title();
+        }
+
+        & > .private {
+            color: $muted;
+            flex-grow: 0;
+            flex-shrink: 0;
+            margin-left: $spacing-large;
+            text-transform: uppercase;
+        }
     }
 
     & > .full-url {
         @include link-url();
     }
 
-    & .description {
+    & > .description {
         font-size: $font-small;
         height: auto;
         line-height: 1.4em;
@@ -556,6 +574,12 @@ div.bookmark {
         & p {
             margin: 0 0 0 0;
         }
+    }
+
+    & > .ownership {
+        color: $muted;
+        font-size: $font-tiny;
+        margin-bottom: $spacing-tiny;
     }
 
     .meta {

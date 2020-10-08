@@ -1,11 +1,21 @@
 <div class="bookmark">
-    <h4><a class="taggedlink" href="<%= @link.url %>"><%= @link.title %></a></h4>
+    <div class="title">
+        <h4><a class="taggedlink" href="<%= @link.url %>"><%= @link.title %></a></h4>
+        <%= if @link.is_private do %>
+            <div class="private"><%= gettext "Private" %></div>
+        <% end %>
+    </div>
     <div class="full-url">
         <a rel="nofollow" href="<%= @link.url %>"><%= @link.url %></a>
     </div>
     <div class="description">
         <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
     </div>
+    <%= unless @logged_in? && @link.user_id == @current_user.id do %>
+    <div class="ownership">
+        <%= gettext "by" %> <a href="<%= Routes.user_path(@conn, :show, @link.user.username) %>"><%= @link.user.username %></a>
+    </div>
+    <% end %>
     <div class="meta">
         <div class="tags">
             <h5 class="label"><%= gettext "Tags:" %></h5>
@@ -21,13 +31,19 @@
             <div class="actions">
                 <h5 class="label"><%= gettext "Actions:" %></h5>
                 <ul class="actions">
-                    <%= if !assigns[:hide_actions] && @link.user_id == @current_user.id do %>
-                    <li>
-                        <a href="<%= Routes.link_path(@conn, :edit, url: @link.url) %>"><%= gettext "edit" %></a>
-                    </li>
-                    <li>
-                        <a href="<%= Routes.link_path(@conn, :delete, url: @link.url) %>"><%= gettext "delete" %></a>
-                    </li>
+                    <%= if !assigns[:hide_actions] do %>
+                        <%= if @link.user_id == @current_user.id do %>
+                        <li>
+                            <a href="<%= Routes.link_path(@conn, :edit, url: @link.url) %>"><%= gettext "edit" %></a>
+                        </li>
+                        <li>
+                            <a href="<%= Routes.link_path(@conn, :delete, url: @link.url) %>"><%= gettext "delete" %></a>
+                        </li>
+                        <% else %>
+                        <li>
+                            <a href="<%= Routes.link_path(@conn, :new, url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags) %>"><%= gettext "copy to mine" %></a>
+                        </li>
+                        <% end %>
                     <% end %>
                 </ul>
             </div>

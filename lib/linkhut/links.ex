@@ -119,8 +119,9 @@ defmodule Linkhut.Links do
   @doc """
   Returns a set of tags associated with a given link query
   """
-  def get_tags(query) do
+  def get_tags(query, [limit: limit]) do
     query_tags(query |> exclude(:preload))
+    |> limit(^limit)
     |> Repo.all()
   end
 
