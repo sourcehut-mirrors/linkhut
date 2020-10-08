@@ -23,7 +23,7 @@ defmodule LinkhutWeb.Auth.RegistrationController do
         |> put_session(:user_id, user.id)
         |> configure_session(renew: true)
         |> put_flash(:info, "Welcome to linkhut!")
-        |> redirect(to: Routes.link_path(conn, :index))
+        |> redirect(to: Routes.link_path(conn, :show, []))
 
       {:error, changeset} ->
         conn
