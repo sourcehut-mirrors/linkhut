@@ -14,7 +14,7 @@ defmodule Linkhut.Links.Link do
     belongs_to :user, User, define_field: false
     field :title, :string
     field :notes, :string, default: ""
-    field :tags, Tags
+    field :tags, Tags, default: []
     field :is_private, :boolean, default: false
     field :language, :string
 
@@ -25,7 +25,7 @@ defmodule Linkhut.Links.Link do
   def changeset(link, attrs) do
     link
     |> cast(attrs, [:url, :user_id, :title, :notes, :tags, :is_private, :inserted_at])
-    |> validate_required([:url, :user_id, :title, :tags, :is_private])
+    |> validate_required([:url, :user_id, :title, :is_private])
     |> validate_length(:url, max: 2048)
     |> validate_length(:title, max: 255)
     |> validate_length(:notes, max: 1024)
