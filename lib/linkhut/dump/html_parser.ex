@@ -87,7 +87,7 @@ defmodule Linkhut.Dump.HTMLParser do
        title: title,
        notes: notes,
        tags: Map.get(params, "tags", []),
-       is_private: !!Map.get(params, "private"),
+       is_private: is_private(params),
        inserted_at:
          DateTime.from_unix!(
            Map.get(params, "add_date", Integer.to_string(:os.system_time(:second)))
@@ -107,4 +107,7 @@ defmodule Linkhut.Dump.HTMLParser do
     |> String.replace(~r/^<#{@error_node}>/, "")
     |> String.replace(~r/<\/#{@error_node}>$/, "")
   end
+
+  defp is_private(%{"private" => value}) when value in ~w{1 true yes}, do: true
+  defp is_private(%{} = _), do: false
 end
