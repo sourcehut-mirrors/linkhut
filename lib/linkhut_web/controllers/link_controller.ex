@@ -9,7 +9,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Search.Context
 
   @links_per_page 20
-  @related_tags_limit 1000
+  @related_tags_limit 400
 
   def new(conn, params) do
     conn
