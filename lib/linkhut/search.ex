@@ -44,7 +44,7 @@ defmodule Linkhut.Search do
     query
     |> where(
       [l, _],
-      fragment("? @> string_to_array(?, ',')::varchar[]", l.tags, ^Enum.join(tags, ","))
+      fragment("array_lowercase(?) @> string_to_array(?, ',')::varchar[]", l.tags, ^Enum.join(tags |> Enum.map(&String.downcase/1), ","))
     )
   end
 

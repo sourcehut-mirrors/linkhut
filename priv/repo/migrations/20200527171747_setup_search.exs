@@ -6,8 +6,18 @@ defmodule Linkhut.Repo.Migrations.SetupSearch do
       add :search_vector, :tsvector
     end
 
+    # function to lowercase all strings in an array
+    execute """
+            CREATE FUNCTION array_lowercase(varchar[]) RETURNS varchar[] AS
+            $BODY$
+              SELECT array_agg(q.tag) FROM (SELECT lower(unnest($1))::varchar AS tag) AS q;
+            $BODY$
+            language sql IMMUTABLE;
+            """,
+            "DROP FUNCTION array_lowercase"
+
     # index on tags column
-    execute "CREATE INDEX link_tags_index on links USING GIN (tags)",
+    execute "CREATE INDEX link_tags_index on links USING GIN (array_lowercase(tags))",
             "DROP INDEX link_tags_index"
 
     # index on search_vector column
@@ -24,7 +34,7 @@ defmodule Linkhut.Repo.Migrations.SetupSearch do
             NEW.search_vector :=
               setweight(to_tsvector(NEW.language::regconfig, coalesce(NEW.title,'')), 'A') ||
               setweight(to_tsvector(NEW.language::regconfig, coalesce(NEW.notes,'')), 'B') ||
-              setweight(array_to_tsvector(coalesce(NEW.tags,'{}')::text[]), 'D');
+              setweight(array_to_tsvector(coalesce(array_lowercase(NEW.tags),'{}')::text[]), 'D');
             return NEW;
             END
             $$ LANGUAGE plpgsql
