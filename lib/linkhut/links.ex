@@ -126,9 +126,9 @@ defmodule Linkhut.Links do
   end
 
   defp query_tags(query) do
-    from l in subquery(query),
-      select: [fragment("unnest(?) as tag", l.tags), count("*")],
-      group_by: fragment("tag"),
-      order_by: [desc: count("*"), asc: fragment("tag")]
+  from t in subquery(select(query, [l], %{tag: fragment("unnest(?)", l.tags)})),
+       select: [fragment("mode() within group (order by ?) as label", t.tag), count("*")],
+       group_by: fragment("lower(?)", t.tag),
+       order_by: [desc: count("*"), asc: fragment("label")]
   end
 end
