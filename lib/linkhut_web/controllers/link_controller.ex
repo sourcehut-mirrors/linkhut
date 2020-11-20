@@ -43,7 +43,7 @@ defmodule LinkhutWeb.LinkController do
     else
       conn
       |> put_flash(:error, "Couldn't find link for #{url}")
-      |> redirect(to: Routes.link_path(conn, :show))
+      |> redirect(to: Routes.recent_path(conn, :show))
     end
   end
 
@@ -73,7 +73,7 @@ defmodule LinkhutWeb.LinkController do
     else
       conn
       |> put_flash(:error, "Couldn't find link for #{url}")
-      |> redirect(to: Routes.link_path(conn, :show))
+      |> redirect(to: Routes.recent_path(conn, :show))
     end
   end
 

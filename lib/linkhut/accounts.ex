@@ -27,7 +27,7 @@ defmodule Linkhut.Accounts do
   @type changeset(data_type) :: Ecto.Changeset.t(data_type)
 
   @doc """
-  Gets a single user.
+  Gets a single user by its username or user id.
 
   Raises `Ecto.NoResultsError` if the User does not exist.
 
@@ -46,28 +46,14 @@ defmodule Linkhut.Accounts do
     |> Repo.get!(id)
   end
 
-  @doc """
-  Gets a single user by its username.
-
-  Raises `Ecto.NoResultsError` if the User does not exist.
-
-  ## Examples
-
-      iex> get_user!("foo")
-      %User{}
-
-      iex> get_user!("bar")
-      ** (Ecto.NoResultsError)
-
-  """
-  @spec get_user!(username) :: user | nil
+  @spec get_user!(username) :: user
   def get_user!(username) when is_binary(username) do
     User
     |> Repo.get_by!(username: username)
   end
 
   @doc """
-  Gets a single user.
+  Gets a single user by its username or user id.
 
   Returns `nil` if the User doesn't exist.
 
@@ -80,26 +66,12 @@ defmodule Linkhut.Accounts do
       nil
 
   """
-  @spec get_user(integer) :: user
+  @spec get_user(integer) :: user | nil
   def get_user(id) when is_number(id) do
     User
     |> Repo.get(id)
   end
 
-  @doc """
-  Gets a single user by its username.
-
-  Returns `nil` if no result was found.
-
-  ## Examples
-
-      iex> get_user("foo")
-      %User{}
-
-      iex> get_user!("bar")
-      nil
-
-  """
   @spec get_user(username) :: user | nil
   def get_user(username) when is_binary(username) do
     User

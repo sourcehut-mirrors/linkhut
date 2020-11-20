@@ -29,7 +29,7 @@ defmodule LinkhutWeb.Settings.ProfileController do
     else
       conn
       |> put_flash(:error, "No access")
-      |> redirect(to: Routes.link_path(conn, :index))
+      |> redirect(to: Routes.recent_path(conn, :show))
     end
   end
 end
