@@ -46,28 +46,28 @@ defmodule Linkhut.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:argon2_elixir, "~> 2.0"},
+      {:argon2_elixir, "~> 2.3"},
       {:atomex, "0.3.0"},
-      {:credo, "~> 1.2", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
       {:earmark, "~> 1.4"},
-      {:ecto_sql, "~> 3.0"},
-      {:ex_doc, "~> 0.22", only: :dev, runtime: false},
-      {:ex_machina, "~> 2.3", only: :test},
-      {:gettext, "~> 0.11"},
+      {:ecto_sql, "~> 3.5"},
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:ex_machina, "~> 2.4", only: :test},
+      {:gettext, "~> 0.18"},
       {:jason, "~> 1.0"},
-      {:phoenix, "~> 1.5.3"},
+      {:phoenix, "~> 1.5.6"},
       {:phoenix_ecto, "~> 4.0"},
-      {:phoenix_html, "~> 2.11"},
-      {:phoenix_html_sanitizer, "~> 1.0.0"},
+      {:phoenix_html, "~> 2.14"},
+      {:phoenix_html_sanitizer, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.1"},
-      {:phoenix_live_reload, "~> 1.2", only: :dev},
+      {:phoenix_live_reload, "~> 1.3", only: :dev},
       {:phoenix_pubsub, "~> 2.0"},
       {:plug_cowboy, "~> 2.1"},
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 0.4"},
       {:telemetry_poller, "~> 0.4"},
-      {:timex, "~> 3.5"}
+      {:timex, "~> 3.6"}
     ]
   end
 
