@@ -56,11 +56,11 @@ defmodule LinkhutWeb.Plugs.EnsureAuth do
     path = conn.request_path
 
     # If conditions apply store path in session, else return conn unmodified
-    case {method, String.match?(path, ~r/^\/(add)$/)} do
-      {"GET", true} ->
+    case method do
+      "GET" ->
         put_session(conn, :login_redirect_path, path)
 
-      {_, _} ->
+      _ ->
         conn
     end
   end
