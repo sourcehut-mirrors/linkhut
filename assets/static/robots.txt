@@ -1,0 +1,3 @@
+# If you're a human looking for tags related to "robots.txt", try /ROBOTS.TXT instead.
+User-agent: *
+Disallow: /

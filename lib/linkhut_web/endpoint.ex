@@ -8,6 +8,13 @@ defmodule LinkhutWeb.Endpoint do
     gzip: true,
     only: ~w(css fonts images js)
 
+  # Serve robots.txt at "/" from "priv/static" directory
+  plug Plug.Static,
+    at: "/",
+    from: :linkhut,
+    gzip: true,
+    only: ~w(robots.txt)
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
