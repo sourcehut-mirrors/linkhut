@@ -17,13 +17,7 @@ defmodule Linkhut.MixProject do
       name: "linkhut",
       source_url: "https://git.sr.ht/~mlb/linkhut",
       homepage_url: "https://git.sr.ht/~mlb/linkhut",
-      docs: [
-        # The main page in the docs
-        main: "readme",
-        logo: "assets/static/images/favicon.svg",
-        extras: ["README.md", "docs/API.md"],
-        source_url_pattern: "https://git.sr.ht/~mlb/linkhut/tree/master/%{path}#L%{line}"
-      ]
+      docs: docs()
     ]
   end
 
@@ -83,6 +77,33 @@ defmodule Linkhut.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]
+    ]
+  end
+
+  defp docs do
+    [
+      # The main page in the docs
+      main: "readme",
+      logo: "assets/static/images/favicon.svg",
+      extras: extras(),
+      groups_for_extras: groups_for_extras(),
+      source_url_pattern: "https://git.sr.ht/~mlb/linkhut/tree/master/%{path}#L%{line}"
+    ]
+  end
+
+  defp extras do
+    [
+      "README.md",
+
+      "docs/api/overview.md",
+      "docs/api/posts.md"
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      "Introduction": "README.md",
+      "External API": ~r/docs\/api\/.?/
     ]
   end
 end
