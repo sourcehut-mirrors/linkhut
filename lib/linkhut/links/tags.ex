@@ -11,6 +11,7 @@ defmodule Linkhut.Links.Tags do
     string
     |> String.trim()
     |> String.split(~r{[, ]}, trim: true)
+    |> Enum.dedup_by(fn x -> String.downcase(x) end)
     |> cast
   end
 

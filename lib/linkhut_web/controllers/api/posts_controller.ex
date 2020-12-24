@@ -1,0 +1,270 @@
+defmodule LinkhutWeb.Api.PostsController do
+  use LinkhutWeb, :controller
+
+  plug :put_view, LinkhutWeb.ApiView
+
+  alias Linkhut.Links
+  alias Linkhut.Links.Link
+
+  def update(conn, _) do
+    user = conn.assigns[:current_user]
+
+    conn
+    |> render("update.xml", %{last_update: last_update(user)})
+  end
+
+  # TODO: support for to_read
+  def add(conn, %{"url" => url, "description" => title, "replace" => "yes"} = params) do
+    user = conn.assigns[:current_user]
+    link = Links.get!(url, user.id)
+
+    link_params =
+      Enum.into(
+        ~w(notes tags is_private inserted_at),
+        %{"title" => title},
+        &{&1, value(&1, params)}
+      )
+
+    case Links.update_link(link, link_params) do
+      {:ok, link} ->
+        conn
+        |> render("add.xml", link: link)
+
+      {:error, changeset} ->
+        conn
+        |> render("add.xml", changeset: changeset)
+    end
+  end
+
+  def add(conn, %{"url" => url, "description" => title} = params) do
+    user = conn.assigns[:current_user]
+
+    link_params =
+      Enum.into(
+        ~w(notes tags is_private inserted_at),
+        %{"url" => url, "title" => title},
+        &{&1, value(&1, params)}
+      )
+
+    case Links.create_link(user, link_params) do
+      {:ok, link} ->
+        conn
+        |> render("add.xml", link: link)
+
+      {:error, changeset} ->
+        conn
+        |> render("add.xml", changeset: changeset)
+    end
+  end
+
+  def delete(conn, %{"url" => url}) do
+    user = conn.assigns[:current_user]
+    link = Links.get!(url, user.id)
+
+    case Links.delete_link(link) do
+      {:ok, link} ->
+        conn
+        |> render("delete.xml", link: link)
+
+      {:error, changeset} ->
+        conn
+        |> render("delete.xml", changeset: changeset)
+    end
+  end
+
+  def get(conn, %{"url" => url} = params) do
+    user = conn.assigns[:current_user]
+    link = Links.get!(url, user.id)
+
+    conn
+    |> render("get.xml",
+      date: DateTime.to_date(link.inserted_at),
+      links: [link],
+      meta: value("meta", params),
+      tag: Map.get(params, "tag", "")
+    )
+  end
+
+  def get(conn, %{"hashes" => hashes} = params) do
+    user = conn.assigns[:current_user]
+
+    conn
+    |> render("get.xml",
+      links: Links.all(user, hashes: String.split(hashes, " ", trim: true)),
+      meta: value("meta", params),
+      tag: ""
+    )
+  end
+
+  def get(conn, %{"dt" => date} = params) do
+    user = conn.assigns[:current_user]
+    date = Date.from_iso8601!(date)
+    links = Links.all(user, dt: date, tags: value("tag", params))
+
+    conn
+    |> render("get.xml",
+      date: date,
+      links: links,
+      meta: value("meta", params),
+      tag: Map.get(params, "tag", "")
+    )
+  end
+
+  def get(conn, params) do
+    user = conn.assigns[:current_user]
+
+    get(conn, Map.put(params, "dt", last_update(user) |> DateTime.to_date() |> Date.to_iso8601()))
+  end
+
+  def recent(conn, params) do
+    user = conn.assigns[:current_user]
+    tags = value("tag", params)
+    count = value("count", params)
+
+    conn
+    |> render("recent.xml",
+      date: last_update(user),
+      links: Links.all(user, tags: tags, count: count),
+      tag: Map.get(params, "tag", "")
+    )
+  end
+
+  def dates(conn, params) do
+    user = conn.assigns[:current_user]
+    tags = value("tag", params)
+
+    conn
+    |> render("dates.xml",
+      date: last_update(user),
+      links: Links.all(user, tags: tags),
+      tag: Map.get(params, "tag", "")
+    )
+  end
+
+  def all(conn, %{"hashes" => _}) do
+    user = conn.assigns[:current_user]
+
+    conn
+    |> render("all?hashes.xml", links: Links.all(user))
+  end
+
+  def all(conn, params) do
+    user = conn.assigns[:current_user]
+    tags = value("tag", params)
+    start = value("start", params)
+    results = value("results", params)
+    from = value("fromdt", params)
+    to = value("todt", params)
+
+    filters = [tags: tags, start: start, count: results, from: from, to: to]
+
+    conn
+    |> render("all.xml",
+      links: Links.all(user, filters),
+      tag: Map.get(params, "tag", ""),
+      meta: value("meta", params)
+    )
+  end
+
+  def suggest(conn, %{"url" => url}) do
+    user = conn.assigns[:current_user]
+
+    popular =
+      Links.all(url: url, is_private: false)
+      |> Links.get_tags()
+      |> Enum.map(fn %{label: label} -> label end)
+
+    recommended =
+      Links.get_tags(user, tags: popular)
+      |> Enum.map(fn %{label: label} -> label end)
+
+    popular = popular -- recommended
+
+    conn
+    |> render("suggest.xml", popular: popular, recommended: recommended)
+  end
+
+  defp last_update(user) do
+    case link = Links.most_recent(user) do
+      %Link{} -> link.inserted_at
+      nil -> DateTime.from_unix!(0)
+    end
+  end
+
+  defp value("notes", params), do: Map.get(params, "extended", "")
+
+  defp value("tags", params), do: Map.get(params, "tags", "")
+
+  defp value("is_private", params) do
+    case Map.get(params, "shared") do
+      "no" -> true
+      _ -> false
+    end
+  end
+
+  defp value("inserted_at", params) do
+    with dt <- Map.get(params, "dt", ""),
+         {:ok, datetime, _} <- DateTime.from_iso8601(dt),
+         now <- DateTime.utc_now(),
+         look_ahead when look_ahead < 600 <- DateTime.diff(datetime, now) do
+      datetime
+    else
+      _ -> DateTime.utc_now()
+    end
+  end
+
+  defp value("meta", %{"meta" => "yes"}), do: true
+  defp value("meta", _params), do: false
+
+  defp value("tag", params), do: String.split(Map.get(params, "tag", ""), ~r{[, ]}, trim: true)
+
+  defp value("count", %{"count" => count}) when is_binary(count) do
+    case Integer.parse(count) do
+      {count, ""} -> value("count", %{"count" => count})
+      _ -> 15
+    end
+  end
+
+  defp value("count", %{"count" => count}) when count >= 1 and count <= 100, do: count
+  defp value("count", _), do: 15
+
+  defp value("start", %{"start" => start}) when is_binary(start) do
+    case Integer.parse(start) do
+      {start, ""} -> value("start", %{"start" => start})
+      _ -> 0
+    end
+  end
+
+  defp value("start", %{"start" => start}) when start >= 1, do: start
+  defp value("start", _), do: 0
+
+  defp value("results", %{"results" => results}) when is_binary(results) do
+    case Integer.parse(results) do
+      {results, ""} -> value("results", %{"results" => results})
+      _ -> 1000
+    end
+  end
+
+  defp value("results", %{"results" => results}) when results >= 1 and results <= 100_000,
+    do: results
+
+  defp value("results", _), do: 1000
+
+  defp value("fromdt", params) do
+    with dt <- Map.get(params, "fromdt", ""),
+         {:ok, datetime, _} <- DateTime.from_iso8601(dt) do
+      datetime
+    else
+      _ -> nil
+    end
+  end
+
+  defp value("todt", params) do
+    with dt <- Map.get(params, "todt", ""),
+         {:ok, datetime, _} <- DateTime.from_iso8601(dt) do
+      datetime
+    else
+      _ -> nil
+    end
+  end
+end

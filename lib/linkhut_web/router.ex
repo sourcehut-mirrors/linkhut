@@ -15,8 +15,29 @@ defmodule LinkhutWeb.Router do
     plug LinkhutWeb.Plugs.EnsureAuth
   end
 
+  pipeline :basic_auth do
+    plug LinkhutWeb.Plugs.BasicAuth
+  end
+
   pipeline :feed do
     plug :accepts, ["xml"]
+  end
+
+  pipeline :api do
+    plug :accepts, ["xml"]
+  end
+
+  scope "/_/v1/", LinkhutWeb.Api, as: :api do
+    pipe_through [:api, :basic_auth]
+
+    get "/posts/update", PostsController, :update
+    get "/posts/add", PostsController, :add
+    get "/posts/delete", PostsController, :delete
+    get "/posts/get", PostsController, :get
+    get "/posts/recent", PostsController, :recent
+    get "/posts/dates", PostsController, :dates
+    get "/posts/all", PostsController, :all
+    get "/posts/suggest", PostsController, :suggest
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do

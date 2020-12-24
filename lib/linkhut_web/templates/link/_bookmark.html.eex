@@ -6,7 +6,7 @@
         <% end %>
     </div>
     <div class="full-url">
-        <a rel="nofollow" href="<%= @link.url %>"><%= @link.url %></a>
+        <a rel="nofollow" data-shares="<%= @link.shares %>" href="<%= @link.url %>"><%= @link.url %></a>
     </div>
     <div class="description">
         <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>

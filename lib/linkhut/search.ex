@@ -5,27 +5,28 @@ defmodule Linkhut.Search do
 
   import Ecto.Query
 
-  alias Linkhut.Links.Link
+  alias Linkhut.Links
   alias Linkhut.Search.Context
 
   def search(context, query, params \\ [])
 
   def search(context, "", _params) do
     links_for_context(context)
-    |> preload([_, u], user: u)
+    |> preload([_, _, u], user: u)
     |> order_by(desc: :inserted_at)
   end
 
   def search(context, query, _params) do
     links_for_context(context)
-    |> where([l, _], fragment("? @@ phraseto_tsquery(?)", l.search_vector, ^query))
-    |> preload([_, u], user: u)
+    |> Map.merge(%{score: 0})
+    |> where([l, _, _], fragment("? @@ phraseto_tsquery(?)", l.search_vector, ^query))
+    |> preload([_, _, u], user: u)
     |> order_by(desc: :inserted_at)
   end
 
   def links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as}) do
-    Link
-    |> join(:inner, [l], u in assoc(l, :user))
+    Links.links()
+    |> join(:inner, [l, _], u in assoc(l, :user))
     |> from_user(from)
     |> tagged_with(tags)
     |> visible_as(visible_as)
@@ -35,7 +36,7 @@ defmodule Linkhut.Search do
 
   defp from_user(query, user) do
     query
-    |> where([_, u], u.id == ^user.id)
+    |> where([_, _, u], u.id == ^user.id)
   end
 
   defp tagged_with(query, tags) when is_nil(tags) or tags == [], do: query
@@ -43,8 +44,12 @@ defmodule Linkhut.Search do
   defp tagged_with(query, tags) do
     query
     |> where(
-      [l, _],
-      fragment("array_lowercase(?) @> string_to_array(?, ',')::varchar[]", l.tags, ^Enum.join(tags |> Enum.map(&String.downcase/1), ","))
+      [l, _, _],
+      fragment(
+        "array_lowercase(?) @> string_to_array(?, ',')::varchar[]",
+        l.tags,
+        ^Enum.join(tags |> Enum.map(&String.downcase/1), ",")
+      )
     )
   end
 
@@ -55,6 +60,6 @@ defmodule Linkhut.Search do
 
   defp visible_as(query, user) do
     query
-    |> where([l, u], l.is_private == false or u.username == ^user)
+    |> where([l, _, u], l.is_private == false or u.username == ^user)
   end
 end

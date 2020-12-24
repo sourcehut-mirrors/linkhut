@@ -21,7 +21,7 @@ defmodule Linkhut.MixProject do
         # The main page in the docs
         main: "readme",
         logo: "assets/static/images/favicon.svg",
-        extras: ["README.md"],
+        extras: ["README.md", "docs/API.md"],
         source_url_pattern: "https://git.sr.ht/~mlb/linkhut/tree/master/%{path}#L%{line}"
       ]
     ]
@@ -67,7 +67,8 @@ defmodule Linkhut.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 0.4"},
       {:telemetry_poller, "~> 0.4"},
-      {:timex, "~> 3.6"}
+      {:timex, "~> 3.6"},
+      {:xml_builder, "~> 2.0.0"}
     ]
   end
 
