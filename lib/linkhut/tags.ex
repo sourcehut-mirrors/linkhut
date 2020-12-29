@@ -7,7 +7,6 @@ defmodule Linkhut.Tags do
 
   alias Linkhut.Accounts.User
   alias Linkhut.Links.Link
-  alias Linkhut.Links
   alias Linkhut.Repo
 
   @typedoc """

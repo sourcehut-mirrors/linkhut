@@ -83,7 +83,7 @@ defmodule Linkhut.MixProject do
   defp docs do
     [
       # The main page in the docs
-      main: "readme",
+      main: "introduction",
       logo: "assets/static/images/favicon.svg",
       extras: extras(),
       groups_for_extras: groups_for_extras(),
@@ -93,7 +93,8 @@ defmodule Linkhut.MixProject do
 
   defp extras do
     [
-      "README.md",
+      "docs/introduction/introduction.md",
+      "docs/introduction/installation.md",
       "docs/api/overview.md",
       "docs/api/posts.md",
       "docs/api/tags.md"
@@ -102,7 +103,7 @@ defmodule Linkhut.MixProject do
 
   defp groups_for_extras do
     [
-      Introduction: "README.md",
+      Introduction: ~r/docs\/introduction\/.?/,
       "External API": ~r/docs\/api\/.?/
     ]
   end
