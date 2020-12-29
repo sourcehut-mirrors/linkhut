@@ -1,16 +1,17 @@
 defmodule LinkhutWeb.Api.PostsController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.ApiView
+  plug :put_view, LinkhutWeb.Api.PostsView
 
   alias Linkhut.Links
   alias Linkhut.Links.Link
+  alias Linkhut.Tags
 
   def update(conn, _) do
     user = conn.assigns[:current_user]
 
     conn
-    |> render("update.xml", %{last_update: last_update(user)})
+    |> render(:update, %{last_update: last_update(user)})
   end
 
   # TODO: support for to_read
@@ -28,11 +29,11 @@ defmodule LinkhutWeb.Api.PostsController do
     case Links.update_link(link, link_params) do
       {:ok, link} ->
         conn
-        |> render("add.xml", link: link)
+        |> render(:add, link: link)
 
       {:error, changeset} ->
         conn
-        |> render("add.xml", changeset: changeset)
+        |> render(:add, changeset: changeset)
     end
   end
 
@@ -49,11 +50,11 @@ defmodule LinkhutWeb.Api.PostsController do
     case Links.create_link(user, link_params) do
       {:ok, link} ->
         conn
-        |> render("add.xml", link: link)
+        |> render(:add, link: link)
 
       {:error, changeset} ->
         conn
-        |> render("add.xml", changeset: changeset)
+        |> render(:add, changeset: changeset)
     end
   end
 
@@ -64,11 +65,11 @@ defmodule LinkhutWeb.Api.PostsController do
     case Links.delete_link(link) do
       {:ok, link} ->
         conn
-        |> render("delete.xml", link: link)
+        |> render(:delete, link: link)
 
       {:error, changeset} ->
         conn
-        |> render("delete.xml", changeset: changeset)
+        |> render(:delete, changeset: changeset)
     end
   end
 
@@ -77,7 +78,7 @@ defmodule LinkhutWeb.Api.PostsController do
     link = Links.get!(url, user.id)
 
     conn
-    |> render("get.xml",
+    |> render(:get,
       date: DateTime.to_date(link.inserted_at),
       links: [link],
       meta: value("meta", params),
@@ -89,7 +90,7 @@ defmodule LinkhutWeb.Api.PostsController do
     user = conn.assigns[:current_user]
 
     conn
-    |> render("get.xml",
+    |> render(:get,
       links: Links.all(user, hashes: String.split(hashes, " ", trim: true)),
       meta: value("meta", params),
       tag: ""
@@ -102,7 +103,7 @@ defmodule LinkhutWeb.Api.PostsController do
     links = Links.all(user, dt: date, tags: value("tag", params))
 
     conn
-    |> render("get.xml",
+    |> render(:get,
       date: date,
       links: links,
       meta: value("meta", params),
@@ -122,7 +123,7 @@ defmodule LinkhutWeb.Api.PostsController do
     count = value("count", params)
 
     conn
-    |> render("recent.xml",
+    |> render(:recent,
       date: last_update(user),
       links: Links.all(user, tags: tags, count: count),
       tag: Map.get(params, "tag", "")
@@ -133,10 +134,15 @@ defmodule LinkhutWeb.Api.PostsController do
     user = conn.assigns[:current_user]
     tags = value("tag", params)
 
+    dates =
+      Links.all(user, tags: tags)
+      |> Enum.frequencies_by(fn %{inserted_at: dt} -> DateTime.to_date(dt) end)
+      |> Enum.sort_by(fn {date, _} -> date end, {:desc, Date})
+
     conn
-    |> render("dates.xml",
+    |> render(:dates,
       date: last_update(user),
-      links: Links.all(user, tags: tags),
+      dates: dates,
       tag: Map.get(params, "tag", "")
     )
   end
@@ -145,7 +151,7 @@ defmodule LinkhutWeb.Api.PostsController do
     user = conn.assigns[:current_user]
 
     conn
-    |> render("all?hashes.xml", links: Links.all(user))
+    |> render(:all_hashes, links: Links.all(user))
   end
 
   def all(conn, params) do
@@ -159,7 +165,7 @@ defmodule LinkhutWeb.Api.PostsController do
     filters = [tags: tags, start: start, count: results, from: from, to: to]
 
     conn
-    |> render("all.xml",
+    |> render(:all,
       links: Links.all(user, filters),
       tag: Map.get(params, "tag", ""),
       meta: value("meta", params)
@@ -171,17 +177,17 @@ defmodule LinkhutWeb.Api.PostsController do
 
     popular =
       Links.all(url: url, is_private: false)
-      |> Links.get_tags()
-      |> Enum.map(fn %{label: label} -> label end)
+      |> Tags.for_links()
+      |> Enum.map(fn %{tag: tag} -> tag end)
 
     recommended =
-      Links.get_tags(user, tags: popular)
-      |> Enum.map(fn %{label: label} -> label end)
+      Tags.all(user, tags: popular)
+      |> Enum.map(fn %{tag: tag} -> tag end)
 
     popular = popular -- recommended
 
     conn
-    |> render("suggest.xml", popular: popular, recommended: recommended)
+    |> render(:suggest, popular: popular, recommended: recommended)
   end
 
   defp last_update(user) do

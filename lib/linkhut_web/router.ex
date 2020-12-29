@@ -24,7 +24,7 @@ defmodule LinkhutWeb.Router do
   end
 
   pipeline :api do
-    plug :accepts, ["xml"]
+    plug :accepts, ["xml", "json"]
   end
 
   scope "/_/v1/", LinkhutWeb.Api, as: :api do
@@ -38,6 +38,10 @@ defmodule LinkhutWeb.Router do
     get "/posts/dates", PostsController, :dates
     get "/posts/all", PostsController, :all
     get "/posts/suggest", PostsController, :suggest
+
+    get "/tags/get", TagsController, :get
+    get "/tags/delete", TagsController, :delete
+    get "/tags/rename", TagsController, :rename
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do

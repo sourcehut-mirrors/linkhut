@@ -9,7 +9,7 @@
         <section>
             <h5><%= gettext "tags" %></h5>
             <ul class="tag-cloud">
-                <%= for %{label: tag, count: count} <- @tags do %>
+                <%= for %{tag: tag, count: count} <- @tags do %>
                 <li><a href="<%= with_tag_link(@conn, tag) %>" data-count="<%= count %>"><%= tag %></a></li>
                 <% end %>
             </ul>

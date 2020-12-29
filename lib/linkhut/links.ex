@@ -205,44 +205,6 @@ defmodule Linkhut.Links do
     )
   end
 
-  # tags
-  # TODO: all tag related methods are in need of a serious cleanup.
-
-  @doc """
-  Returns a set of tags associated with a given link query
-  """
-  def get_tags(query, limit: limit) do
-    query_tags(query |> exclude(:preload) |> exclude(:select))
-    |> limit(^limit)
-    |> Repo.all()
-  end
-
-  @spec get(%User{}, [term()]) :: list(%{label: String.t(), count: integer()})
-  def get_tags(%User{} = user, params) do
-    tags = Keyword.get(params, :tags, [])
-
-    query_tags(Link |> where([l], l.user_id == ^user.id))
-    |> where([t], fragment("lower(?)", t.tag) in ^tags)
-    |> Repo.all()
-  end
-
-  def get_tags(links) when is_list(links) do
-    urls = Enum.map(links, fn %{url: url} -> url end)
-
-    query_tags(Link |> where([l], l.url in ^urls))
-    |> Repo.all()
-  end
-
-  defp query_tags(query) do
-    from t in subquery(select(query, [l], %{tag: fragment("unnest(?)", l.tags)})),
-      select: %{
-        label: fragment("mode() within group (order by ?) as label", t.tag),
-        count: count("*")
-      },
-      group_by: fragment("lower(?)", t.tag),
-      order_by: [desc: count("*"), asc: fragment("label")]
-  end
-
   defp get_shares() do
     from(l in Link,
       join: o in Link,

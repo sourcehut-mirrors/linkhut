@@ -94,15 +94,15 @@ defmodule Linkhut.MixProject do
   defp extras do
     [
       "README.md",
-
       "docs/api/overview.md",
-      "docs/api/posts.md"
+      "docs/api/posts.md",
+      "docs/api/tags.md"
     ]
   end
 
   defp groups_for_extras do
     [
-      "Introduction": "README.md",
+      Introduction: "README.md",
       "External API": ~r/docs\/api\/.?/
     ]
   end

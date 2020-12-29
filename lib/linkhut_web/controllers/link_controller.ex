@@ -7,6 +7,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Pagination
   alias Linkhut.Search
   alias Linkhut.Search.Context
+  alias Linkhut.Tags
 
   @links_per_page 20
   @related_tags_limit 400
@@ -133,7 +134,7 @@ defmodule LinkhutWeb.LinkController do
     conn
     |> render(:index,
       links: links,
-      tags: Links.get_tags(search_query, limit: @related_tags_limit),
+      tags: Tags.for_query(search_query, limit: @related_tags_limit),
       query: query,
       context: context
     )
