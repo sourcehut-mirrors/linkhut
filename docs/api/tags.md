@@ -4,7 +4,9 @@
 
 Returns a list of tags and number of times used by a user.
 
-### Example Response
+### Examples
+
+#### XML
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -17,6 +19,18 @@ Returns a list of tags and number of times used by a user.
 </tags>
 ```
 
+#### JSON
+
+```json
+{
+  "collaboration": 5,
+  "development": 4,
+  "git": 3,
+  "open-source": 1,
+  "software": 1
+}
+```
+
 ## `/v1/tags/delete`
 
 Delete an existing tag from all posts
@@ -25,10 +39,18 @@ Delete an existing tag from all posts
 
 - `&tag={TAG}` (required) — Tag to delete.
 
-### Example Response
+### Examples
+
+#### XML
 
 ```xml
 <result>done</result>
+```
+
+#### JSON
+
+```json
+{"result_code":"done"}
 ```
 
 ## `/v1/tags/rename`
@@ -40,8 +62,16 @@ Rename an existing tag with a new tag name.
 - `&old={TAG}` (required) — Tag to rename.
 - `&new={TAG}` (required) — New tag name.
 
-### Example Response
+### Examples
+
+#### XML
 
 ```xml
 <result>done</result>
+```
+
+#### JSON
+
+```json
+{"result_code":"done"}
 ```
