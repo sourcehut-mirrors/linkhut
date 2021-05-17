@@ -14,7 +14,7 @@ defmodule Linkhut.Tags do
   """
   @type tag :: %{count: number(), tag: String.t()}
 
-  @spec all(%User{}, [term()]) :: list(tag())
+  @spec all(User.t(), [term()]) :: list(tag())
   def all(%User{} = user, params \\ []) do
     tags = Keyword.get(params, :tags)
 

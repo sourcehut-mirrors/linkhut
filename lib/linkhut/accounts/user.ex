@@ -5,6 +5,8 @@ defmodule Linkhut.Accounts.User do
   import Ecto.Changeset
   alias Linkhut.Accounts.Credential
 
+  @type t :: Ecto.Schema.t()
+
   @username_format ~r/^[a-zA-Z\d]{3,}$/
 
   schema "users" do
@@ -22,5 +24,12 @@ defmodule Linkhut.Accounts.User do
     |> validate_required([:username])
     |> unique_constraint(:username)
     |> validate_format(:username, @username_format)
+    |> validate_change(:username, fn :username, username ->
+      if Linkhut.Reserved.valid_username?(username) do
+        []
+      else
+        [username: ~s('#{username}' is reserved)]
+      end
+    end)
   end
 end

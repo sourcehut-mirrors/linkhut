@@ -17,11 +17,6 @@ defmodule Linkhut.Accounts do
   @type username :: binary
 
   @typedoc """
-  A `User` struct.
-  """
-  @type user :: %User{}
-
-  @typedoc """
   An `Ecto.Changeset` struct for the given `data_type`.
   """
   @type changeset(data_type) :: Ecto.Changeset.t(data_type)
@@ -40,13 +35,13 @@ defmodule Linkhut.Accounts do
       ** (Ecto.NoResultsError)
 
   """
-  @spec get_user!(integer) :: user
+  @spec get_user!(integer) :: User.t()
   def get_user!(id) when is_number(id) do
     User
     |> Repo.get!(id)
   end
 
-  @spec get_user!(username) :: user
+  @spec get_user!(username) :: User.t()
   def get_user!(username) when is_binary(username) do
     User
     |> Repo.get_by!(username: username)
@@ -66,13 +61,13 @@ defmodule Linkhut.Accounts do
       nil
 
   """
-  @spec get_user(integer) :: user | nil
+  @spec get_user(integer) :: User.t() | nil
   def get_user(id) when is_number(id) do
     User
     |> Repo.get(id)
   end
 
-  @spec get_user(username) :: user | nil
+  @spec get_user(username) :: User.t() | nil
   def get_user(username) when is_binary(username) do
     User
     |> Repo.get_by(username: username)
@@ -90,7 +85,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec create_user(%{optional(any) => any}) :: {:ok, user} | {:error, changeset(user)}
+  @spec create_user(%{optional(any) => any}) :: {:ok, User.t()} | {:error, changeset(User.t())}
   def create_user(attrs \\ %{}) do
     %User{}
     |> User.changeset(attrs)
@@ -110,7 +105,8 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec update_user(user, %{optional(any) => any}) :: {:ok, user} | {:error, changeset(user)}
+  @spec update_user(User.t(), %{optional(any) => any}) ::
+          {:ok, User.t()} | {:error, changeset(User.t())}
   def update_user(%User{} = user, attrs) do
     user
     |> Repo.preload(:credential)
@@ -131,7 +127,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_user(user) :: {:ok, user} | {:error, changeset(user)}
+  @spec delete_user(User.t()) :: {:ok, User.t()} | {:error, changeset(User.t())}
   def delete_user(%User{} = user) do
     Repo.delete(user)
   end
@@ -145,7 +141,7 @@ defmodule Linkhut.Accounts do
       %Ecto.Changeset{data: %User{}}
 
   """
-  @spec change_user(user, %{optional(any) => any}) :: changeset(user)
+  @spec change_user(User.t(), %{optional(any) => any}) :: changeset(User.t())
   def change_user(%User{} = user, attrs \\ %{}) do
     user
     |> Repo.preload(:credential)
@@ -196,22 +192,22 @@ defmodule Linkhut.Accounts do
 
   """
   def authenticate_by_username_password(username, password) do
-    user =
-      username
-      |> get_user()
-      |> Repo.preload(:credential)
+    username
+    |> get_user()
+    |> Repo.preload(:credential)
+    |> verify_password(password)
+  end
 
-    case user do
-      %User{} = user ->
-        if verify_pass(password, user.credential.password_hash) do
-          {:ok, user}
-        else
-          {:error, :unauthorized}
-        end
+  defp verify_password(nil, password) do
+    no_user_verify(password: password)
 
-      nil ->
-        no_user_verify(password: password)
-        {:error, :unauthorized}
+    {:error, :unauthorized}
+  end
+
+  defp verify_password(%User{credential: %{password_hash: hash}} = user, password) do
+    case verify_pass(password, hash) do
+      true -> {:ok, user}
+      false -> {:error, :unauthorized}
     end
   end
 end

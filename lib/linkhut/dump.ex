@@ -6,10 +6,10 @@ defmodule Linkhut.Dump do
   alias Linkhut.Dump.HTMLParser
   alias Linkhut.Links
 
-  @type success :: {:ok, Linkhut.Links.link()}
+  @type success :: {:ok, Linkhut.Links.Link.t()}
   @type failure :: {:error, String.t() | %Ecto.Changeset{}}
 
-  @spec import(Linkhut.Accounts.user(), String.t()) :: [success | failure]
+  @spec import(Linkhut.Accounts.User.t(), String.t()) :: [success | failure]
   def import(user, document) do
     {:ok, bookmarks} = HTMLParser.parse_document(document)
 

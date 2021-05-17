@@ -4,6 +4,8 @@ defmodule Linkhut.Links.Link do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @type t :: Ecto.Schema.t()
+
   alias Linkhut.Accounts.User
   alias Linkhut.Links.Tags
 

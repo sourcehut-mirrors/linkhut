@@ -6,7 +6,7 @@ defmodule Linkhut.Search.Context do
   alias Linkhut.Accounts
 
   @type t() :: %__MODULE__{
-          from: Accounts.user(),
+          from: Accounts.User.t(),
           tagged_with: [String.t()],
           visible_as: String.t()
         }
