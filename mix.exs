@@ -46,7 +46,7 @@ defmodule Linkhut.MixProject do
       {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.5"},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.24", only: :dev, runtime: false},
       {:ex_machina, "~> 2.4", only: :test},
       {:gettext, "~> 0.18"},
       {:jason, "~> 1.0"},
@@ -56,6 +56,7 @@ defmodule Linkhut.MixProject do
       {:phoenix_html_sanitizer, "~> 1.0"},
       {:phoenix_live_dashboard, "~> 0.1"},
       {:phoenix_live_reload, "~> 1.3", only: :dev},
+      {:phoenix_oauth2_provider, "~> 0.5.1"},
       {:phoenix_pubsub, "~> 2.0"},
       {:plug_cowboy, "~> 2.1"},
       {:postgrex, ">= 0.0.0"},
@@ -83,6 +84,7 @@ defmodule Linkhut.MixProject do
   defp docs do
     [
       # The main page in the docs
+      api_reference: false,
       main: "introduction",
       logo: "assets/static/images/favicon.svg",
       extras: extras(),

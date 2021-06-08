@@ -1,0 +1,13 @@
+<%= render "_menu.html", conn: @conn %>
+<section class="settings">
+    <h4>Personal Access Token</h4>
+    <p>
+    This will generate a valid OAuth token with complete access to your linkhut account. It will expire in one year, or when you manually revoke it.
+
+    <%= form_for @conn, Routes.oauth_path(@conn, :create_personal_token), fn f -> %>
+    <fieldset>
+        <%= input f, :comment, [placeholder: "Arbitrary comment for personal reference only", maxlength: 128] %>
+    </fieldset>
+    <%= submit "Generate token" %>
+  <% end %>
+</section>

@@ -165,7 +165,7 @@ a:not(.doc) {
 
 fieldset {
     border-color: transparent;
-    border-width: 1px;
+    border-width: 0;
     border-style: solid;
     margin: 0;
     padding: 0;
@@ -227,26 +227,17 @@ fieldset {
 
 form:not([itemprop="signout"]) {
     & button, a {
-        background-color: transparent;
+        background-color: $white;
         border-color: $muted;
         border-style: solid;
         border-width: 1px;
         display: inline-block;
-        float: right;
-        font-weight: bold;
-        margin-left: $spacing-small;
         padding: $spacing-small $spacing-medium;
 
         &:hover {
             cursor: pointer;
             text-decoration: none;
         }
-    }
-
-    &:after {
-        content: '';
-        display: block;
-        clear: both;
     }
 }
 
@@ -647,6 +638,13 @@ a.button {
     display: inline-flex;
     padding: $spacing-small $spacing-medium;
     text-decoration: none;
+    background-color: $white;
+
+    &.fill {
+        display: block;
+        text-align: center;
+        width: 100%;
+    }
 
     & > span {
         padding-left: $spacing-small;
@@ -794,4 +792,66 @@ div.navigation {
     @media #{$not-small} {
         flex-direction: row;
     }
+}
+
+section.settings {
+    &:first-child {
+        margin-top: 0;
+    }
+
+    & h4 {
+        border-bottom: 1px solid;
+        border-bottom-color: $background;
+        padding-bottom: $spacing-tiny;
+    }
+
+    & dl {
+        & > dt {
+            font-weight: bold;
+        }
+        & > dd {
+            margin-bottom: $spacing-small;
+            margin-left: 0;
+        }
+        margin-top: 0;
+        margin-bottom: $spacing-medium;
+    }
+
+    & table {
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: $spacing-medium;
+        border-collapse: collapse;
+
+        & > thead > tr > th {
+            &.btn-column {
+                width: 6rem;
+            }
+
+            text-align: inherit;
+            padding: $spacing-tiny $spacing-tiny;
+            border: none;
+        }
+
+        & > tbody > tr > td {
+            position: relative;
+            vertical-align: middle;
+            padding: $spacing-tiny $spacing-tiny;
+            border-top: 1px solid $gray;
+            border-bottom: 1px solid $gray;
+        }
+    }
+
+    background: $light-gray;
+    margin-top: $spacing-small;
+    overflow-x: auto;
+    padding: $spacing-small;
+}
+
+span.code {
+    font-family: monospace, monospace;
+}
+
+form.inline {
+    display: inline-block;
 }

@@ -1,0 +1,12 @@
+<%= render "_menu.html", conn: @conn %>
+<section class="settings">
+    <h4>Personal Access Token</h4>
+    <p>
+    <dl>
+        <dt>Your token:</dt>
+        <dd><code><%= @token %></code></dd>
+    </dl>
+    This access token <strong>will never be shown to you again</strong>. Keep this secret.
+    <p>
+    <a class="button" href="<%= Routes.oauth_path(@conn, :show) %>">Continue</a>
+</section>

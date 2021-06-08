@@ -1,0 +1,15 @@
+<%= render "_menu.html", conn: @conn %>
+<section class="settings">
+    <h4>Are you sure?</h4>
+    <p>
+    <%= if @token.application == nil do %>
+        Do you want to revoke personal access token <strong><code><%= String.slice(@token.token, 0, 8) %>&hellip;</code></strong>? This cannot be undone.
+    <% else %>
+        Do you want to revoke all access from <strong><%= @token.application.name %></strong> to your account? This cannot be undone.
+    <% end %>
+    </p>
+    <%= form_for @changeset, Routes.oauth_path(@conn, :revoke_token, @token.id), [class: "inline"], fn f -> %>
+    <%= hidden_input f, :id %>
+    <%= submit "Revoke" %>
+    <% end %>
+</section>

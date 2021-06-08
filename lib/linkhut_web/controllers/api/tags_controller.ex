@@ -2,6 +2,8 @@ defmodule LinkhutWeb.Api.TagsController do
   use LinkhutWeb, :controller
 
   plug :put_view, LinkhutWeb.Api.TagsView
+  plug ExOauth2Provider.Plug.EnsureScopes, [scopes: ~w(tags:write)] when action in [:delete, :rename]
+  plug ExOauth2Provider.Plug.EnsureScopes, [scopes: ~w(tags:read)] when action in [:get]
 
   alias Linkhut.Tags
 

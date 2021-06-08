@@ -1,11 +1,9 @@
 defmodule LinkhutWeb.LinkView do
   use LinkhutWeb, :view
-  use Timex
 
   alias Atomex.{Entry, Feed}
   alias Linkhut.Search.Context
   alias LinkhutWeb.Router.Helpers, as: RouteHelpers
-  alias Timex.Duration
 
   @doc """
   Provides the path to a new search context that includes the given tag
@@ -32,28 +30,6 @@ defmodule LinkhutWeb.LinkView do
   """
   def feed_link(%Plug.Conn{path_info: path_segments} = conn) do
     RouteHelpers.feed_link_path(conn, :show, path_segments)
-  end
-
-  @doc """
-  Makes dates pretty
-  """
-  def prettify(date) do
-    days_ago =
-      Duration.diff(Duration.now(), Duration.from_days(Date.diff(date, ~D[1970-01-01])), :days)
-
-    cond do
-      days_ago < 1 ->
-        "Today"
-
-      days_ago <= 2 ->
-        LinkhutWeb.Gettext.gettext("Yesterday")
-
-      days_ago < 10 ->
-        Timex.format!(date, "{relative}", :relative)
-
-      true ->
-        Timex.format!(date, "{0D} {Mshort} {0YY}")
-    end
   end
 
   @doc """

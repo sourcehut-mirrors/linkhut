@@ -5,6 +5,7 @@
     <%= nav_link(@conn, gettext("Import"), to: Routes.import_path(@conn, :show), wrap_with: :li) %>
     <%= nav_link(@conn, gettext("Export"), to: Routes.export_path(@conn, :show), wrap_with: :li) %>
     <%= nav_link(@conn, gettext("Misc"), to: Routes.misc_path(@conn, :show), wrap_with: :li) %>
+    <%= nav_link(@conn, gettext("OAuth"), to: Routes.oauth_path(@conn, :show), wrap_with: :li) %>
     </ul>
 </div>
 <hr/>

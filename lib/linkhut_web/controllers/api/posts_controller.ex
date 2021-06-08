@@ -2,6 +2,8 @@ defmodule LinkhutWeb.Api.PostsController do
   use LinkhutWeb, :controller
 
   plug :put_view, LinkhutWeb.Api.PostsView
+  plug ExOauth2Provider.Plug.EnsureScopes, [scopes: ~w(posts:write)] when action in [:add, :delete]
+  plug ExOauth2Provider.Plug.EnsureScopes, [scopes: ~w(posts:read)] when action in [:update, :get, :recent, :dates, :all, :suggest]
 
   alias Linkhut.Links
   alias Linkhut.Links.Link

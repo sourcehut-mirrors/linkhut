@@ -1,0 +1,32 @@
+<%= render "_menu.html", conn: @conn %>
+<section class="settings">
+    <h4>Authorize account access</h4>
+    <p>
+        <strong><%= @client.name %></strong> would like access to your linkhut account.
+    </p>
+    <p>
+        <strong><%= @client.name %></strong> is a third-party application operated by <strong><%= @client.owner.username %></strong>. You may revoke this access at any time.
+    </p>
+    They would like permission to access the following resources on your account:
+    <ul>
+        <%= for scope <- @scopes do %>
+        <li><%= scope %></li>
+        <% end %>
+    </ul>
+    <%= form_for @conn, Routes.oauth_path(@conn, :create_authorization), [class: "inline"], fn f -> %>
+    <%= hidden_input f, :client_id %>
+    <%= hidden_input f, :redirect_uri %>
+    <%= hidden_input f, :state %>
+    <%= hidden_input f, :response_type %>
+    <%= hidden_input f, :scope %>
+    <%= submit "Proceed and grant access" %>
+    <% end %>
+    <%= form_for @conn, Routes.oauth_path(@conn, :delete_authorization), [method: :delete, class: "inline"], fn f -> %>
+    <%= hidden_input f, :client_id %>
+    <%= hidden_input f, :redirect_uri %>
+    <%= hidden_input f, :state %>
+    <%= hidden_input f, :response_type %>
+    <%= hidden_input f, :scope %>
+    <%= submit "Cancel and do not grant access" %>
+    <% end %>
+</section>

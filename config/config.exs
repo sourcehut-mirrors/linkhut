@@ -31,6 +31,23 @@ config :mime, :types, %{
   "application/xml" => ["xml"]
 }
 
+# Configures OAuth
+config :linkhut, ExOauth2Provider,
+  repo: Linkhut.Repo,
+  resource_owner: Linkhut.Accounts.User,
+  access_grant: Linkhut.Oauth.AccessGrant,
+  access_token: Linkhut.Oauth.AccessToken,
+  application: Linkhut.Oauth.Application,
+  force_ssl_in_redirect_uri: true,
+  access_token_expires_in: 365 * 24 * 60 * 60,
+  use_refresh_token: true,
+  revoke_refresh_token_on_use: true,
+  optional_scopes: (for scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
+
+config :linkhut, PhoenixOauth2Provider,
+       web_module: LinkhutWeb,
+       current_resource_owner: :current_user
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{Mix.env()}.exs"

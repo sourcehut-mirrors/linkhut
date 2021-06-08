@@ -1,5 +1,6 @@
 defmodule LinkhutWeb.Router do
   use LinkhutWeb, :router
+  use PhoenixOauth2Provider.Router, otp_app: :linkhut
   import Phoenix.LiveDashboard.Router
 
   pipeline :browser do
@@ -15,8 +16,8 @@ defmodule LinkhutWeb.Router do
     plug LinkhutWeb.Plugs.EnsureAuth
   end
 
-  pipeline :basic_auth do
-    plug LinkhutWeb.Plugs.BasicAuth
+  pipeline :token_auth do
+    plug LinkhutWeb.Plugs.VerifyTokenAuth
   end
 
   pipeline :feed do
@@ -27,8 +28,14 @@ defmodule LinkhutWeb.Router do
     plug :accepts, ["xml", "json"]
   end
 
+  scope "/_/v1/" do
+    pipe_through :api
+
+    oauth_api_routes()
+  end
+
   scope "/_/v1/", LinkhutWeb.Api, as: :api do
-    pipe_through [:api, :basic_auth]
+    pipe_through [:api, :token_auth]
 
     get "/posts/update", PostsController, :update
     get "/posts/add", PostsController, :add
@@ -53,19 +60,22 @@ defmodule LinkhutWeb.Router do
     get "/*tags", LinkController, :show
   end
 
-  scope "/_", LinkhutWeb do
+  scope "/_", LinkhutWeb.Settings do
     pipe_through [:browser, :ensure_auth]
 
-    get "/import", Settings.ImportController, :show
-    post "/import", Settings.ImportController, :upload
+    get "/import", ImportController, :show
+    post "/import", ImportController, :upload
 
-    get "/export", Settings.ExportController, :show
-    get "/download", Settings.ExportController, :download
+    get "/export", ExportController, :show
+    get "/download", ExportController, :download
 
-    get "/misc", Settings.MiscController, :show
+    get "/misc", MiscController, :show
+    get "/profile", ProfileController, :show
+    put "/profile", ProfileController, :update
+  end
 
-    get "/profile", Settings.ProfileController, :show
-    put "/profile", Settings.ProfileController, :update
+  scope "/_", LinkhutWeb do
+    pipe_through [:browser, :ensure_auth]
 
     get "/add", LinkController, :new
     post "/add", LinkController, :insert
@@ -77,6 +87,29 @@ defmodule LinkhutWeb.Router do
     put "/delete", LinkController, :delete
 
     delete "/logout", Auth.SessionController, :delete
+  end
+
+  scope "/_/oauth", LinkhutWeb.Settings do
+    pipe_through [:browser, :ensure_auth]
+
+    get "/", OauthController, :show
+    get "/personal-token", OauthController, :new_personal_token
+    post "/personal-token", OauthController, :create_personal_token
+    get "/personal-token/revoke/:id", OauthController, :revoke_token
+    put "/personal-token/revoke/:id", OauthController, :revoke_token
+
+    get "/register", OauthController, :new_application
+    post "/register", OauthController, :create_application
+    get "/registered", OauthController, :show_application
+    get "/application/:uid/settings", OauthController, :edit_application
+    put "/application/:uid/settings", OauthController, :update_application
+    post "/application/delete/:uid", OauthController, :delete_application
+    post "/revoke-tokens/:uid", OauthController, :revoke_application
+    post "/reset-secret/:uid", OauthController, :reset_application
+
+    get "/authorize", OauthController, :new_authorization
+    post "/authorize", OauthController, :create_authorization
+    delete "/authorize", OauthController, :delete_authorization
   end
 
   # Enables LiveDashboard only for development

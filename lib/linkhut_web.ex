@@ -31,6 +31,7 @@ defmodule LinkhutWeb do
     quote do
       use Phoenix.View,
         root: "lib/linkhut_web/templates",
+        pattern: "**/*",
         namespace: LinkhutWeb
 
       # Import convenience functions from controllers
@@ -42,6 +43,7 @@ defmodule LinkhutWeb do
 
       import LinkhutWeb.FormHelpers
       import LinkhutWeb.Gettext
+      import LinkhutWeb.Helpers
       alias LinkhutWeb.Router.Helpers, as: Routes
     end
   end

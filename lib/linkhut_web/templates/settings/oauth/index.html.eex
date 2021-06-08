@@ -1,0 +1,17 @@
+<%= render "_menu.html", conn: @conn %>
+<div>
+    <section class="settings">
+        <h4>Personal Access Tokens</h4>
+        <%= render "oauth/personal_token/_index.html", assigns %>
+        <a class="button" href="<%= Routes.oauth_path(@conn, :new_personal_token) %>">Generate new token</a>
+    </section>
+    <section class="settings">
+        <h4>Authorized Applications</h4>
+        <%= render "oauth/authorized_applications/_index.html", assigns %>
+    </section>
+    <section class="settings">
+        <h4>Registered Applications</h4>
+        <%= render "oauth/application/_index.html", assigns %>
+        <a class="button" href="<%= Routes.oauth_path(@conn, :new_application) %>">Register new application</a>
+    </section>
+</div>

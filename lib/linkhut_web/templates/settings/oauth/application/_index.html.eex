@@ -1,0 +1,26 @@
+<%= if assigns[:applications] != [] do %>
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Application ID</th>
+        <th>Active users</th>
+        <th class="btn-column"></th>
+    </tr>
+    </thead>
+    <tbody>
+<%= for application <- @applications do %>
+    <tr>
+        <td><%= application.name %></td>
+        <td><code><%= application.uid %></code></td>
+        <td><code><%= Enum.count(application.access_tokens) %></code></td>
+        <td><a class="button fill" href="<%= Routes.oauth_path(@conn, :edit_application, application.uid) %>">Manage</a></td>
+    </tr>
+<% end %>
+    </tbody>
+</table>
+<% else %>
+<p>
+    You have not registered any OAuth applications yet.
+</p>
+<% end %>

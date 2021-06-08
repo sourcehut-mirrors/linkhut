@@ -1,0 +1,16 @@
+<%= render "_menu.html", conn: @conn %>
+<section class="settings">
+    <h4>OAuth application registered</h4>
+    <p>
+    Your OAuth application has been successfully registered. Write down this information:
+    <p>
+    <dl>
+    <dt>Application ID</dt>
+    <dd><code><%= @application.uid %></code></dd>
+    <dt>Application Secret</dt>
+    <dd><code><%= @application.secret %></code></dd>
+    </dl>
+    Your application secret <strong>will never be shown to you again</strong>, though you can reset it later if necessary. As the name implies, you should keep it secret.
+    <p>
+    <a class="button" href="<%= Routes.oauth_path(@conn, :show) %>">Continue</a>
+</section>
