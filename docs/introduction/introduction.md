@@ -2,7 +2,7 @@
 
 **linkhut** is an [open source](https://sr.ht/~mlb/linkhut/) social bookmarking website.
 
-# Features
+## Features
 
 * Absolutely no tracking or advertising
 * Import/Export your bookmarks
