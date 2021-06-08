@@ -52,7 +52,7 @@ to you. **Record your application secret now**. It will not be shown to you agai
 To start the exchange, direct the user to the following URL:
 
 ```none
-https://ln.ht/_/oauth/authorize?client_id=<CLIENT_ID>&scopes=<SCOPES>&redirect_uri=<REDIRECT_URI>
+https://ln.ht/_/oauth/authorize?response_type=code&client_id=<CLIENT_ID>&scopes=<SCOPES>&redirect_uri=<REDIRECT_URI>
 ```
 
 Provide the following parameters in the query string:
