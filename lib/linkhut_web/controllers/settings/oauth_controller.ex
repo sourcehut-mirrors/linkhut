@@ -87,12 +87,13 @@ defmodule LinkhutWeb.Settings.OauthController do
     render(conn, "oauth/application/edit.html", changeset: changeset, application: application)
   end
 
-  def update_application(conn, %{"uid" => uid, "application" => application}) do
+  def update_application(conn, %{"uid" => uid, "application" => params}) do
     user = conn.assigns[:current_user]
 
-    user
-    |> Oauth.get_application_for!(uid)
-    |> Oauth.update_application(application)
+    application = Oauth.get_application_for!(user, uid)
+
+    application
+    |> Oauth.update_application(params)
     |> case do
       {:ok, _} ->
         conn
@@ -100,7 +101,7 @@ defmodule LinkhutWeb.Settings.OauthController do
         |> redirect(to: Routes.oauth_path(conn, :show))
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "oauth/application/edit.html", changeset: changeset)
+        render(conn, "oauth/application/edit.html", changeset: changeset, application: application)
     end
   end
 
