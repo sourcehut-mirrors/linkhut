@@ -113,10 +113,22 @@ defmodule LinkhutWeb.Api.PostsController do
     )
   end
 
-  def get(conn, params) do
+  def get(conn, params) when map_size(params) == 0 do
     user = conn.assigns[:current_user]
 
     get(conn, Map.put(params, "dt", last_update(user) |> DateTime.to_date() |> Date.to_iso8601()))
+  end
+
+  def get(conn, %{} = params) do
+    user = conn.assigns[:current_user]
+    links = Links.all(user, tags: value("tag", params))
+
+    conn
+    |> render(:get,
+         links: links,
+         meta: value("meta", params),
+         tag: Map.get(params, "tag", "")
+       )
   end
 
   def recent(conn, params) do
