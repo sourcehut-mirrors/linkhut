@@ -104,7 +104,7 @@ Returns one or more posts on a single day matching the arguments. If no date or 
 #### XML
 
 ```shell
-$ curl 'https://user:passwd@api.ln.ht/v1/posts/get?tag=webdev&meta=yes'
+$ curl -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/get?tag=webdev&meta=yes'
 ```
 
 ```xml
@@ -121,7 +121,7 @@ $ curl 'https://user:passwd@api.ln.ht/v1/posts/get?tag=webdev&meta=yes'
 ```
 
 ```shell
-$ curl 'https://user:passwd@api.ln.ht/v1/posts/get?url=https%3A%2F%2Fsourcehut.org%2F'
+$ curl -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/get?url=https%3A%2F%2Fsourcehut.org%2F'
 ```
 
 ```xml
@@ -140,7 +140,7 @@ $ curl 'https://user:passwd@api.ln.ht/v1/posts/get?url=https%3A%2F%2Fsourcehut.o
 #### JSON
 
 ```shell
-$ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/get?tag=webdev&meta=yes'
+$ curl -H Accept:'application/json' -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/get?tag=webdev&meta=yes'
 ```
 
 ```json
@@ -162,7 +162,7 @@ $ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/get
 ```
 
 ```shell
-$ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/get?url=https%3A%2F%2Fsourcehut.org%2F'
+$ curl -H Accept:'application/json' -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/get?url=https%3A%2F%2Fsourcehut.org%2F'
 ```
 
 ```json
@@ -197,7 +197,7 @@ Returns a list of the user's most recent posts, filtered by tag.
 #### XML
 
 ```shell
-$ curl 'https://user:passwd@api.ln.ht/v1/posts/recent'
+$ curl -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/recent'
 ```
 
 ```xml
@@ -216,7 +216,7 @@ $ curl 'https://user:passwd@api.ln.ht/v1/posts/recent'
 #### JSON
 
 ```shell
-$ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/recent'
+$ curl -H Accept:'application/json' -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/recent'
 ```
 
 ```json
@@ -309,7 +309,7 @@ Returns all bookmarks in the user's account. Please use sparingly. Call the upda
 #### XML
 
 ```shell
-$ curl 'https://user:passwd@api.ln.ht/v1/posts/all'
+$ curl -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/all'
 ```
 
 ```xml
@@ -326,7 +326,7 @@ $ curl 'https://user:passwd@api.ln.ht/v1/posts/all'
 #### JSON
 
 ```shell
-$ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/all'
+$ curl -H Accept:'application/json' -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/all'
 ```
 
 ```json
@@ -370,7 +370,7 @@ Each post element returned offers a `url` attribute containing an URL MD5, with 
 #### XML
 
 ```shell
-$ curl 'https://user:passwd@api.ln.ht/v1/posts/all?hashes'
+$ curl -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/all?hashes'
 ```
 
 ```xml
@@ -385,7 +385,7 @@ $ curl 'https://user:passwd@api.ln.ht/v1/posts/all?hashes'
 #### JSON
 
 ```shell
-$ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/all?hashes'
+$ curl -H Accept:'application/json' -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/all?hashes'
 ```
 
 ```json
@@ -417,7 +417,7 @@ This method is intended to provide suggestions for tagging a particular url.
 #### XML
 
 ```shell
-$ curl 'https://user:passwd@api.ln.ht/v1/posts/suggest?url=https%3A%2F%2Fsourcehut.org%2F'
+$ curl -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/suggest?url=https%3A%2F%2Fsourcehut.org%2F'
 ```
 
 ```xml
@@ -436,7 +436,7 @@ $ curl 'https://user:passwd@api.ln.ht/v1/posts/suggest?url=https%3A%2F%2Fsourceh
 #### JSON
 
 ```shell
-$ curl -H "Accept: application/json" 'https://user:passwd@api.ln.ht/v1/posts/suggest?url=https%3A%2F%2Fsourcehut.org%2F'
+$ curl -H Accept:'application/json' -H Authorization:'Bearer <TOKEN>' 'https://api.ln.ht/v1/posts/suggest?url=https%3A%2F%2Fsourcehut.org%2F'
 ```
 
 ```json
