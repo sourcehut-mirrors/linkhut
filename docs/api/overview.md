@@ -52,13 +52,13 @@ to you. **Record your application secret now**. It will not be shown to you agai
 To start the exchange, direct the user to the following URL:
 
 ```none
-https://ln.ht/_/oauth/authorize?response_type=code&client_id=<CLIENT_ID>&scopes=<SCOPES>&redirect_uri=<REDIRECT_URI>
+https://ln.ht/_/oauth/authorize?response_type=code&client_id=<CLIENT_ID>&scope=<SCOPES>&redirect_uri=<REDIRECT_URI>
 ```
 
 Provide the following parameters in the query string:
 
 - `client_id`: The application ID assigned to you in the previous step.
-- `scopes`: A list of scopes you're requesting — see next section.   
+- `scope`: A (space separated) list of scopes you're requesting — see next section.
 - `redirect_uri`: Your application URI for redirect the user to.
 
 ### OAuth scopes
