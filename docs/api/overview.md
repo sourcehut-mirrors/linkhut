@@ -6,7 +6,7 @@ Wherever possible the linkhut API uses the same syntax and method names as the [
 
 All API methods are GET requests, even when good REST habits suggest they should use a different verb.
 
-Methods return data in XML format or JSON format based on the value of the `Accept` header or from the value of the 
+Methods return data in XML format or JSON format based on the value of the `Accept` header or from the value of the
 `_format` request parameter.
 
 ## Authentication
@@ -27,7 +27,7 @@ develop an OAuth application as described in the next section.
 ## OAuth Applications
 
 Personal access tokens are suitable for authenticating yourself, but if you
-intend to provide software that other sr.ht users can log into, you should
+intend to provide software that other `ln.ht` users can log into, you should
 [create an OAuth application](https://ln.ht/_/oauth/register) instead. The OAuth
 flow allows end-users to grant your application only the privileges it requires to
 execute its duties and to revoke this access at any time. This is accomplished
@@ -63,8 +63,8 @@ Provide the following parameters in the query string:
 
 ### OAuth scopes
 
-The linkhut API methods require valid tokens for a specific **scope**. A scope is written as: `context:access`. 
-Where **context** is the API method (e.g., `posts`, `tags`) and **access** is either `read` or `write` 
+The linkhut API methods require valid tokens for a specific **scope**. A scope is written as: `context:access`.
+Where **context** is the API method (e.g., `posts`, `tags`) and **access** is either `read` or `write`
 depending on whether the operation is merely fetching data, or enabling callers to transform data (e.g., add or edit links).
 
 Scopes enable you to request access only for the minimum access level you require.
@@ -94,7 +94,7 @@ do not match the scopes you requested.
 Once your application retrieves the exchange token from the redirect, you can
 submit an HTTP POST request to `https://api.ln.ht/v1/oauth/token` with the following parameters:
 
-- `grant_type`: Set to: `authorization_code` 
+- `grant_type`: Set to: `authorization_code`
 - `client_id`: The application ID assigned to you when you registered the application.
 - `client_secret`: The application secret assigned to you when you registered the application.
 - `code`: The exchange token issued in the previous step.
@@ -116,7 +116,7 @@ You can now use this token for [Authenticating API requests](#authenticating-api
 
 ### Authenticating API requests
 
-Authenticating your API request is simple once you have an access token. 
+Authenticating your API request is simple once you have an access token.
 You just need to set the `Authorization` header to `Bearer <your-access-token>`.
 
 For example:
@@ -136,7 +136,7 @@ $ curl 'https://api.ln.ht/v1/posts/get?auth_token=<your-access-token>'
 ```
 ### Refreshing access tokens
 
-There's no mechanism to extend the expiration time of an access token, instead you can request a new access token by 
+There's no mechanism to extend the expiration time of an access token, instead you can request a new access token by
 using the `refresh_token` provided when obtaining the original access token.
 
 To request a new access token send another POST request to `https://api.ln.ht/v1/oauth/token` with the following parameters:
@@ -153,10 +153,10 @@ To request a new access token send another POST request to `https://api.ln.ht/v1
 * Please wait **at least one second** between HTTP queries, or you are likely to get automatically throttled. If you are
   releasing a library to access the API, you **must** do this.
 * Please watch for 500 or 999 errors and back-off appropriately. It means that you have been throttled.
-* Please set your User-Agent to something identifiable. The default identifiers (e.g.: `Java/1.8.0_191`, `lwp-perl`) 
+* Please set your User-Agent to something identifiable. The default identifiers (e.g.: `Java/1.8.0_191`, `lwp-perl`)
   tend to get banned from time to time.
-* If you are releasing software, or a service for other people to use, your software or service **must not** add any 
-  links without a user’s explicit direction. Likewise, you **must not** modify any urls except under the user’s explicit 
+* If you are releasing software, or a service for other people to use, your software or service **must not** add any
+  links without a user’s explicit direction. Likewise, you **must not** modify any urls except under the user’s explicit
   direction.
 
 ## Methods
