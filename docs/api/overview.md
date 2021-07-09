@@ -92,12 +92,15 @@ do not match the scopes you requested.
 ### Obtaining an access token
 
 Once your application retrieves the exchange token from the redirect, you can
-submit an HTTP POST request to `https://api.ln.ht/v1/oauth/token` with the following parameters:
+submit an HTTP POST request to `https://api.ln.ht/v1/oauth/token` with the following query string parameters url encoded:
 
 - `grant_type`: Set to: `authorization_code`
 - `client_id`: The application ID assigned to you when you registered the application.
 - `client_secret`: The application secret assigned to you when you registered the application.
 - `code`: The exchange token issued in the previous step.
+- `redirect_uri`: Your application URI for redirect the user to.
+
+Example request: `https://api.ln.ht/v1/oauth/token?grant_type=authorization_code&client_id=abcdef&redirect_uri=http%3A%2F%2Fexample.com&client_secret=abcdef&code=abcdef`
 
 You will receive a response like this:
 
