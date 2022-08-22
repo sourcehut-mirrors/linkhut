@@ -5,9 +5,9 @@ defmodule Linkhut.MixProject do
     [
       app: :linkhut,
       version: "0.1.0",
-      elixir: "~> 1.5",
+      elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:phoenix, :gettext] ++ Mix.compilers(),
+      compilers: [:phoenix] ++ Mix.compilers(),
       dialyzer: [plt_add_deps: :transitive],
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -40,30 +40,35 @@ defmodule Linkhut.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:argon2_elixir, "~> 2.3"},
-      {:atomex, "0.3.0"},
-      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
+      {:argon2_elixir, "~> 3.0"},
+      {:atomex, "~> 0.5"},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:phoenix_copy, "~> 0.1.1", runtime: Mix.env() == :dev},
+      {:dart_sass, "~> 0.5", runtime: Mix.env() == :dev},
+      {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
       {:earmark, "~> 1.4"},
-      {:ecto_sql, "~> 3.5"},
-      {:ex_doc, "~> 0.24", only: :dev, runtime: false},
-      {:ex_machina, "~> 2.4", only: :test},
-      {:gettext, "~> 0.18"},
-      {:jason, "~> 1.0"},
-      {:phoenix, "~> 1.5.6"},
-      {:phoenix_ecto, "~> 4.0"},
-      {:phoenix_html, "~> 2.14"},
-      {:phoenix_html_sanitizer, "~> 1.0"},
-      {:phoenix_live_dashboard, "~> 0.1"},
+      {:ecto_sql, "~> 3.8"},
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:ex_machina, "~> 2.7", only: :test},
+      {:gettext, "~> 0.20"},
+      {:jason, "~> 1.3"},
+      {:phoenix, "~> 1.6"},
+      {:phoenix_ecto, "~> 4.4"},
+      {:phoenix_html, "~> 3.2", override: true},
+      {:phoenix_html_sanitizer, "~> 1.1.1"},
+      {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.3", only: :dev},
-      {:phoenix_oauth2_provider, "~> 0.5.1"},
-      {:phoenix_pubsub, "~> 2.0"},
-      {:plug_cowboy, "~> 2.1"},
+      {:phoenix_oauth2_provider, "~> 0.5"},
+      # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96
+      {:ex_oauth2_provider,
+       git: "https://github.com/heroinbob/ex_oauth2_provider", tag: "0.8.1", override: true},
+      {:phoenix_pubsub, "~> 2.1"},
+      {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
-      {:telemetry_metrics, "~> 0.4"},
-      {:telemetry_poller, "~> 0.4"},
-      {:timex, "~> 3.6"},
-      {:xml_builder, "~> 2.0.0"}
+      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_poller, "~> 0.5"},
+      {:timex, "~> 3.7"},
+      {:xml_builder, "~> 2.2"}
     ]
   end
 
@@ -75,6 +80,7 @@ defmodule Linkhut.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
+      "assets.deploy": ["phx.copy default", "sass default --no-source-map --style=compressed", "phx.digest"],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]

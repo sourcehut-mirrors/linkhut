@@ -5,7 +5,7 @@
 # is restricted to this project.
 
 # General application configuration
-use Mix.Config
+import Config
 
 config :linkhut,
   ecto_repos: [Linkhut.Repo]
@@ -31,6 +31,19 @@ config :mime, :types, %{
   "application/xml" => ["xml"]
 }
 
+config :phoenix_copy,
+ default: [
+   source: Path.expand("../assets/static/", __DIR__),
+   destination: Path.expand("../priv/static/", __DIR__)
+ ]
+
+config :dart_sass,
+  version: "1.49.11",
+  default: [
+    args: ~w(css/app.scss ../priv/static/css/app.css),
+    cd: Path.expand("../assets", __DIR__)
+  ]
+
 # Configures OAuth
 config :linkhut, ExOauth2Provider,
   repo: Linkhut.Repo,
@@ -42,11 +55,12 @@ config :linkhut, ExOauth2Provider,
   access_token_expires_in: 365 * 24 * 60 * 60,
   use_refresh_token: true,
   revoke_refresh_token_on_use: true,
-  optional_scopes: (for scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
+  optional_scopes:
+    for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
 
 config :linkhut, PhoenixOauth2Provider,
-       web_module: LinkhutWeb,
-       current_resource_owner: :current_user
+  web_module: LinkhutWeb,
+  current_resource_owner: :current_user
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
