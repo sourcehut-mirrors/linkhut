@@ -7,7 +7,7 @@
 ## Dependencies
 
 * Install Elixir dependencies with `mix deps.get`
-* Install Node.js dependencies with `cd assets && npm install`
+* Prepare assets (CSS, images) with `mix assets.deploy`
 
 ## Running
 
