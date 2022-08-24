@@ -54,14 +54,13 @@ defmodule Linkhut.MixProject do
       {:jason, "~> 1.3"},
       {:phoenix, "~> 1.6"},
       {:phoenix_ecto, "~> 4.4"},
-      {:phoenix_html, "~> 3.2", override: true},
+      {:phoenix_html, "~> 3.2"},
       {:phoenix_html_sanitizer, "~> 1.1.1"},
       {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.3", only: :dev},
-      {:phoenix_oauth2_provider, "~> 0.5"},
-      # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96
-      {:ex_oauth2_provider,
-       git: "https://github.com/heroinbob/ex_oauth2_provider", tag: "0.8.1", override: true},
+      {:phoenix_oauth2_provider,
+        # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96
+        git: "https://github.com/fastjames/phoenix_oauth2_provider", branch: "update_deps"},
       {:phoenix_pubsub, "~> 2.1"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
