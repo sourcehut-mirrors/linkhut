@@ -1,0 +1,17 @@
+<%= if assigns[:context] do %>
+  <div class="context">
+    <%= if @context.from do %>
+      <h5 class="no-css-label">Bookmarks</h5>
+      <h5 class="no-css-label"><%= gettext("from user: ") %></h5>
+      <span class="user"><a href={Routes.user_path(@conn, :show, @context.from.username)}><%= @context.from.username %></a></span>
+    <% end %>
+    <%= if @context.tagged_with != [] do %>
+      <h5 class="no-css-label"><%= gettext("tagged with: ") %></h5>
+      <ul class="tags">
+        <%= for tag <- @context.tagged_with do %>
+          <li><a href={Routes.link_path(@conn, :show, [tag])}><%= tag %></a></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+<% end %>

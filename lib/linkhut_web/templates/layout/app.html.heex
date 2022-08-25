@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" sizes="any" type="image/svg+xml" href={Routes.static_path(@conn, "/images/favicon.svg")} />
+    <title>linkhut</title>
+    <link rel="stylesheet" href={Routes.static_path(@conn, "/css/app.css")} />
+  </head>
+  <body>
+    <header>
+      <nav>
+        <div class="session">
+          <%= render("_session.html", assigns) %>
+        </div>
+        <div class="breadcrumbs">
+          <a class="brand" href="/">linkhut</a>
+          <%= render("_context.html", assigns) %>
+        </div>
+      </nav>
+      <%= render("_alerts.html", conn: @conn) %>
+    </header>
+    <main>
+      <%= @inner_content %>
+    </main>
+    <hr />
+    <footer>
+      <div>
+        <p>linkhut is open source software. You can contribute and report issues on SourceHut at <a href="https://sr.ht/~mlb/linkhut">~mlb/linkhut</a> (v<%= version() %>)</p>
+      </div>
+    </footer>
+  </body>
+</html>

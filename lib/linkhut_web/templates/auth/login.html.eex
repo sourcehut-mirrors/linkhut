@@ -1,8 +1,0 @@
-<h3>Sign in</h3>
-<%= form_for @conn, Routes.session_path(@conn, :create), [as: :session], fn f -> %>
-  <fieldset>
-  <%= input f, :username %>
-  <%= input f, :password %>
-  </fieldset>
-  <%= submit "Submit" %>
-<% end %>

@@ -1,0 +1,11 @@
+<%= render("_menu.html", conn: @conn) %>
+<section class="settings">
+  <h4>An error occured</h4>
+  <p>
+    An error occurred processing a request to authorize third party access to your account. This is generally not a problem with linkhut, but with the application.
+  </p>
+
+  <p>
+    <%= @error.error_description %>
+  </p>
+</section>

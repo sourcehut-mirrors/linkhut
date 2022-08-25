@@ -1,0 +1,28 @@
+<%= if assigns[:personal_access_tokens] != [] do %>
+  <table>
+    <thead>
+      <tr>
+        <th>Token</th>
+        <th>Comment</th>
+        <th>Date issued</th>
+        <th>Expires</th>
+        <th class="btn-column"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <%= for token <- @personal_access_tokens do %>
+        <tr>
+          <td><code><%= String.slice(token.token, 0, 8) %>&hellip;</code></td>
+          <td><%= token.comment %></td>
+          <td><%= prettify(token.inserted_at) %></td>
+          <td><%= prettify(NaiveDateTime.add(token.inserted_at, token.expires_in, :second)) %></td>
+          <td><a class="button fill" href={Routes.oauth_path(@conn, :revoke_token, token.id)}>Revoke</a></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p>
+    You have not created any personal access tokens.
+  </p>
+<% end %>
