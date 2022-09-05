@@ -44,16 +44,20 @@ defmodule LinkhutWeb.Plugs.EnsureAuth do
 
   defp auth_error!(conn) do
     conn
-    |> store_path_in_session()
+    |> store_path_and_querystring_in_session()
     |> put_flash(:error, "Login required")
     |> redirect(to: RouteHelpers.session_path(conn, :new))
     |> halt()
   end
 
-  defp store_path_in_session(conn) do
+  defp store_path_and_querystring_in_session(conn) do
     # Get HTTP method and url from conn
     method = conn.method
-    path = conn.request_path
+    path = if conn.query_string != "" do
+      conn.request_path <> "?" <> conn.query_string
+    else
+      conn.request_path
+    end
 
     # If conditions apply store path in session, else return conn unmodified
     case method do
