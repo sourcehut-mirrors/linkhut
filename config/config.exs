@@ -32,10 +32,10 @@ config :mime, :types, %{
 }
 
 config :phoenix_copy,
- default: [
-   source: Path.expand("../assets/static/", __DIR__),
-   destination: Path.expand("../priv/static/", __DIR__)
- ]
+  default: [
+    source: Path.expand("../assets/static/", __DIR__),
+    destination: Path.expand("../priv/static/", __DIR__)
+  ]
 
 config :dart_sass,
   version: "1.49.11",
@@ -64,4 +64,4 @@ config :linkhut, PhoenixOauth2Provider,
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-import_config "#{Mix.env()}.exs"
+import_config "#{config_env()}.exs"

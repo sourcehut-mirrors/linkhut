@@ -22,8 +22,10 @@ config :linkhut, LinkhutWeb.Endpoint,
   code_reloader: true,
   check_origin: false,
   watchers: [
-      asset_copy: {Phoenix.Copy, :watch, [:default]},
-      sass: {DartSass, :install_and_run, [:default, ~w(--embed-source-map --source-map-urls=absolute --watch)]}
+    asset_copy: {Phoenix.Copy, :watch, [:default]},
+    sass:
+      {DartSass, :install_and_run,
+       [:default, ~w(--embed-source-map --source-map-urls=absolute --watch)]}
   ]
 
 # ## SSL Support
