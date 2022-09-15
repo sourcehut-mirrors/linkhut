@@ -7,7 +7,7 @@ defmodule LinkhutWeb.Plugs.VerifyTokenAuth do
   alias ExOauth2Provider.Plug.{
     VerifyHeader,
     EnsureAuthenticated
-    }
+  }
 
   import ExOauth2Provider.Plug, only: [current_resource_owner: 1]
 

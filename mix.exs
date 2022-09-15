@@ -12,12 +12,17 @@ defmodule Linkhut.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-
       # Docs
       name: "linkhut",
       source_url: "https://git.sr.ht/~mlb/linkhut",
       homepage_url: "https://git.sr.ht/~mlb/linkhut",
-      docs: docs()
+      docs: docs(),
+      # Release
+      releases: [
+        linkhut: [
+          steps: [:assemble, :tar]
+        ]
+      ]
     ]
   end
 
@@ -58,9 +63,11 @@ defmodule Linkhut.MixProject do
       {:phoenix_html_sanitizer, "~> 1.1.1"},
       {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.3", only: :dev},
-      {:phoenix_oauth2_provider,
+      {
+        :phoenix_oauth2_provider,
         # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96
-        git: "https://github.com/fastjames/phoenix_oauth2_provider", branch: "update_deps"},
+        git: "https://github.com/fastjames/phoenix_oauth2_provider", branch: "update_deps"
+      },
       {:phoenix_pubsub, "~> 2.1"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
@@ -79,7 +86,11 @@ defmodule Linkhut.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      "assets.deploy": ["phx.copy default", "sass default --no-source-map --style=compressed", "phx.digest"],
+      "assets.deploy": [
+        "phx.copy default",
+        "sass default --no-source-map --style=compressed",
+        "phx.digest"
+      ],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate", "test"]

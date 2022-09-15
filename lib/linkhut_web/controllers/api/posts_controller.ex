@@ -2,8 +2,12 @@ defmodule LinkhutWeb.Api.PostsController do
   use LinkhutWeb, :controller
 
   plug :put_view, LinkhutWeb.Api.PostsView
-  plug ExOauth2Provider.Plug.EnsureScopes, [scopes: ~w(posts:write)] when action in [:add, :delete]
-  plug ExOauth2Provider.Plug.EnsureScopes, [scopes: ~w(posts:read)] when action in [:update, :get, :recent, :dates, :all, :suggest]
+
+  plug ExOauth2Provider.Plug.EnsureScopes,
+       [scopes: ~w(posts:write)] when action in [:add, :delete]
+
+  plug ExOauth2Provider.Plug.EnsureScopes,
+       [scopes: ~w(posts:read)] when action in [:update, :get, :recent, :dates, :all, :suggest]
 
   alias Linkhut.Links
   alias Linkhut.Links.Link
@@ -125,10 +129,10 @@ defmodule LinkhutWeb.Api.PostsController do
 
     conn
     |> render(:get,
-         links: links,
-         meta: value("meta", params),
-         tag: Map.get(params, "tag", "")
-       )
+      links: links,
+      meta: value("meta", params),
+      tag: Map.get(params, "tag", "")
+    )
   end
 
   def recent(conn, params) do

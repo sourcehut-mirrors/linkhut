@@ -38,7 +38,11 @@ defmodule Linkhut.Oauth do
 
   defp create_token(resource_owner, attrs) do
     %AccessToken{}
-    |> Map.put(:scopes, (for scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}") |> Enum.join(" "))
+    |> Map.put(
+      :scopes,
+      for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
+      |> Enum.join(" ")
+    )
     |> Map.put(:resource_owner, resource_owner)
     |> put_application(attrs)
     |> do_create_token(attrs)
@@ -52,8 +56,7 @@ defmodule Linkhut.Oauth do
   end
 
   defp do_create_token(access_token, attrs) do
-    attrs =
-      Map.merge(%{expires_in: Timex.Duration.to_seconds(365, :days)}, attrs)
+    attrs = Map.merge(%{expires_in: Timex.Duration.to_seconds(365, :days)}, attrs)
 
     access_token
     |> AccessToken.changeset(attrs)
@@ -78,8 +81,9 @@ defmodule Linkhut.Oauth do
   @spec get_tokens(User.t()) :: [AccessToken.t()]
   def get_tokens(user) do
     AccessTokens.get_authorized_tokens_for(user, otp_app: :linkhut)
-    |> Enum.filter(fn %{application_id: id} -> id == nil end)
-    |> Enum.filter(fn token -> !AccessTokens.is_revoked?(token) end)
+    |> Enum.filter(fn %{application_id: id} = token ->
+      id == nil && !AccessTokens.is_revoked?(token)
+    end)
   end
 
   @doc """
@@ -234,6 +238,7 @@ defmodule Linkhut.Oauth do
   @spec get_authorized_applications_for(User.t()) :: [Application.t()]
   def get_authorized_applications_for(user) do
     Applications.get_authorized_applications_for(user, otp_app: :linkhut)
+    |> Enum.filter(fn %{revoked_at: revoked_at} -> revoked_at != nil end)
     |> Repo.preload([:owner, access_tokens: from(t in AccessToken, order_by: t.inserted_at)])
   end
 

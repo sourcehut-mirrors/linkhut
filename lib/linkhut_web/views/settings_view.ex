@@ -18,9 +18,7 @@ defmodule LinkhutWeb.SettingsView do
     get_tags_js =
       "(document.querySelector('meta[name=\"keywords\"]')!=null?document.querySelector('meta[name=\"keywords\"]').content:%22%22)"
 
-    "javascript:window.location=%22#{new_link_url}?url=%22+#{get_url_js}+%22&title=%22+#{
-      get_title_js
-    }+%22&notes=%22+#{get_notes_js}+%22&tags=%22+#{get_tags_js}"
+    "javascript:window.location=%22#{new_link_url}?url=%22+#{get_url_js}+%22&title=%22+#{get_title_js}+%22&notes=%22+#{get_notes_js}+%22&tags=%22+#{get_tags_js}"
   end
 
   def nav_link(conn, text, opts) do
