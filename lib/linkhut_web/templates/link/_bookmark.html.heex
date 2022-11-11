@@ -1,5 +1,5 @@
 <div class="bookmark">
-  <div class="title">
+  <div data-posted-on={@link.inserted_at} class="title">
     <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
     <%= if @link.is_private do %>
       <div class="private"><%= gettext("Private") %></div>
