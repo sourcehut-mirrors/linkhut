@@ -17,7 +17,7 @@ defmodule LinkhutWeb.Helpers do
       diff < 1 ->
         LinkhutWeb.Gettext.gettext("Today")
 
-      diff <= 2 ->
+      diff < 2 ->
         LinkhutWeb.Gettext.gettext("Yesterday")
 
       diff < 10 ->
