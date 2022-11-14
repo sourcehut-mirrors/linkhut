@@ -7,7 +7,9 @@ defmodule LinkhutWeb.Helpers do
   @doc """
   Makes dates pretty
   """
-  def prettify(time1, time2 \\ Timex.now()) do
+  def prettify(time1, time2 \\ Timex.today()) do
+    time1 = Timex.to_date(time1)
+    time2 = Timex.to_date(time2)
     diff = Date.diff(time2, time1)
 
     cond do
