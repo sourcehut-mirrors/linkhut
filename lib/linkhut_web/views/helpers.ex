@@ -8,7 +8,7 @@ defmodule LinkhutWeb.Helpers do
   Makes dates pretty
   """
   def prettify(time1, time2 \\ Timex.now()) do
-    diff = Timex.diff(time2, time1, :days)
+    diff = Date.diff(time2, time1)
 
     cond do
       diff < 0 ->
