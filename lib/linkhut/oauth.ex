@@ -28,7 +28,7 @@ defmodule Linkhut.Oauth do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec create_token!(User.t(), String.t()) :: AccessToken.t()
+  @spec create_token!(User.t(), map()) :: {:ok, AccessToken.t()} | {:error, Ecto.Changeset.t()}
   def create_token!(user, attrs) do
     case create_token(user, attrs) do
       {:ok, token} -> token
@@ -112,7 +112,7 @@ defmodule Linkhut.Oauth do
       {:ok, %Application{}}
 
   """
-  @spec change_application(Application.t(), map()) :: Changeset.t()
+  @spec change_application(Application.t(), map()) :: Ecto.Changeset.t()
   def change_application(%Application{} = application, params \\ %{}) do
     application
     |> Application.changeset(params)
@@ -130,7 +130,8 @@ defmodule Linkhut.Oauth do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec create_application(User.t(), map()) :: {:ok, Application.t()} | {:error, Changeset.t()}
+  @spec create_application(User.t(), map()) ::
+          {:ok, Application.t()} | {:error, Ecto.Changeset.t()}
   def create_application(%User{} = user, params) do
     user
     |> Applications.create_application(params, otp_app: :linkhut)
@@ -190,7 +191,7 @@ defmodule Linkhut.Oauth do
 
   """
   @spec update_application(Application.t(), map()) ::
-          {:ok, Application.t()} | {:error, Changeset.t()}
+          {:ok, Application.t()} | {:error, Ecto.Changeset.t()}
   def update_application(application, attrs) do
     application
     |> Application.changeset(attrs)
@@ -238,7 +239,6 @@ defmodule Linkhut.Oauth do
   @spec get_authorized_applications_for(User.t()) :: [Application.t()]
   def get_authorized_applications_for(user) do
     Applications.get_authorized_applications_for(user, otp_app: :linkhut)
-    |> Enum.filter(fn %{revoked_at: revoked_at} -> revoked_at != nil end)
     |> Repo.preload([:owner, access_tokens: from(t in AccessToken, order_by: t.inserted_at)])
   end
 
@@ -254,7 +254,8 @@ defmodule Linkhut.Oauth do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_application(Application.t()) :: {:ok, Application.t()} | {:error, Changeset.t()}
+  @spec delete_application(Application.t()) ::
+          {:ok, Application.t()} | {:error, Ecto.Changeset.t()}
   def delete_application(application) do
     Applications.delete_application(application, otp_app: :linkhut)
   end
@@ -268,7 +269,7 @@ defmodule Linkhut.Oauth do
       {:ok, [%AccessToken{}]}
 
   """
-  @spec revoke_all_access_tokens_for(Application.t(), User.t()) :: [AccessToken.t()]
+  @spec revoke_all_access_tokens_for(Application.t(), User.t()) :: {:ok, [AccessToken.t()]}
   def revoke_all_access_tokens_for(application, user) do
     Applications.revoke_all_access_tokens_for(application, user, otp_app: :linkhut)
   end
