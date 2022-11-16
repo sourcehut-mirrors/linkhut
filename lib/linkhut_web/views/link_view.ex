@@ -6,30 +6,95 @@ defmodule LinkhutWeb.LinkView do
   alias LinkhutWeb.Router.Helpers, as: RouteHelpers
 
   @doc """
-  Provides the path to a new search context that includes the given tag
+  Provides the path of the current context with the provided parameters
+
+  ## Options
+
+  Accepts one of the following options:
+    * `:username` - reduce the context to the given username (resets page)
+    * `:tag` - reduce the context to the given tag (resets page)
+    * `:page` - provides results for the given page
+
+  ## Examples
+
+  Given a current path of `"/foo"`
+
+      iex> current_path(conn, username: "bob")
+      "/~bob/foo"
+      iex> current_path(conn, page: 3)
+      "/foo?p=3"
+      iex> current_path(conn, tag: "bar")
+      "/foo/bar"
   """
-  def with_tag_link(%Plug.Conn{path_info: ["~" <> username | path_segments]} = conn, tag) do
-    RouteHelpers.user_tags_path(
-      conn,
-      :show,
-      username,
-      MapSet.to_list(MapSet.put(MapSet.new(path_segments), tag))
-    )
+  @spec current_path(Plug.Conn.t(), Keyword.t()) :: String.t()
+  def current_path(conn, opts)
+
+  def current_path(%Plug.Conn{path_info: path, query_params: params} = conn, username: username) do
+    current_path(%Plug.Conn{
+      conn
+      | path_info: Enum.uniq(["~" <> username | path]),
+        query_params: Map.take(params, ["query"])
+    })
   end
 
-  def with_tag_link(%Plug.Conn{path_info: path_segments} = conn, tag) do
-    RouteHelpers.link_path(
-      conn,
-      :show,
-      MapSet.to_list(MapSet.put(MapSet.new(path_segments), tag))
-    )
+  def current_path(%Plug.Conn{path_info: path, query_params: params} = conn, tag: tag) do
+    current_path(%Plug.Conn{
+      conn
+      | path_info: Enum.uniq(path ++ [tag]),
+        query_params: Map.take(params, ["query"])
+    })
+  end
+
+  def current_path(%Plug.Conn{query_params: params} = conn, page: page) do
+    current_path(%Plug.Conn{conn | query_params: Map.put(Map.take(params, ["query"]), :p, page)})
+  end
+
+  defp current_path(%Plug.Conn{query_params: params} = conn) do
+    context = context(conn)
+
+    case context do
+      %{username: username, tags: tags} when is_binary(username) ->
+        RouteHelpers.user_tags_path(conn, :show, username, tags, params)
+
+      %{username: username} when is_binary(username) ->
+        RouteHelpers.user_path(conn, :show, username, params)
+
+      %{tags: tags} ->
+        RouteHelpers.link_path(conn, :show, tags, params)
+
+      _ ->
+        RouteHelpers.link_path(conn, :show, [], params)
+    end
   end
 
   @doc """
   Provides the path to the feed view of the current page
   """
-  def feed_link(%Plug.Conn{path_info: path_segments} = conn) do
-    RouteHelpers.feed_link_path(conn, :show, path_segments)
+  def feed_path(%Plug.Conn{} = conn) do
+    context = context(conn)
+
+    case context do
+      %{username: username, tags: tags} when is_binary(username) ->
+        RouteHelpers.feed_user_tags_path(conn, :show, username, tags)
+
+      %{username: username} when is_binary(username) ->
+        RouteHelpers.feed_user_path(conn, :show, username)
+
+      %{tags: tags} ->
+        RouteHelpers.feed_link_path(conn, :show, tags)
+
+      _ ->
+        RouteHelpers.feed_link_path(conn, :show, [])
+    end
+  end
+
+  defp context(%Plug.Conn{path_info: path}) do
+    case path do
+      ["~" <> username] -> %{username: username}
+      ["~" <> username | tags] -> %{username: username, tags: tags}
+      [] -> %{}
+      tags -> %{tags: tags}
+    end
   end
 
   @doc """

@@ -1,6 +1,6 @@
 <div class="pagination">
   <%= if @page.has_prev do %>
-    <a class="button" href={"?p=#{@page.prev_page}"}>
+    <a class="button" href={current_path(@conn, page: @page.prev_page)}>
       <svg data-icon="chevronLeft" width="16" viewBox="0 0 32 32" style="fill:currentcolor">
         <title>chevronLeft icon</title>
         <path d="M20 1 L24 5 L14 16 L24 27 L20 31 L6 16 z"></path>
@@ -9,7 +9,7 @@
     </a>
   <% end %>
   <%= if @page.has_next do %>
-    <a class="button" href={"?p=#{@page.next_page}"}>
+    <a class="button" href={current_path(@conn, page: @page.next_page)}>
       <span><%= gettext("Next") %></span>
       <svg data-icon="chevronRight" width="16" viewBox="0 0 32 32" style="fill:currentcolor">
         <title>chevronRight icon</title>

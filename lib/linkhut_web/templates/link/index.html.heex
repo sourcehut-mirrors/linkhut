@@ -7,7 +7,7 @@
         <%= render("_bookmarks.html", Map.put(assigns, :links, links)) %>
       </div>
     <% end) %>
-    <%= render("_pagination.html", page: %{has_prev: @links.has_prev, prev_page: @links.prev_page, has_next: @links.has_next, next_page: @links.next_page}) %>
+    <%= render("_pagination.html", Map.put(assigns, :page, %{has_prev: @links.has_prev, prev_page: @links.prev_page, has_next: @links.has_next, next_page: @links.next_page})) %>
   </section>
   <%= render("_side-pannel.html", assigns) %>
 </div>

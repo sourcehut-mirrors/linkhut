@@ -13,7 +13,7 @@
   </div>
   <%= unless @logged_in? && @link.user_id == @current_user.id do %>
     <div class="ownership">
-      <%= gettext("by") %> <a href={Routes.user_path(@conn, :show, @link.user.username)}><%= @link.user.username %></a>
+      <%= gettext("by") %> <a href={current_path(@conn, username: @link.user.username)}><%= @link.user.username %></a>
     </div>
   <% end %>
   <div class="meta">
@@ -22,7 +22,7 @@
       <ul class="tags">
         <%= for tag <- @link.tags do %>
           <li>
-            <a href={with_tag_link(@conn, tag)}><%= tag %></a>
+            <a href={current_path(@conn, tag: tag)}><%= tag %></a>
           </li>
         <% end %>
       </ul>
