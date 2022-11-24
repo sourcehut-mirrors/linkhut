@@ -7,8 +7,7 @@ defmodule LinkhutWeb.SettingsView do
   Generates a bookmarklet link to add the current page to this linkhut instance
   """
   def bookmarklet(conn) do
-    cur_uri = LinkhutWeb.Endpoint.struct_url()
-    new_link_url = Routes.link_url(%URI{cur_uri | host: conn.host, port: conn.port}, :new)
+    new_link_url = Routes.link_url(conn, :new)
 
     get_url_js = "encodeURIComponent(document.location)"
     get_title_js = "encodeURIComponent(document.title)"
