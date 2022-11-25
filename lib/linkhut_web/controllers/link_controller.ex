@@ -44,7 +44,7 @@ defmodule LinkhutWeb.LinkController do
     else
       conn
       |> put_flash(:error, "Couldn't find link for #{url}")
-      |> redirect(to: Routes.recent_path(conn, :show))
+      |> redirect(to: Routes.link_path(conn, :show))
     end
   end
 
@@ -74,7 +74,7 @@ defmodule LinkhutWeb.LinkController do
     else
       conn
       |> put_flash(:error, "Couldn't find link for #{url}")
-      |> redirect(to: Routes.recent_path(conn, :show))
+      |> redirect(to: Routes.link_path(conn, :show))
     end
   end
 
@@ -100,43 +100,93 @@ defmodule LinkhutWeb.LinkController do
     end
   end
 
-  def show(conn, %{"username" => username, "tags" => tags, "query" => query, "p" => page}) do
-    user = Accounts.get_user!(username)
+  defp has_query?(%{"query" => _}), do: true
+  defp has_query?(_), do: false
 
-    show(conn, %Context{from: user, tagged_with: MapSet.to_list(MapSet.new(tags))}, query, page)
-  end
-
-  def show(conn, %{"tags" => tags, "query" => query, "p" => page}) do
-    show(conn, %Context{tagged_with: MapSet.to_list(MapSet.new(tags))}, query, page)
-  end
+  defp has_filters?(%{"username" => _}), do: true
+  defp has_filters?(%{"tags" => _}), do: true
+  defp has_filters?(_), do: false
 
   def show(conn, params) do
-    show(conn, Map.merge(%{"tags" => [], "query" => "", "p" => 1}, params))
+    cond do
+      has_query?(params) -> query(conn, context(params), Map.get(params, "query"), page(params))
+      has_filters?(params) -> filter(conn, context(params), page(params))
+      true -> recent(conn, page(params))
+    end
   end
 
-  defp show(conn, context, query, page) do
+  defp recent(conn, page) do
     context =
       case conn.assigns[:current_user] do
-        nil -> context
-        current_user -> %{context | visible_as: current_user.username}
+        nil -> %Context{}
+        current_user -> %Context{visible_as: current_user.username}
       end
 
-    search_query = Search.search(context, query)
-
-    links =
-      search_query
-      |> Pagination.page(page, per_page: @links_per_page)
-      |> Map.update!(
-        :entries,
-        &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
-      )
+    links_query = Links.recent()
 
     conn
     |> render(:index,
-      links: links,
-      tags: Tags.for_query(search_query, limit: @related_tags_limit),
+      links: realize_query(links_query, page),
+      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      query: "",
+      context: context,
+      title: :recent
+    )
+  end
+
+  defp query(conn, context, query, page) do
+    context =
+      case conn.assigns[:current_user] do
+        nil -> context
+        current_user -> %Context{context | visible_as: current_user.username}
+      end
+
+    links_query = Search.search(context, query)
+
+    conn
+    |> render(:index,
+      links: realize_query(links_query, page),
+      tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: query,
       context: context
     )
   end
+
+  defp filter(conn, %Context{} = context, page) do
+    context =
+      case conn.assigns[:current_user] do
+        nil -> context
+        current_user -> %Context{context | visible_as: current_user.username}
+      end
+
+    links_query = Search.search(context, "")
+
+    conn
+    |> render(:index,
+      links: realize_query(links_query, page),
+      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      query: "",
+      context: context
+    )
+  end
+
+  defp realize_query(query, page) do
+    query
+    |> Pagination.page(page, per_page: @links_per_page)
+    |> Map.update!(
+      :entries,
+      &Enum.chunk_by(&1, fn link -> DateTime.to_date(link.inserted_at) end)
+    )
+  end
+
+  defp context(%{"username" => username, "tags" => tags}) do
+    %Context{from: Accounts.get_user!(username), tagged_with: Enum.uniq(tags)}
+  end
+
+  defp context(%{"tags" => tags}), do: %Context{tagged_with: Enum.uniq(tags)}
+  defp context(%{"username" => username}), do: %Context{from: Accounts.get_user!(username)}
+  defp context(_), do: %Context{}
+
+  defp page(%{"p" => page}), do: page
+  defp page(_), do: 1
 end

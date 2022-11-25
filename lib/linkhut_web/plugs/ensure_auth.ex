@@ -53,11 +53,13 @@ defmodule LinkhutWeb.Plugs.EnsureAuth do
   defp store_path_and_querystring_in_session(conn) do
     # Get HTTP method and url from conn
     method = conn.method
-    path = if conn.query_string != "" do
-      conn.request_path <> "?" <> conn.query_string
-    else
-      conn.request_path
-    end
+
+    path =
+      if conn.query_string != "" do
+        conn.request_path <> "?" <> conn.query_string
+      else
+        conn.request_path
+      end
 
     # If conditions apply store path in session, else return conn unmodified
     case method do

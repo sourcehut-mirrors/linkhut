@@ -50,20 +50,18 @@ defmodule LinkhutWeb.LinkView do
   end
 
   defp current_path(%Plug.Conn{query_params: params} = conn) do
-    context = context(conn)
-
-    case context do
+    case context(conn) do
       %{username: username, tags: tags} when is_binary(username) ->
-        RouteHelpers.user_tags_path(conn, :show, username, tags, params)
+        RouteHelpers.user_path(conn, :show, username, tags, params)
 
       %{username: username} when is_binary(username) ->
         RouteHelpers.user_path(conn, :show, username, params)
 
       %{tags: tags} ->
-        RouteHelpers.link_path(conn, :show, tags, params)
+        RouteHelpers.tags_path(conn, :show, tags, params)
 
       _ ->
-        RouteHelpers.link_path(conn, :show, [], params)
+        RouteHelpers.link_path(conn, :show, params)
     end
   end
 
@@ -75,16 +73,16 @@ defmodule LinkhutWeb.LinkView do
 
     case context do
       %{username: username, tags: tags} when is_binary(username) ->
-        RouteHelpers.feed_user_tags_path(conn, :show, username, tags)
+        RouteHelpers.feed_user_path(conn, :show, username, tags)
 
       %{username: username} when is_binary(username) ->
         RouteHelpers.feed_user_path(conn, :show, username)
 
       %{tags: tags} ->
-        RouteHelpers.feed_link_path(conn, :show, tags)
+        RouteHelpers.feed_tags_path(conn, :show, tags)
 
       _ ->
-        RouteHelpers.feed_link_path(conn, :show, [])
+        RouteHelpers.feed_link_path(conn, :show)
     end
   end
 
@@ -125,16 +123,16 @@ defmodule LinkhutWeb.LinkView do
         tags: Enum.join(tags, ",")
       )
 
-    feed_url = Routes.feed_user_tags_url(conn, :show, user.username, tags)
-    html_url = Routes.user_tags_url(conn, :show, user.username, tags)
+    feed_url = Routes.feed_user_url(conn, :show, user.username, tags)
+    html_url = Routes.user_url(conn, :show, user.username, tags)
 
     render_feed(title, feed_url, html_url, links)
   end
 
   def render("index.xml", %{conn: conn, context: %Context{tagged_with: []}, links: links}) do
     title = LinkhutWeb.Gettext.gettext("Recent bookmarks")
-    feed_url = Routes.feed_recent_url(conn, :show)
-    html_url = Routes.recent_url(conn, :show)
+    feed_url = Routes.feed_link_url(conn, :show)
+    html_url = Routes.link_url(conn, :show)
 
     render_feed(title, feed_url, html_url, links)
   end
@@ -144,8 +142,8 @@ defmodule LinkhutWeb.LinkView do
     title =
       LinkhutWeb.Gettext.gettext("Bookmarks tagged with: %{tags}", tags: Enum.join(tags, ","))
 
-    feed_url = Routes.feed_link_url(conn, :show, tags)
-    html_url = Routes.link_url(conn, :show, tags)
+    feed_url = Routes.feed_tags_url(conn, :show, tags)
+    html_url = Routes.tags_url(conn, :show, tags)
 
     render_feed(title, feed_url, html_url, links)
   end

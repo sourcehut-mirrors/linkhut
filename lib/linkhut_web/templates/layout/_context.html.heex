@@ -1,17 +1,30 @@
 <%= if assigns[:context] do %>
   <div class="context">
-    <%= if @context.from do %>
-      <h5 class="no-css-label">Bookmarks</h5>
-      <h5 class="no-css-label"><%= gettext("from user: ") %></h5>
-      <span class="user"><a href={Routes.user_path(@conn, :show, @context.from.username)}><%= @context.from.username %></a></span>
-    <% end %>
-    <%= if @context.tagged_with != [] do %>
-      <h5 class="no-css-label"><%= gettext("tagged with: ") %></h5>
-      <ul class="tags">
-        <%= for tag <- @context.tagged_with do %>
-          <li><a href={Routes.link_path(@conn, :show, [tag])}><%= tag %></a></li>
+    <%= case {@context, @query} do %>
+      <% {%{from: from, tagged_with: tagged_with}, query} when not is_nil(from) or (is_list(tagged_with) and tagged_with != []) or (is_binary("query") and query != "") -> %>
+        <h5 class="no-css-label">Bookmarks</h5>
+        <%= if from do %>
+          <h5 class="no-css-label"><%= gettext("from user: ") %></h5>
+          <span class="user"><a href={Routes.user_path(@conn, :show, @context.from.username)}><%= @context.from.username %></a></span>
         <% end %>
-      </ul>
+        <%= if tagged_with != [] do %>
+          <h5 class="no-css-label"><%= gettext("tagged with: ") %></h5>
+          <ul class="tags">
+            <%= for tag <- @context.tagged_with do %>
+              <li><a href={Routes.tags_path(@conn, :show, [tag])}><%= tag %></a></li>
+            <% end %>
+          </ul>
+        <% end %>
+      <% _ -> %>
+        <%# we're on an editorial page, such as :recent or :popular %>
+        <%= case @title do %>
+          <% :recent -> %>
+            <span class="title"><span><%= gettext("Recent Bookmarks") %></span></span>
+          <% :popular -> %>
+            <span class="title"><span><%= gettext("Popular Bookmarks") %></span></span>
+          <% _ -> %>
+            <!-- ¯\_(ツ)_/¯ -->
+        <% end %>
     <% end %>
   </div>
 <% end %>

@@ -5,7 +5,8 @@ defmodule LinkhutWeb.Api.TagsView do
   import XmlBuilder
 
   def render("get.xml", %{tags: tags}) do
-    doc(:tags, Enum.map(tags, fn t -> element(:tag, Map.take(t, [:tag, :count])) end))
+    document(:tags, Enum.map(tags, fn t -> element(:tag, Map.take(t, [:tag, :count])) end))
+    |> generate()
   end
 
   def render("get.json", %{tags: tags}) do
@@ -13,7 +14,8 @@ defmodule LinkhutWeb.Api.TagsView do
   end
 
   def render("delete.xml", _) do
-    doc(:result, %{code: "done"})
+    document(:result, %{code: "done"})
+    |> generate()
   end
 
   def render("delete.json", _) do
@@ -21,7 +23,8 @@ defmodule LinkhutWeb.Api.TagsView do
   end
 
   def render("rename.xml", _) do
-    doc(:result, %{code: "done"})
+    document(:result, %{code: "done"})
+    |> generate()
   end
 
   def render("rename.json", _) do

@@ -24,7 +24,7 @@ defmodule Linkhut.Search do
     |> order_by(desc: :inserted_at)
   end
 
-  def links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as}) do
+  defp links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as}) do
     Links.links()
     |> join(:inner, [l, _], u in assoc(l, :user))
     |> from_user(from)

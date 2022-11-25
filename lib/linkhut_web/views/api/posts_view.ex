@@ -5,11 +5,12 @@ defmodule LinkhutWeb.Api.PostsView do
   import XmlBuilder
 
   def render("update.xml", %{last_update: last_update}) do
-    doc(:update, %{
+    document(:update, %{
       code: "done",
       inboxnew: "",
       time: DateTime.to_iso8601(last_update)
     })
+    |> generate()
   end
 
   def render("update.json", %{last_update: last_update}) do
@@ -17,7 +18,8 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("add.xml", %{link: _link}) do
-    doc(:result, %{code: "done"})
+    document(:result, %{code: "done"})
+    |> generate()
   end
 
   def render("add.json", %{link: _link}) do
@@ -25,7 +27,8 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("add.xml", %{changeset: _changeset}) do
-    doc(:result, %{code: "something went wrong"})
+    document(:result, %{code: "something went wrong"})
+    |> generate()
   end
 
   def render("add.json", %{changeset: _changeset}) do
@@ -33,7 +36,8 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("delete.xml", %{link: _link}) do
-    doc(:result, %{code: "done"})
+    document(:result, %{code: "done"})
+    |> generate()
   end
 
   def render("delete.json", %{link: _link}) do
@@ -41,7 +45,8 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("delete.xml", %{changeset: _changeset}) do
-    doc(:result, %{code: "something went wrong"})
+    document(:result, %{code: "something went wrong"})
+    |> generate()
   end
 
   def render("delete.json", %{changeset: _changeset}) do
@@ -55,11 +60,12 @@ defmodule LinkhutWeb.Api.PostsView do
         date -> Date.to_iso8601(date)
       end
 
-    doc(
+    document(
       :posts,
       %{dt: dt, tag: tag, user: conn.assigns[:current_user].username},
       Enum.map(links, fn l -> post(l, :xml, meta: show_meta) end)
     )
+    |> generate()
   end
 
   def render("get.json", %{links: links, meta: show_meta}) do
@@ -67,11 +73,12 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("recent.xml", %{conn: conn, date: date, tag: tag, links: links}) do
-    doc(
+    document(
       :posts,
       %{dt: Date.to_iso8601(date), tag: tag, user: conn.assigns[:current_user].username},
       Enum.map(links, fn l -> post(l, :xml) end)
     )
+    |> generate()
   end
 
   def render("recent.json", %{links: links}) do
@@ -79,11 +86,12 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("dates.xml", %{conn: conn, tag: tag, dates: dates}) do
-    doc(
+    document(
       :dates,
       %{tag: tag, user: conn.assigns[:current_user].username},
       Enum.map(dates, fn {date, cnt} -> element(:date, %{date: date, count: cnt}) end)
     )
+    |> generate()
   end
 
   def render("dates.json", %{dates: dates}) do
@@ -91,11 +99,12 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("all.xml", %{conn: conn, tag: tag, links: links, meta: show_meta}) do
-    doc(
+    document(
       :posts,
       %{tag: tag, user: conn.assigns[:current_user].username},
       Enum.map(links, fn l -> post(l, :xml, meta: show_meta) end)
     )
+    |> generate()
   end
 
   def render("all.json", %{links: links, meta: meta}) do
@@ -103,12 +112,13 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("all_hashes.xml", %{links: links}) do
-    doc(
+    document(
       :posts,
       Enum.map(links, fn l ->
         element(:post, %{url: md5(l.url), meta: md5(DateTime.to_iso8601(l.updated_at))})
       end)
     )
+    |> generate()
   end
 
   def render("all_hashes.json", %{links: links}) do
@@ -116,10 +126,11 @@ defmodule LinkhutWeb.Api.PostsView do
   end
 
   def render("suggest.xml", %{popular: popular, recommended: recommended}) do
-    doc(:suggest, [
+    document(:suggest, [
       Enum.map(popular, fn t -> element(:popular, t) end),
       Enum.map(recommended, fn t -> element(:recommended, t) end)
     ])
+    |> generate()
   end
 
   def render("suggest.json", %{popular: popular, recommended: recommended}),

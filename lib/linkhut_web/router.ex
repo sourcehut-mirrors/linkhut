@@ -54,10 +54,10 @@ defmodule LinkhutWeb.Router do
   scope "/_/feed", LinkhutWeb, as: :feed do
     pipe_through :feed
 
-    get "/", LinkController, :show, as: :recent
+    get "/", LinkController, :show
     get "/~:username", LinkController, :show, as: :user
-    get "/~:username/*tags", LinkController, :show, as: :user_tags
-    get "/*tags", LinkController, :show
+    get "/~:username/*tags", LinkController, :show, as: :user
+    get "/*tags", LinkController, :show, as: :tags
   end
 
   scope "/_", LinkhutWeb.Settings do
@@ -133,9 +133,9 @@ defmodule LinkhutWeb.Router do
   scope "/", LinkhutWeb do
     pipe_through :browser
 
-    get "/", LinkController, :show, as: :recent
+    get "/", LinkController, :show
     get "/~:username", LinkController, :show, as: :user
-    get "/~:username/*tags", LinkController, :show, as: :user_tags
-    get "/*tags", LinkController, :show
+    get "/~:username/*tags", LinkController, :show, as: :user
+    get "/*tags", LinkController, :show, as: :tags
   end
 end

@@ -197,6 +197,20 @@ defmodule Linkhut.Links do
     |> Repo.one()
   end
 
+  @doc """
+  Returns most recent public links
+  """
+  def recent(days \\ 30) do
+    datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
+
+    links()
+    |> join(:inner, [l, _], u in assoc(l, :user))
+    |> where(is_private: false)
+    |> where([l], l.inserted_at >= ^datetime)
+    |> order_by(desc: :inserted_at)
+    |> preload([_, _, u], user: u)
+  end
+
   def links() do
     from(l in Link,
       left_join: s in subquery(get_shares()),

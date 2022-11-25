@@ -18,6 +18,10 @@ body {
     }
 }
 
+input {
+    font-size: 1rem;
+}
+
 hr, .no-css-label {
     display: none;
 }
@@ -354,6 +358,23 @@ nav {
             display: inline-flex;
             flex-grow: 0;
             flex-wrap: wrap;
+
+            & > span.title {
+                color: $foreground;
+                flex-grow: 0;
+
+                &::before {
+                    color: $dark-pink;
+                    content: "\203A";
+                    font-size: $font-normal;
+                    margin-left: $spacing-tiny;
+                    margin-right: $spacing-tiny;
+                }
+
+                & > span {
+                    font-size: $font-small;
+                }
+            }
 
             & > span.user {
                 flex-grow: 0;
