@@ -24,12 +24,13 @@ defmodule Linkhut.Search do
     |> order_by(desc: :inserted_at)
   end
 
-  defp links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as}) do
+  defp links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as, url: url}) do
     Links.links()
     |> join(:inner, [l, _], u in assoc(l, :user))
     |> from_user(from)
     |> tagged_with(tags)
     |> visible_as(visible_as)
+    |> matching(url)
   end
 
   defp from_user(query, user) when is_nil(user), do: query
@@ -61,5 +62,12 @@ defmodule Linkhut.Search do
   defp visible_as(query, user) do
     query
     |> where([l, _, u], l.is_private == false or u.username == ^user)
+  end
+
+  defp matching(query, url) when is_nil(url), do: query
+
+  defp matching(query, url) do
+    query
+    |> where(url: ^url)
   end
 end

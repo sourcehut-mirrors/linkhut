@@ -1,25 +1,35 @@
 <div class="bookmark">
-  <div data-posted-on={@link.inserted_at} class="title">
+  <div data-posted-on={@link.inserted_at} data-savers={@link.savers} class="title">
     <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
     <%= if @link.is_private do %>
       <div class="private"><%= gettext("Private") %></div>
     <% end %>
   </div>
   <div class="full-url">
-    <a rel="nofollow" data-shares={@link.shares} href={@link.url}><%= @link.url %></a>
+    <a rel="nofollow" href={@link.url}><%= @link.url %></a>
   </div>
   <div class="description">
     <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
   </div>
-  <%= unless @logged_in? && @link.user_id == @current_user.id do %>
-    <div class="ownership">
-      <%= gettext("by") %> <a href={current_path(@conn, username: @link.user.username)}><%= @link.user.username %></a>
-    </div>
-  <% end %>
+  <div class="ownership">
+    <%= unless @logged_in? && @link.user_id == @current_user.id do %>
+      <span>
+        <%= gettext("by") %> <a href={current_path(@conn, username: @link.user.username)}><%= @link.user.username %></a>
+      </span>
+    <% end %>
+    <span>
+      <%= Timex.format!(@link.inserted_at, "{relative}", :relative) %>
+    </span>
+    <%= if not @link.is_private and @link.savers > 1 do %>
+      <span class="savers">
+        <%= gettext("saved") %> <a data-label={gettext("people")} href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
+      </span>
+    <% end %>
+  </div>
   <div class="meta">
     <div class="tags">
       <h5 class="label"><%= gettext("Tags:") %></h5>
-      <ul class="tags">
+      <ul class="tags" data-label={gettext("tags")}>
         <%= for tag <- @link.tags do %>
           <li>
             <a href={current_path(@conn, tag: tag)}><%= tag %></a>

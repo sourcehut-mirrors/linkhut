@@ -56,7 +56,11 @@ defmodule LinkhutWeb.Router do
 
     get "/", LinkController, :show
     get "/~:username", LinkController, :show, as: :user
-    get "/~:username/*tags", LinkController, :show, as: :user
+    get "/~:username/-:url", LinkController, :show, as: :user_bookmark
+    get "/~:username/-:url/*tags", LinkController, :show, as: :user_bookmark_tags
+    get "/~:username/*tags", LinkController, :show, as: :user_tags
+    get "/-:url", LinkController, :show, as: :bookmark
+    get "/-:url/*tags", LinkController, :show, as: :bookmark_tags
     get "/*tags", LinkController, :show, as: :tags
   end
 
@@ -135,7 +139,11 @@ defmodule LinkhutWeb.Router do
 
     get "/", LinkController, :show
     get "/~:username", LinkController, :show, as: :user
-    get "/~:username/*tags", LinkController, :show, as: :user
+    get "/~:username/-:url", LinkController, :show, as: :user_bookmark
+    get "/~:username/-:url/*tags", LinkController, :show, as: :user_bookmark_tags
+    get "/~:username/*tags", LinkController, :show, as: :user_tags
+    get "/-:url", LinkController, :show, as: :bookmark
+    get "/-:url/*tags", LinkController, :show, as: :bookmark_tags
     get "/*tags", LinkController, :show, as: :tags
   end
 end

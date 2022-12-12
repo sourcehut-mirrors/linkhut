@@ -213,13 +213,13 @@ defmodule Linkhut.Links do
 
   def links() do
     from(l in Link,
-      left_join: s in subquery(get_shares()),
+      left_join: s in subquery(get_savers()),
       on: [url: l.url, user_id: l.user_id],
-      select_merge: %{shares: s.shares}
+      select_merge: %{savers: s.savers}
     )
   end
 
-  defp get_shares() do
+  defp get_savers() do
     from(l in Link,
       join: o in Link,
       on: [url: l.url],
@@ -227,7 +227,7 @@ defmodule Linkhut.Links do
       select: %{
         url: l.url,
         user_id: l.user_id,
-        shares: count(o.url) |> filter(l.user_id != o.user_id and not o.is_private)
+        savers: count(o.url) |> filter(not o.is_private)
       }
     )
   end

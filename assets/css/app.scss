@@ -376,6 +376,24 @@ nav {
                 }
             }
 
+            & > span.url {
+                color: $foreground;
+                flex-grow: 0;
+
+                &::before {
+                    color: $light-purple;
+                    content: "\002F";
+                    font-size: $font-normal;
+                    margin-left: $spacing-tiny;
+                    margin-right: $spacing-tiny;
+                }
+
+                & > a {
+                    font-size: $font-small;
+                }
+            }
+
+
             & > span.user {
                 flex-grow: 0;
 
@@ -539,6 +557,10 @@ div.bookmarks {
     flex-direction: column;
     flex-grow: 1;
     min-width: 0;
+
+    @media #{$large} {
+        margin-right: 2 * $spacing-large;
+    }
 }
 
 div.bookmark {
@@ -547,11 +569,20 @@ div.bookmark {
     border-top-width: 1px;
     padding-bottom: 2px;
     padding-top: 4px;
+    position: relative;
 
     & > .title {
         display: flex;
         justify-content: space-between;
         max-width: 100%;
+
+        @media #{$large} {
+            &:after {
+                content: "";
+                min-width: 4em;
+                width: 4em;
+            }
+        }
 
         & > h4 {
             flex-grow: 1;
@@ -591,6 +622,50 @@ div.bookmark {
         color: $muted;
         font-size: $font-tiny;
         margin-bottom: $spacing-tiny;
+
+        & > span {
+            display: inline;
+        }
+
+        & > span:not(:first-child)::before {
+            content: "::";
+        }
+    }
+
+    & > .ownership > .savers {
+        color: $muted;
+        font-size: $font-tiny;
+        margin-bottom: $spacing-tiny;
+
+        @media #{$large} {
+            font-size: 0;
+            & a {
+                background-color: $blue;
+                color: $white;
+                display: block;
+                font-size: $font-normal;
+                font-weight: bold;
+                padding: $spacing-tiny;
+                position: absolute;
+                right: 0;
+                top: -1px;
+
+                &:hover {
+                    background-color: $green;
+                    text-decoration: none;
+                }
+
+                &:hover::after {
+                    color: $gray;
+                    content: attr(data-label);
+                    font-size: $font-tiny;
+                    font-weight: normal;
+                    margin-left: $spacing-tiny + $spacing-small;
+                    position: absolute;
+                    text-transform: uppercase;
+                }
+            }
+        }
     }
 
     .meta {
@@ -629,6 +704,18 @@ div.bookmark {
 
                 @media #{$not-small} {
                     text-align: right;
+                }
+
+                @media #{$large} {
+                    &:hover::after {
+                        color: $gray;
+                        content: attr(data-label);
+                        font-size: $font-tiny;
+                        font-weight: normal;
+                        margin-left: $spacing-small;
+                        position: absolute;
+                        text-transform: uppercase;
+                    }
                 }
 
                 & > li {
@@ -696,9 +783,6 @@ a.button {
 
 div.pagination {
     align-items: center;
-    border-top-color: $light-gray;
-    border-top-style: solid;
-    border-top-width: 1px;
     display: flex;
     justify-content: space-evenly;
     margin-bottom: 0.5em;

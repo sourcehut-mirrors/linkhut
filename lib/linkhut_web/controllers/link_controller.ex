@@ -105,6 +105,7 @@ defmodule LinkhutWeb.LinkController do
 
   defp has_filters?(%{"username" => _}), do: true
   defp has_filters?(%{"tags" => _}), do: true
+  defp has_filters?(%{"url" => _}), do: true
   defp has_filters?(_), do: false
 
   def show(conn, params) do
@@ -179,12 +180,40 @@ defmodule LinkhutWeb.LinkController do
     )
   end
 
-  defp context(%{"username" => username, "tags" => tags}) do
-    %Context{from: Accounts.get_user!(username), tagged_with: Enum.uniq(tags)}
+  defp context(%{"username" => username, "tags" => tags, "url" => url}) do
+    %Context{
+      from: Accounts.get_user!(username),
+      tagged_with: Enum.uniq_by(tags, &String.downcase(&1)),
+      url: URI.decode(url)
+    }
   end
 
-  defp context(%{"tags" => tags}), do: %Context{tagged_with: Enum.uniq(tags)}
+  defp context(%{"username" => username, "tags" => tags}) do
+    %Context{
+      from: Accounts.get_user!(username),
+      tagged_with: Enum.uniq_by(tags, &String.downcase(&1))
+    }
+  end
+
+  defp context(%{"username" => username, "url" => url}) do
+    %Context{
+      from: Accounts.get_user!(username),
+      url: URI.decode(url)
+    }
+  end
+
+  defp context(%{"tags" => tags, "url" => url}) do
+    %Context{
+      tagged_with: Enum.uniq_by(tags, &String.downcase/1),
+      url: URI.decode(url)
+    }
+  end
+
+  defp context(%{"tags" => tags}),
+    do: %Context{tagged_with: Enum.uniq_by(tags, &String.downcase/1)}
+
   defp context(%{"username" => username}), do: %Context{from: Accounts.get_user!(username)}
+  defp context(%{"url" => url}), do: %Context{url: URI.decode(url)}
   defp context(_), do: %Context{}
 
   defp page(%{"p" => page}), do: page
