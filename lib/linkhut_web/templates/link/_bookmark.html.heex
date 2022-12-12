@@ -20,7 +20,7 @@
     <span>
       <%= Timex.format!(@link.inserted_at, "{relative}", :relative) %>
     </span>
-    <%= if not @link.is_private and @link.savers > 1 do %>
+    <%= if @context.url == nil and not @link.is_private and @link.savers > 1 do %>
       <span class="savers">
         <%= gettext("saved") %> <a data-label={gettext("people")} href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
       </span>
