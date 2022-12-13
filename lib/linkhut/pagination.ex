@@ -33,9 +33,9 @@ defmodule Linkhut.Pagination do
       has_prev: has_prev,
       prev_page: page,
       next_page: page + 2,
-      page: page,
+      page: page + 1,
       first: page * per_page + 1,
-      last: Enum.min([page + 1 * per_page, total_count]),
+      last: Enum.min([(page + 1) * per_page, total_count]),
       count: total_count,
       entries: Enum.slice(result, 0, count - 1)
     }

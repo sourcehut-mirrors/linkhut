@@ -31,11 +31,11 @@ defmodule LinkhutWeb.LinkView do
   def current_path(conn, opts)
 
   def current_path(%Plug.Conn{query_params: params} = conn, username: username) do
-    current_path(conn, %Context{context(conn) | from: Accounts.get_user(username)}, params)
+    current_path(conn, %Context{Map.drop(context(conn), [:url]) | from: Accounts.get_user(username)}, Map.drop(params, ["p"]))
   end
 
   def current_path(%Plug.Conn{query_params: params} = conn, url: url) do
-    current_path(conn, %Context{context(conn) | url: url}, params)
+    current_path(conn, %Context{context(conn) | url: url}, Map.drop(params, ["p"]))
   end
 
   def current_path(%Plug.Conn{query_params: params} = conn, tag: tag) do
@@ -44,7 +44,7 @@ defmodule LinkhutWeb.LinkView do
       Map.update(context(conn), :tagged_with, [], fn v ->
         Enum.uniq_by(v ++ [tag], &String.downcase/1)
       end),
-      params
+      Map.drop(params, ["p"])
     )
   end
 
@@ -84,9 +84,7 @@ defmodule LinkhutWeb.LinkView do
   @doc """
   Provides the path to the feed view of the current page
   """
-  require Logger
   def feed_path(%Plug.Conn{} = conn) do
-    Logger.info("#{inspect(context(conn))}")
     case context(conn) do
       %{from: user, url: url, tagged_with: tags}
       when not is_nil(user) and is_binary(url) and tags != [] ->

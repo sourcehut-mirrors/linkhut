@@ -784,10 +784,31 @@ a.button {
 div.pagination {
     align-items: center;
     display: flex;
-    justify-content: space-evenly;
+    justify-content: center;
     margin-bottom: 0.5em;
     padding-bottom: 1em;
     padding-top: 2.5em;
+
+    & > span, & > a {
+        padding: $spacing-small $spacing-medium;
+    }
+
+    & > a {
+        text-decoration: none;
+
+        &.active {
+            background-color: $blue;
+            color: $white;
+        }
+
+        &:hover {
+            text-decoration: none;
+
+            &:not(.active) {
+                background-color: $light-gray;
+            }
+        }
+    }
 }
 
 a.feed-link > svg {

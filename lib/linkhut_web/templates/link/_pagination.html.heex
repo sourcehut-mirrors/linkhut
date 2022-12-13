@@ -1,20 +1,57 @@
 <div class="pagination">
   <%= if @page.has_prev do %>
-    <a class="button" href={current_path(@conn, page: @page.prev_page)}>
-      <svg data-icon="chevronLeft" width="16" viewBox="0 0 32 32" style="fill:currentcolor">
-        <title>chevronLeft icon</title>
-        <path d="M20 1 L24 5 L14 16 L24 27 L20 31 L6 16 z"></path>
-      </svg>
-      <span><%= gettext("Previous") %></span>
+    <a href={current_path(@conn, page: @page.prev_page)}>
+      <span>❮</span>
+      <span class="no-css-label"><%= gettext("Previous") %></span>
     </a>
   <% end %>
+    <% pages = ceil(@page.count/20) %>
+    <%= cond do %>
+        <% pages == 1 -> %>
+            <%# noop %>
+        <% pages <= 7 -> %>
+            <%= for p <- 1..pages do %>
+                <a class={if p == @page.page,  do: "active"} href={current_path(@conn, page: p)}>
+                    <span><%= p %></span>
+                </a>
+            <% end %>
+        <% @page.page <= 3 or @page.page >= (pages-2) -> %>
+            <%= for p <- 1..3 do %>
+                <a class={if p == @page.page,  do: "active"} href={current_path(@conn, page: p)}>
+                    <span><%= p %></span>
+                </a>
+            <% end %>
+            <span>
+                <span>&hellip;</span>
+            </span>
+            <%= for p <- (pages-2)..pages do %>
+                <a class={if p == @page.page,  do: "active"} href={current_path(@conn, page: p)}>
+                    <span><%= p %></span>
+                </a>
+            <% end %>
+        <% true -> %>
+            <a href={current_path(@conn, page: 1)}>
+                <span>1</span>
+            </a>
+            <span>
+                <span>&hellip;</span>
+            </span>
+            <%= for p <- (@page.page-1)..(@page.page+1) do %>
+                <a class={if p == @page.page,  do: "active"} href={current_path(@conn, page: p)}>
+                    <span><%= p %></span>
+                </a>
+            <% end %>
+            <span>
+                <span>&hellip;</span>
+            </span>
+            <a href={current_path(@conn, page: pages)}>
+                <span><%= pages %></span>
+            </a>
+    <% end %>
   <%= if @page.has_next do %>
-    <a class="button" href={current_path(@conn, page: @page.next_page)}>
-      <span><%= gettext("Next") %></span>
-      <svg data-icon="chevronRight" width="16" viewBox="0 0 32 32" style="fill:currentcolor">
-        <title>chevronRight icon</title>
-        <path d="M12 1 L26 16 L12 31 L8 27 L18 16 L8 5 z"></path>
-      </svg>
+    <a href={current_path(@conn, page: @page.next_page)}>
+      <span class="no-css-label"><%= gettext("Next") %></span>
+      <span>❯</span>
     </a>
   <% end %>
 </div>
