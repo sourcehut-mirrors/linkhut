@@ -57,11 +57,13 @@ defmodule Linkhut.Search do
   defp visible_as(query, user) when is_nil(user) do
     query
     |> where(is_private: false)
+    |> where(is_unread: false)
   end
 
   defp visible_as(query, user) do
     query
     |> where([l, _, u], l.is_private == false or u.username == ^user)
+    |> where([l, _, u], l.is_unread == false or u.username == ^user)
   end
 
   defp matching(query, url) when is_nil(url), do: query

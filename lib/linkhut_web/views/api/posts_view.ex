@@ -171,8 +171,7 @@ defmodule LinkhutWeb.Api.PostsView do
       shared: if(link.is_private, do: "no", else: "yes"),
       time: DateTime.to_iso8601(link.inserted_at),
       meta: if(show_meta, do: md5(DateTime.to_iso8601(link.updated_at)), else: nil),
-      # FIXME
-      toread: "no"
+      toread: if(link.is_unread, do: "yes", else: "no")
     }
   end
 

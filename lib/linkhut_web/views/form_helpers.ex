@@ -9,7 +9,7 @@ defmodule LinkhutWeb.FormHelpers do
   Wraps a form input in a div that carries information on why it failed validation
   """
   def input(form, field, opts \\ []) do
-    name = Keyword.get(opts, :name, humanize(field))
+    name = Keyword.get(opts, :label, humanize(field))
     {type, opts} = Keyword.pop(opts, :type, input_type(form, field))
     opts = Keyword.put_new(opts, :value, Form.input_value(form, field) |> value_to_string())
 

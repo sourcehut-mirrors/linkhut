@@ -3,6 +3,8 @@ defmodule Linkhut.Links.Tags do
 
   @behaviour Ecto.Type
 
+  @unread_tag "unread"
+
   @impl true
   def type, do: {:array, :string}
 
@@ -41,6 +43,14 @@ defmodule Linkhut.Links.Tags do
 
   @impl true
   def embed_as(_), do: :self
+
+  def unread, do: @unread_tag
+
+  def is_unread?(tag) do
+    tag
+    |> String.downcase()
+    |> (&(&1 == "unread" or &1 == "toread")).()
+  end
 
   defp valid?(tag), do: String.valid?(tag) && String.length(tag) <= 128
 end

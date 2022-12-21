@@ -34,6 +34,7 @@ Add a new bookmark.
 - `&dt={CCYY-MM-DDThh:mm:ssZ}` (optional) — Datestamp of the item (format “CCYY-MM-DDThh:mm:ssZ”). Requires a LITERAL “T” and “Z” like in ISO8601 at http://www.cl.cam.ac.uk/~mgk25/iso-time.html for Example: `1984-09-01T14:21:31Z`.
 - `&replace=no` (optional) — Don’t replace post if given url has already been posted.
 - `&shared=no` (optional) — Make the item private.
+- `&toread=yes` (optional) — Mark the item as unread.
 
 ### Examples
 

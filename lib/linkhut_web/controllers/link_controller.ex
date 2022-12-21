@@ -12,6 +12,8 @@ defmodule LinkhutWeb.LinkController do
   @links_per_page 20
   @related_tags_limit 400
 
+  def links_per_page, do: @links_per_page
+
   def new(conn, params) do
     conn
     |> render("add.html",
@@ -114,6 +116,21 @@ defmodule LinkhutWeb.LinkController do
       has_filters?(params) -> filter(conn, context(params), page(params))
       true -> recent(conn, page(params))
     end
+  end
+
+  def unread(conn, params) do
+    user = conn.assigns[:current_user]
+    page = page(params)
+    links_query = Links.unread(user.id)
+
+    conn
+    |> render("index.html",
+         links: realize_query(links_query, page),
+         tags: Tags.for_query(links_query, limit: @related_tags_limit),
+         query: "",
+         context: context(params),
+         title: :unread
+    )
   end
 
   defp recent(conn, page) do

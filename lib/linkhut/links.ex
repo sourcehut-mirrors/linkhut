@@ -206,9 +206,32 @@ defmodule Linkhut.Links do
     links()
     |> join(:inner, [l, _], u in assoc(l, :user))
     |> where(is_private: false)
+    |> where(is_unread: false)
     |> where([l], l.inserted_at >= ^datetime)
     |> order_by(desc: :inserted_at)
     |> preload([_, _, u], user: u)
+  end
+
+  @doc """
+  Returns the unread links for a user
+  """
+  def unread(user_id) do
+    links()
+    |> join(:inner, [l, _], u in assoc(l, :user))
+    |> where(user_id: ^user_id)
+    |> where(is_unread: true)
+    |> order_by(desc: :inserted_at)
+    |> preload([_, _, u], user: u)
+  end
+
+  @doc """
+  Returns the number of unread links for a user
+  """
+  def unread_count(user_id) do
+    links()
+    |> where(user_id: ^user_id)
+    |> where(is_unread: true)
+    |> Repo.aggregate(:count)
   end
 
   def links() do
@@ -227,7 +250,7 @@ defmodule Linkhut.Links do
       select: %{
         url: l.url,
         user_id: l.user_id,
-        savers: count(o.url) |> filter(not o.is_private)
+        savers: count(o.url) |> filter(not o.is_private or not o.is_unread)
       }
     )
   end

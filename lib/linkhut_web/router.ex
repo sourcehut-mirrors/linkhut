@@ -120,7 +120,7 @@ defmodule LinkhutWeb.Router do
   if Mix.env() == :dev do
     scope "/_/admin" do
       pipe_through :browser
-      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry
+      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry, ecto_repos: [Linkhut.Repo]
     end
   end
 
@@ -132,6 +132,11 @@ defmodule LinkhutWeb.Router do
 
     get "/login", Auth.SessionController, :new
     post "/login", Auth.SessionController, :create
+  end
+
+  scope "/_", LinkhutWeb do
+    pipe_through [:browser, :ensure_auth]
+    get "/unread", LinkController, :unread, as: :unread
   end
 
   scope "/", LinkhutWeb do

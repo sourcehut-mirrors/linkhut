@@ -1,4 +1,5 @@
 @import "variables";
+@import "svgs";
 
 html, body {
     height: 100%;
@@ -98,6 +99,7 @@ footer {
     line-height: 1rem;
     margin-bottom: $spacing-tiny;
     word-break: break-word;
+    overflow: hidden;
 
     & > a, & > span {
         color: $dark-green;
@@ -113,6 +115,7 @@ footer {
 @mixin link-actions() {
     & > ul.actions {
         display: inline;
+        font-weight: bold;
         list-style: none;
         margin: 0;
         padding: 0;
@@ -120,14 +123,34 @@ footer {
         & > li {
             color: $muted;
             display: inline-block;
+            font-size: $font-tiny;
 
             & > a {
                 color: $muted;
-                text-transform: uppercase;
             }
 
             &:not(:first-child)::before {
                 content: "\007C";
+                font-weight: normal;
+            }
+        }
+
+        & form {
+            display: inline-block;
+            padding: 0;
+
+            & > button {
+                background-color: transparent;
+                border: none;
+                color: $muted;
+                font-size: $font-tiny;
+                font-weight: bold;
+                padding: 0;
+
+                &:hover {
+                    cursor: pointer;
+                    text-decoration: underline;
+                }
             }
         }
     }
@@ -276,6 +299,36 @@ nav {
         margin: 0;
         padding: 0;
 
+        &.quicklinks {
+            margin-left: $spacing-tiny;
+
+            &::before {
+                content: "\007C";
+                margin-right: $spacing-tiny;
+            }
+
+            & li > a {
+                font-size: 0;
+
+                &::before {
+                    content: unread($blue);
+                    display: inline-block;
+                    vertical-align: middle;
+                    width: $font-small;
+                }
+                &::after {
+                    content: attr(data-count);
+                    font-size: $font-tiny;
+                    display: inline-block;
+                    vertical-align: baseline;
+                    margin-left: 0.5 * $spacing-tiny;
+                }
+                &:hover::after {
+                    text-decoration: underline;
+                }
+            }
+        }
+
         & li {
             align-items: baseline;
             display: inline-flex;
@@ -362,6 +415,7 @@ nav {
             & > span.title {
                 color: $foreground;
                 flex-grow: 0;
+                line-break: strict;
 
                 &::before {
                     color: $dark-pink;
@@ -555,32 +609,105 @@ div.date-group {
 div.bookmarks {
     display: block flex;
     flex-direction: column;
+    overflow: hidden;
     flex-grow: 1;
     min-width: 0;
+}
 
-    @media #{$large} {
-        margin-right: 2 * $spacing-large;
+div.bookmark-card {
+    display: block flex;
+    flex-flow: row-reverse;
+    flex-grow: 1;
+    justify-content: flex-end;
+
+    & > .icons {
+        border-top-color: $light-gray;
+        border-top-style: solid;
+        border-top-width: 1px;
+        background-color: $washed-gray;
+        max-width: $font-normal;
+        min-width: $font-normal;
+        padding-bottom: 2px;
+        padding-top: 4px;
+
+        & > span {
+            display: inline-block;
+            line-height: 1.2em;
+            margin-bottom: 2px;
+            margin-top: 2px;
+
+            &[data-icon-type="private"] {
+                content: hidden($blue);
+            }
+
+            &[data-icon-type="unread"] {
+                content: later($blue);
+            }
+        }
     }
 }
 
 div.bookmark {
-    border-top-color: $light-gray;
-    border-top-style: solid;
-    border-top-width: 1px;
+    flex-grow: 1.0;
+    overflow: hidden;
     padding-bottom: 2px;
-    padding-top: 4px;
     position: relative;
 
+    & > div {
+        padding-left: $spacing-tiny;
+    }
+
+    @media #{$large} {
+        padding-right: 2 * $spacing-large;
+    }
+
     & > .title {
+        border-top-color: $light-gray;
+        border-top-style: solid;
+        border-top-width: 1px;
         display: flex;
         justify-content: space-between;
-        max-width: 100%;
+        padding-top: 4px;
 
         @media #{$large} {
-            &:after {
-                content: "";
-                min-width: 4em;
-                width: 4em;
+            position: relative;
+            & a.savers[data-count="0"], & a.savers[data-count="1"]{
+                display: none;
+            }
+            & a.savers {
+                background-color: $blue;
+                color: $white;
+                display: block;
+                font-size: $font-normal;
+                font-weight: bold;
+                padding: $spacing-tiny;
+                margin-top: -5px;
+                border-top: 1px;
+                border-top-color: $dark-blue;
+                border-top-style: solid;
+
+                &::before {
+                    content: attr(data-count);
+                }
+
+                &:hover {
+                    background-color: $green;
+                    border-top-color: $dark-green;
+                    text-decoration: none;
+
+                    @media #{$large} {
+                        &::after {
+                            color: $gray;
+                            content: attr(data-label);
+                            font-size: $font-tiny;
+                            font-weight: normal;
+                            margin-left: $spacing-tiny + $spacing-small;
+                            margin-top: 2px;
+                            position: absolute;
+                            text-transform: uppercase;
+                        }
+                    }
+                }
             }
         }
 
@@ -590,14 +717,6 @@ div.bookmark {
             min-width: 10%;
 
             @include link-title();
-        }
-
-        & > .private {
-            color: $muted;
-            flex-grow: 0;
-            flex-shrink: 0;
-            margin-left: $spacing-large;
-            text-transform: uppercase;
         }
     }
 
@@ -611,7 +730,7 @@ div.bookmark {
         line-height: 1.4em;
         overflow: hidden;
         padding-bottom: $spacing-tiny;
-        width: 100%;
+        //width: 100%;
 
         & p {
             margin: 0 0 0 0;
@@ -628,7 +747,7 @@ div.bookmark {
         }
 
         & > span:not(:first-child)::before {
-            content: "::";
+            content: "\00B7";
         }
     }
 
@@ -637,34 +756,8 @@ div.bookmark {
         font-size: $font-tiny;
         margin-bottom: $spacing-tiny;
 
-        @media #{$large} {
-            font-size: 0;
-            & a {
-                background-color: $blue;
-                color: $white;
-                display: block;
-                font-size: $font-normal;
-                font-weight: bold;
-                padding: $spacing-tiny;
-                position: absolute;
-                right: 0;
-                top: -1px;
-
-                &:hover {
-                    background-color: $green;
-                    text-decoration: none;
-                }
-
-                &:hover::after {
-                    color: $gray;
-                    content: attr(data-label);
-                    font-size: $font-tiny;
-                    font-weight: normal;
-                    margin-left: $spacing-tiny + $spacing-small;
-                    position: absolute;
-                    text-transform: uppercase;
-                }
-            }
+        @media #{$not-small} {
+            display: none;
         }
     }
 
@@ -697,6 +790,7 @@ div.bookmark {
             }
 
             & > ul.tags {
+                display: inline;
                 font-size: $font-tiny;
                 list-style: none;
                 margin: 0;
@@ -712,6 +806,7 @@ div.bookmark {
                         content: attr(data-label);
                         font-size: $font-tiny;
                         font-weight: normal;
+                        margin-top: 2px;
                         margin-left: $spacing-small;
                         position: absolute;
                         text-transform: uppercase;

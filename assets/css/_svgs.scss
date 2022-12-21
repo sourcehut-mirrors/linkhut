@@ -1,0 +1,16 @@
+@import "svg-utils";
+
+// icon for unread list
+@function unread($color) {
+  @return inline-svg("<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect stroke='#{$color}' x='2' y='4' width='20' height='16' rx='2'></rect><path stroke='#{$color}' d='m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7'></path></svg>")
+}
+
+// icon for private links
+@function hidden($color) {
+  @return inline-svg("<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='#{$color}' d='m3,9h1V6a5,5 0 0,1 12,0V9h1v11H3M14,9V6a4,4 0 1,0-8,0v3'/></svg>")
+}
+
+// icon for to-read links
+@function later($color) {
+  @return inline-svg("<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#{$color}'><path d='M12,2C6.477,2,2,6.477,2,12c0,5.523,4.477,10,10,10s10-4.477,10-10C22,6.477,17.523,2,12,2z M14.586,16l-3.293-3.293 C11.105,12.519,11,12.265,11,12V7c0-0.552,0.448-1,1-1h0c0.552,0,1,0.448,1,1v4.586l3,3c0.39,0.39,0.39,1.024,0,1.414l0,0 C15.61,16.39,14.976,16.39,14.586,16z'/></svg>")
+}

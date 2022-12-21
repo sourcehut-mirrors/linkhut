@@ -1,8 +1,12 @@
+<div class="bookmark-card">
 <div class="bookmark">
   <div data-posted-on={@link.inserted_at} data-savers={@link.savers} class="title">
     <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
     <%= if @link.is_private do %>
-      <div class="private"><%= gettext("Private") %></div>
+      <span class="no-css-label"><%= gettext("Private") %></span>
+    <% end %>
+    <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
+      <a class="savers" data-count={@link.savers} data-label={gettext("people")} href={Routes.bookmark_path(@conn, :show, @link.url)}></a>
     <% end %>
   </div>
   <div class="full-url">
@@ -20,9 +24,9 @@
     <span>
       <%= Timex.format!(@link.inserted_at, "{relative}", :relative) %>
     </span>
-    <%= if @context.url == nil and not @link.is_private and @link.savers > 1 do %>
+    <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
       <span class="savers">
-        <%= gettext("saved") %> <a data-label={gettext("people")} href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
+        <%= gettext("saved") %> <a href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
       </span>
     <% end %>
   </div>
@@ -49,6 +53,15 @@
               <li>
                 <a href={Routes.link_path(@conn, :delete, url: @link.url)}><%= gettext("delete") %></a>
               </li>
+              <%= if @link.is_unread do %>
+              <li>
+                <%= form_for :mark_as_read, Routes.link_path(@conn, :update), [method: :put], fn _ -> %>
+                  <%= hidden_input(:link, :url, value: @link.url) %>
+                  <%= hidden_input(:link, :is_unread, value: false) %>
+                  <%= submit(gettext("mark as read")) %>
+                <% end %>
+              </li>
+              <% end %>
             <% else %>
               <li>
                 <a href={Routes.link_path(@conn, :new, url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags)}><%= gettext("copy to mine") %></a>
@@ -59,5 +72,12 @@
       </div>
     <% end %>
   </div>
+</div>
+<%= if @link.is_private or @link.is_unread do %>
+<div class="icons">
+    <%= if @link.is_private do %><span data-icon-type="private" title={gettext("private")}></span><% end %>
+    <%= if @link.is_unread do %><span data-icon-type="unread" title={gettext("unread")}></span><% end %>
+</div>
+<% end %>
 </div>
 <hr />

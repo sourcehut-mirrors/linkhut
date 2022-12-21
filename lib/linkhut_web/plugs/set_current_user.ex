@@ -7,6 +7,7 @@ defmodule LinkhutWeb.Plugs.SetCurrentUser do
 
   import Plug.Conn
   alias Linkhut.Accounts
+  alias Linkhut.Links
 
   @doc false
   @impl true
@@ -19,6 +20,7 @@ defmodule LinkhutWeb.Plugs.SetCurrentUser do
       conn
       |> assign(:current_user, user)
       |> assign(:logged_in?, true)
+      |> refresh_unread_count(user)
     else
       conn
       |> assign(:current_user, nil)
@@ -43,5 +45,10 @@ defmodule LinkhutWeb.Plugs.SetCurrentUser do
     else
       nil
     end
+  end
+
+  defp refresh_unread_count(conn, user) do
+    conn
+    |> assign(:unread_count, Links.unread_count(user.id))
   end
 end

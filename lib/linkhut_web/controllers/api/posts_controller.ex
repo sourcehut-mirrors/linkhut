@@ -20,14 +20,13 @@ defmodule LinkhutWeb.Api.PostsController do
     |> render(:update, %{last_update: last_update(user)})
   end
 
-  # TODO: support for to_read
   def add(conn, %{"url" => url, "description" => title, "replace" => "yes"} = params) do
     user = conn.assigns[:current_user]
     link = Links.get!(url, user.id)
 
     link_params =
       Enum.into(
-        ~w(notes tags is_private inserted_at),
+        ~w(notes tags is_private is_unread inserted_at),
         %{"title" => title},
         &{&1, value(&1, params)}
       )
@@ -48,7 +47,7 @@ defmodule LinkhutWeb.Api.PostsController do
 
     link_params =
       Enum.into(
-        ~w(notes tags is_private inserted_at),
+        ~w(notes tags is_private is_unread inserted_at),
         %{"url" => url, "title" => title},
         &{&1, value(&1, params)}
       )
@@ -222,6 +221,13 @@ defmodule LinkhutWeb.Api.PostsController do
   defp value("is_private", params) do
     case Map.get(params, "shared") do
       "no" -> true
+      _ -> false
+    end
+  end
+
+  defp value("is_unread", params) do
+    case Map.get(params, "toread") do
+      "yes" -> true
       _ -> false
     end
   end

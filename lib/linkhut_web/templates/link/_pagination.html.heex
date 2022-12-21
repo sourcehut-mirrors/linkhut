@@ -5,9 +5,9 @@
       <span class="no-css-label"><%= gettext("Previous") %></span>
     </a>
   <% end %>
-    <% pages = ceil(@page.count/20) %>
+    <% pages = ceil(@page.count/LinkhutWeb.LinkController.links_per_page) %>
     <%= cond do %>
-        <% pages == 1 -> %>
+        <% pages <= 1 -> %>
             <%# noop %>
         <% pages <= 7 -> %>
             <%= for p <- 1..pages do %>
