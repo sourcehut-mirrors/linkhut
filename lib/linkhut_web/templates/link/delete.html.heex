@@ -1,5 +1,17 @@
 <div>
   <h3>Remove link</h3>
+  <div class="bookmark">
+    <div data-posted-on={@link.inserted_at} data-savers={@link.savers} class="title">
+      <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
+    </div>
+    <div class="full-url">
+      <a rel="nofollow" href={@link.url}><%= @link.url %></a>
+    </div>
+    <div class="description">
+      <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
+    </div>
+  </div>
+  <hr>
   <%= form_for @changeset, Routes.link_path(@conn, :delete), fn f -> %>
     <fieldset>
       <%= hidden_input(f, :url) %>
@@ -7,5 +19,4 @@
       <%= submit("Delete") %>
     </fieldset>
   <% end %>
-  <%= render("_bookmark.html", Map.put(assigns, :hide_actions, true)) %>
 </div>
