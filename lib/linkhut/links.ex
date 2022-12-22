@@ -250,7 +250,7 @@ defmodule Linkhut.Links do
       select: %{
         url: l.url,
         user_id: l.user_id,
-        savers: count(o.url) |> filter(not o.is_private or not o.is_unread)
+        savers: count(o.url) |> filter(not o.is_private and not o.is_unread)
       }
     )
   end
