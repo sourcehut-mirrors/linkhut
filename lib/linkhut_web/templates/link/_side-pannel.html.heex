@@ -7,7 +7,7 @@
   <% end %>
   <%= if length(@tags) > 0 do %>
     <section>
-      <h5><%= gettext("tags") %></h5>
+      <h5><%= gettext("Tags") %></h5>
       <ul class="tag-cloud">
         <%= for %{tag: tag, count: count} <- @tags do %>
           <li><a href={current_path(@conn, tag: tag)} data-count={count}><%= tag %></a></li>
@@ -16,15 +16,17 @@
     </section>
   <% end %>
   <section>
+    <div class="explore">
+      <h5><%= gettext("Explore") %></h5>
+      <ul>
+        <li><a href={Routes.link_path(@conn, :show, v: "recent")}><%= gettext("Recent") %></a></li>
+        <li><a href={Routes.link_path(@conn, :show, v: "popular")}><%= gettext("Popular") %></a></li>
+      </ul>
+    </div>
+  </section>
+  <section>
     <h5>
-      <a class="feed-link" href={feed_path(@conn)}>
-        <svg data-icon="rss-feed" width="16" height="16" viewBox="0 0 256 256">
-          <circle cx="68" cy="189" r="24" />
-          <path d="M160 213h-34a82 82 0 0 0 -82 -82v-34a116 116 0 0 1 116 116z" />
-          <path d="M184 213A140 140 0 0 0 44 73 V 38a175 175 0 0 1 175 175z" />
-        </svg>
-        <%= gettext("RSS feed") %>
-      </a>
+      <a class="feed-link" href={feed_path(@conn)}><%= gettext("RSS feed") %></a>
     </h5>
   </section>
 </aside>

@@ -49,15 +49,30 @@ defmodule Linkhut.Links.Link do
 
   defp update_tags(changeset) do
     case get_change(changeset, :tags) do
-      nil -> changeset
-      tags -> if Enum.any?(tags, &Tags.is_unread?/1), do: force_change(changeset, :is_unread, true), else: changeset
+      nil ->
+        changeset
+
+      tags ->
+        if Enum.any?(tags, &Tags.is_unread?/1),
+          do: force_change(changeset, :is_unread, true),
+          else: changeset
     end
   end
 
   defp dedupe_tags(changeset) do
     case get_change(changeset, :tags) do
-      nil -> changeset
-      tags -> force_change(changeset, :tags, Enum.uniq_by(tags, &(if Tags.is_unread?(&1), do: Tags.unread, else: String.downcase(&1))))
+      nil ->
+        changeset
+
+      tags ->
+        force_change(
+          changeset,
+          :tags,
+          Enum.uniq_by(
+            tags,
+            &if(Tags.is_unread?(&1), do: Tags.unread(), else: String.downcase(&1))
+          )
+        )
     end
   end
 

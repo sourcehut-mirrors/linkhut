@@ -114,7 +114,7 @@ defmodule LinkhutWeb.LinkController do
     cond do
       has_query?(params) -> query(conn, context(params), Map.get(params, "query"), page(params))
       has_filters?(params) -> filter(conn, context(params), page(params))
-      true -> recent(conn, page(params))
+      true -> explore(conn, view(params), page(params))
     end
   end
 
@@ -125,22 +125,26 @@ defmodule LinkhutWeb.LinkController do
 
     conn
     |> render("index.html",
-         links: realize_query(links_query, page),
-         tags: Tags.for_query(links_query, limit: @related_tags_limit),
-         query: "",
-         context: context(params),
-         title: :unread
+      links: realize_query(links_query, page),
+      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      query: "",
+      context: context(params),
+      title: :unread
     )
   end
 
-  defp recent(conn, page) do
+  defp explore(conn, view, page) do
     context =
       case conn.assigns[:current_user] do
         nil -> %Context{}
         current_user -> %Context{visible_as: current_user.username}
       end
 
-    links_query = Links.recent()
+    links_query =
+      case view do
+        :recent -> Links.recent()
+        :popular -> Links.popular()
+      end
 
     conn
     |> render(:index,
@@ -148,7 +152,7 @@ defmodule LinkhutWeb.LinkController do
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: "",
       context: context,
-      title: :recent
+      title: view
     )
   end
 
@@ -235,4 +239,8 @@ defmodule LinkhutWeb.LinkController do
 
   defp page(%{"p" => page}), do: page
   defp page(_), do: 1
+
+  defp view(%{"v" => "recent"}), do: :recent
+  defp view(%{"v" => "popular"}), do: :popular
+  defp view(_), do: :recent
 end

@@ -365,6 +365,7 @@ nav {
     & > div.breadcrumbs {
         display: inline-flex;
         flex-grow: 0;
+        flex-wrap: wrap;
 
         & > a.brand {
             color: $foreground;
@@ -546,7 +547,37 @@ div#content, div#controls {
                     content: ", ";
                 }
             }
+        }
 
+        & div.explore {
+            & > ul {
+                align-items: baseline;
+                display: inline-flex;
+                flex-direction: row;
+                font-size: $font-small;
+                list-style-type: none;
+                margin: 0;
+                padding: 0;
+
+                & > li {
+                    align-items: baseline;
+                    display: inline-flex;
+                    list-style: none outside none;
+
+                    & > a {
+                        text-transform: lowercase;
+                    }
+
+                    &:not(:first-child) {
+                        margin-left: $spacing-tiny;
+                    }
+
+                    &:not(:first-child)::before {
+                        content: "\00B7";
+                        margin-right: $spacing-tiny;
+                    }
+                }
+            }
         }
     }
 
@@ -906,11 +937,14 @@ div.pagination {
     }
 }
 
-a.feed-link > svg {
-    display: inline;
-    height: 1.1em;
-    vertical-align: bottom;
-    width: 1.1em;
+a.feed-link {
+    &::before {
+        content: rss($near-black);
+        display: inline-block;
+        vertical-align: middle;
+        width: $font-normal;
+        margin-right: 0.5 * $spacing-tiny;
+    }
 }
 
 details {

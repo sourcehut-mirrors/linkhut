@@ -1,83 +1,87 @@
 <div class="bookmark-card">
-<div class="bookmark">
-  <div data-posted-on={@link.inserted_at} data-savers={@link.savers} class="title">
-    <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
-    <%= if @link.is_private do %>
-      <span class="no-css-label"><%= gettext("Private") %></span>
-    <% end %>
-    <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
-      <a class="savers" data-count={@link.savers} data-label={gettext("people")} href={Routes.bookmark_path(@conn, :show, @link.url)}></a>
-    <% end %>
-  </div>
-  <div class="full-url">
-    <a rel="nofollow" href={@link.url}><%= @link.url %></a>
-  </div>
-  <div class="description">
-    <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
-  </div>
-  <div class="ownership">
-    <%= unless @logged_in? && @link.user_id == @current_user.id do %>
-      <span>
-        <%= gettext("by") %> <a href={current_path(@conn, username: @link.user.username)}><%= @link.user.username %></a>
-      </span>
-    <% end %>
-    <span>
-      <%= Timex.format!(@link.inserted_at, "{relative}", :relative) %>
-    </span>
-    <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
-      <span class="savers">
-        <%= gettext("saved") %> <a href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
-      </span>
-    <% end %>
-  </div>
-  <div class="meta">
-    <div class="tags">
-      <h5 class="label"><%= gettext("Tags:") %></h5>
-      <ul class="tags" data-label={gettext("tags")}>
-        <%= for tag <- @link.tags do %>
-          <li>
-            <a href={current_path(@conn, tag: tag)}><%= tag %></a>
-          </li>
-        <% end %>
-      </ul>
+  <div class="bookmark">
+    <div data-posted-on={@link.inserted_at} data-savers={@link.savers} class="title">
+      <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
+      <%= if @link.is_private do %>
+        <span class="no-css-label"><%= gettext("Private") %></span>
+      <% end %>
+      <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
+        <a class="savers" data-count={@link.savers} data-label={gettext("people")} href={Routes.bookmark_path(@conn, :show, @link.url)}></a>
+      <% end %>
     </div>
-    <%= if @logged_in? do %>
-      <div class="actions">
-        <h5 class="label"><%= gettext("Actions:") %></h5>
-        <ul class="actions">
-          <%= if !assigns[:hide_actions] do %>
-            <%= if @link.user_id == @current_user.id do %>
-              <li>
-                <a href={Routes.link_path(@conn, :edit, url: @link.url)}><%= gettext("edit") %></a>
-              </li>
-              <li>
-                <a href={Routes.link_path(@conn, :delete, url: @link.url)}><%= gettext("delete") %></a>
-              </li>
-              <%= if @link.is_unread do %>
-              <li>
-                <%= form_for :mark_as_read, Routes.link_path(@conn, :update), [method: :put], fn _ -> %>
-                  <%= hidden_input(:link, :url, value: @link.url) %>
-                  <%= hidden_input(:link, :is_unread, value: false) %>
-                  <%= submit(gettext("mark as read")) %>
-                <% end %>
-              </li>
-              <% end %>
-            <% else %>
-              <li>
-                <a href={Routes.link_path(@conn, :new, url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags)}><%= gettext("copy to mine") %></a>
-              </li>
-            <% end %>
+    <div class="full-url">
+      <a rel="nofollow" href={@link.url}><%= @link.url %></a>
+    </div>
+    <div class="description">
+      <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
+    </div>
+    <div class="ownership">
+      <%= unless @logged_in? && @link.user_id == @current_user.id do %>
+        <span>
+          <%= gettext("by") %> <a href={current_path(@conn, username: @link.user.username)}><%= @link.user.username %></a>
+        </span>
+      <% end %>
+      <span>
+        <%= Timex.format!(@link.inserted_at, "{relative}", :relative) %>
+      </span>
+      <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
+        <span class="savers">
+          <%= gettext("saved") %> <a href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
+        </span>
+      <% end %>
+    </div>
+    <div class="meta">
+      <div class="tags">
+        <h5 class="label"><%= gettext("Tags:") %></h5>
+        <ul class="tags" data-label={gettext("tags")}>
+          <%= for tag <- @link.tags do %>
+            <li>
+              <a href={current_path(@conn, tag: tag)}><%= tag %></a>
+            </li>
           <% end %>
         </ul>
       </div>
-    <% end %>
+      <%= if @logged_in? do %>
+        <div class="actions">
+          <h5 class="label"><%= gettext("Actions:") %></h5>
+          <ul class="actions">
+            <%= if !assigns[:hide_actions] do %>
+              <%= if @link.user_id == @current_user.id do %>
+                <li>
+                  <a href={Routes.link_path(@conn, :edit, url: @link.url)}><%= gettext("edit") %></a>
+                </li>
+                <li>
+                  <a href={Routes.link_path(@conn, :delete, url: @link.url)}><%= gettext("delete") %></a>
+                </li>
+                <%= if @link.is_unread do %>
+                  <li>
+                    <%= form_for :mark_as_read, Routes.link_path(@conn, :update), [method: :put], fn _ -> %>
+                      <%= hidden_input(:link, :url, value: @link.url) %>
+                      <%= hidden_input(:link, :is_unread, value: false) %>
+                      <%= submit(gettext("mark as read")) %>
+                    <% end %>
+                  </li>
+                <% end %>
+              <% else %>
+                <li>
+                  <a href={Routes.link_path(@conn, :new, url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags)}><%= gettext("copy to mine") %></a>
+                </li>
+              <% end %>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
   </div>
-</div>
-<%= if @link.is_private or @link.is_unread do %>
-<div class="icons">
-    <%= if @link.is_private do %><span data-icon-type="private" title={gettext("private")}></span><% end %>
-    <%= if @link.is_unread do %><span data-icon-type="unread" title={gettext("unread")}></span><% end %>
-</div>
-<% end %>
+  <%= if @link.is_private or @link.is_unread do %>
+    <div class="icons">
+      <%= if @link.is_private do %>
+        <span data-icon-type="private" title={gettext("private")}></span>
+      <% end %>
+      <%= if @link.is_unread do %>
+        <span data-icon-type="unread" title={gettext("unread")}></span>
+      <% end %>
+    </div>
+  <% end %>
 </div>
 <hr />

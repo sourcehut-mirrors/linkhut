@@ -24,7 +24,7 @@
               <ul class="tags">
                 <%= for tag <- @context.tagged_with do %>
                   <li><a href={Routes.tags_path(@conn, :show, [tag])}><%= tag %></a></li>
-                 <% end %>
+                <% end %>
               </ul>
             <% end %>
           <% _ -> %>

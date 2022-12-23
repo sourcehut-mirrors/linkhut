@@ -31,7 +31,11 @@ defmodule LinkhutWeb.LinkView do
   def current_path(conn, opts)
 
   def current_path(%Plug.Conn{query_params: params} = conn, username: username) do
-    current_path(conn, %Context{Map.drop(context(conn), [:url]) | from: Accounts.get_user(username)}, Map.drop(params, ["p"]))
+    current_path(
+      conn,
+      %Context{Map.drop(context(conn), [:url]) | from: Accounts.get_user(username)},
+      Map.drop(params, ["p"])
+    )
   end
 
   def current_path(%Plug.Conn{query_params: params} = conn, url: url) do
@@ -135,20 +139,35 @@ defmodule LinkhutWeb.LinkView do
 
   defp title(%Context{} = context) do
     case context do
-      %{from: user, url: url, tagged_with: tags} when not is_nil(user) and is_binary(url) and tags != [] ->
-        LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url} by linkhut user: %{user} tagged with: %{tags}", url: url, tags: Enum.join(tags, ","), user: user.username)
+      %{from: user, url: url, tagged_with: tags}
+      when not is_nil(user) and is_binary(url) and tags != [] ->
+        LinkhutWeb.Gettext.gettext(
+          "Bookmarks for url: %{url} by linkhut user: %{user} tagged with: %{tags}",
+          url: url,
+          tags: Enum.join(tags, ","),
+          user: user.username
+        )
 
       %{from: user, url: url} when not is_nil(user) and is_binary(url) ->
-        LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url} by linkhut user: %{user}", url: url, user: user.username)
+        LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url} by linkhut user: %{user}",
+          url: url,
+          user: user.username
+        )
 
       %{url: url, tagged_with: tags} when is_binary(url) and tags != [] ->
-        LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url} tagged with: %{tags}", url: url, tags: Enum.join(tags, ","))
+        LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url} tagged with: %{tags}",
+          url: url,
+          tags: Enum.join(tags, ",")
+        )
 
       %{url: url} when is_binary(url) ->
         LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url}", url: url)
 
       %{from: user, tagged_with: tags} when not is_nil(user) and tags != [] ->
-        LinkhutWeb.Gettext.gettext("Bookmarks by linkhut user: %{user} tagged with: %{tags}", tags: Enum.join(tags, ","), user: user.username)
+        LinkhutWeb.Gettext.gettext("Bookmarks by linkhut user: %{user} tagged with: %{tags}",
+          tags: Enum.join(tags, ","),
+          user: user.username
+        )
 
       %{from: user} when not is_nil(user) ->
         LinkhutWeb.Gettext.gettext("Bookmarks by linkhut user: %{user}", user: user.username)

@@ -204,11 +204,36 @@ defmodule Linkhut.Links do
     datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
-    |> join(:inner, [l, _], u in assoc(l, :user))
+    |> join(:inner, [l], u in assoc(l, :user))
+    |> join(:left, [l], latest in subquery(latest()),
+      on: l.url == latest.url and l.inserted_at == latest.inserted_at
+    )
+    |> where([l, _, _, latest], l.url == latest.url and l.inserted_at == latest.inserted_at)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([l], l.inserted_at >= ^datetime)
     |> order_by(desc: :inserted_at)
+    |> preload([_, _, u], user: u)
+  end
+
+  @doc """
+  Returns the most popular public links
+  """
+  def popular(popularity \\ 3) do
+    links()
+    |> join(:inner, [l, _], u in assoc(l, :user))
+    |> join(:left, [l, _, _], earliest in subquery(earliest()),
+      on: l.url == earliest.url and l.inserted_at == earliest.inserted_at
+    )
+    |> where([l, s], s.savers > 1)
+    |> where([l, _, _, latest], l.url == latest.url and l.inserted_at == latest.inserted_at)
+    |> where(is_private: false)
+    |> where(is_unread: false)
+    |> where(
+      [l, s, _, latest],
+      s.savers > ^popularity and l.url == latest.url and l.inserted_at == latest.inserted_at
+    )
+    |> order_by([l, s, _, _], desc: s.savers, desc: l.inserted_at)
     |> preload([_, _, u], user: u)
   end
 
@@ -253,5 +278,21 @@ defmodule Linkhut.Links do
         savers: count(o.url) |> filter(not o.is_private and not o.is_unread)
       }
     )
+  end
+
+  defp earliest() do
+    Link
+    |> where(is_private: false)
+    |> where(is_unread: false)
+    |> group_by([x], x.url)
+    |> select([x], %{url: x.url, inserted_at: min(x.inserted_at)})
+  end
+
+  defp latest() do
+    Link
+    |> where(is_private: false)
+    |> where(is_unread: false)
+    |> group_by([x], x.url)
+    |> select([x], %{url: x.url, inserted_at: max(x.inserted_at)})
   end
 end

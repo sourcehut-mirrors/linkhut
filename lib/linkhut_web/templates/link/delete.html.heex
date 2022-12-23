@@ -11,7 +11,7 @@
       <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
     </div>
   </div>
-  <hr>
+  <hr />
   <%= form_for @changeset, Routes.link_path(@conn, :delete), fn f -> %>
     <fieldset>
       <%= hidden_input(f, :url) %>
