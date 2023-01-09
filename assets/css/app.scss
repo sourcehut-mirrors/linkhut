@@ -257,6 +257,7 @@ form:not([itemprop="signout"]) {
         border-color: $muted;
         border-style: solid;
         border-width: 1px;
+        color: $foreground;
         display: inline-block;
         padding: $spacing-small $spacing-medium;
 
@@ -270,7 +271,6 @@ form:not([itemprop="signout"]) {
 button, input:not([type=checkbox]) {
     -moz-appearance: none;
     -webkit-appearance: none;
-    appearance: none;
 
     &::-moz-focus-inner {
         border: 0;
@@ -351,6 +351,7 @@ nav {
                 & > button {
                     background-color: transparent;
                     border: none;
+                    font-size: $font-small;
                     font-weight: normal;
                     padding: 0;
                     @extend a;
