@@ -20,6 +20,14 @@ defmodule Linkhut.Factory do
     }
   end
 
+  def access_token_factory do
+    %Linkhut.Oauth.AccessToken{
+      token: sequence("token-"),
+      scopes: &"#{&1}",
+      resource_owner_id: build(:user).id
+    }
+  end
+
   def link_factory do
     %Linkhut.Links.Link{
       user_id: build(:user).id,

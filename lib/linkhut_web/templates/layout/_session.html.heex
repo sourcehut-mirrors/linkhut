@@ -10,7 +10,6 @@
     </li>
     <li><%= link("Settings", to: Routes.profile_path(@conn, :show)) %></li>
     <li>
-      
       <%= form_for :nil, Routes.session_path(@conn, :delete), [method: :delete, itemprop: "signout"], fn _f -> %>
         <%= submit("Log out") %>
       <% end %>
