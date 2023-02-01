@@ -37,6 +37,8 @@ defmodule LinkhutWeb.Router do
   scope "/_/v1/", LinkhutWeb.Api, as: :api do
     pipe_through [:api, :token_auth]
 
+    get "/ifttt/v1/user/info", IFTTController, :user_info
+
     get "/posts/update", PostsController, :update
     get "/posts/add", PostsController, :add
     get "/posts/delete", PostsController, :delete
