@@ -3,6 +3,6 @@ defmodule LinkhutWeb.Api.IFTT.UserView do
   use LinkhutWeb, :view
 
   def render("info.json", %{user: user, url: url}) do
-    %{data: %{name: user.username, id: user.id, url: url}}
+    %{data: %{name: user.username, id: "#{user.id}", url: url}}
   end
 end
