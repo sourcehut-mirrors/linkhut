@@ -34,13 +34,9 @@ defmodule LinkhutWeb.Router do
     oauth_api_routes()
   end
 
-  scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTT, as: :ifttt do
+  scope "/_/v1/", LinkhutWeb.Api, as: :api do
     pipe_through [:api, :token_auth]
 
-    get "/user/info", UserController, :info
-  end
-
-  scope "/_/v1/", LinkhutWeb.Api, as: :api do
     get "/posts/update", PostsController, :update
     get "/posts/add", PostsController, :add
     get "/posts/delete", PostsController, :delete
@@ -53,6 +49,12 @@ defmodule LinkhutWeb.Router do
     get "/tags/get", TagsController, :get
     get "/tags/delete", TagsController, :delete
     get "/tags/rename", TagsController, :rename
+  end
+
+  scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTT, as: :ifttt do
+    pipe_through [:api, :token_auth]
+
+    get "/user/info", UserController, :info
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do

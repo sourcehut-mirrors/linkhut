@@ -56,7 +56,7 @@ config :linkhut, ExOauth2Provider,
   use_refresh_token: true,
   revoke_refresh_token_on_use: true,
   optional_scopes:
-    for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
+    ["iftt"] ++ for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
 
 config :linkhut, PhoenixOauth2Provider,
   web_module: LinkhutWeb,
