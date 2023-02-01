@@ -54,7 +54,7 @@ config :linkhut, ExOauth2Provider,
   force_ssl_in_redirect_uri: true,
   access_token_expires_in: 365 * 24 * 60 * 60,
   use_refresh_token: true,
-  revoke_refresh_token_on_use: true,
+  revoke_refresh_token_on_use: false,
   optional_scopes:
     ["ifttt"] ++ for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
 
