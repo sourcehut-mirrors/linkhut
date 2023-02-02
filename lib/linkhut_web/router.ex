@@ -55,6 +55,8 @@ defmodule LinkhutWeb.Router do
     pipe_through [:api, :token_auth]
 
     get "/user/info", UserController, :info
+
+    post "/triggers/new_public_link", TriggersController, :new_public_link
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do
