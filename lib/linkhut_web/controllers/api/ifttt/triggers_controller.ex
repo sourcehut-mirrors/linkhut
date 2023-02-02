@@ -10,9 +10,21 @@ defmodule LinkhutWeb.Api.IFTT.TriggersController do
   def new_public_link(conn, params) do
     limit = Map.get(params, "limit", 50)
     user = conn.assigns[:current_user]
-    links = Links.all(user, count: limit)
+    links = Links.all(user, count: limit, is_private: false, is_unread: false)
 
     conn
-    |> render("new_public_link.json", links: links)
+    |> render("links.json", links: links)
   end
+
+  def new_public_link_tagged(conn, %{"triggerFields" => %{"tag" => tag}} = params)
+      when is_binary(tag) and tag != "" do
+    limit = Map.get(params, "limit", 50)
+    user = conn.assigns[:current_user]
+    links = Links.all(user, count: limit, is_private: false, is_unread: false, tags: [tag])
+
+    conn
+    |> render("links.json", links: links)
+  end
+
+  def new_public_link_tagged(conn, _params), do: render(conn, "links.json", links: [])
 end

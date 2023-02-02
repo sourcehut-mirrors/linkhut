@@ -149,6 +149,9 @@ defmodule Linkhut.Links do
       {:is_private, is_private}, dynamic ->
         dynamic([l], ^dynamic and l.is_private == ^is_private)
 
+      {:is_unread, is_unread}, dynamic ->
+        dynamic([l], ^dynamic and l.is_unread == ^is_unread)
+
       {:dt, date}, dynamic ->
         dynamic([l], ^dynamic and fragment("?::date", l.inserted_at) == ^date)
 

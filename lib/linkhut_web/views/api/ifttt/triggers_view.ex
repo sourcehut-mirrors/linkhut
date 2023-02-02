@@ -2,7 +2,7 @@ defmodule LinkhutWeb.Api.IFTT.TriggersView do
   @moduledoc false
   use LinkhutWeb, :view
 
-  def render("new_public_link.json", %{links: links}) do
+  def render("links.json", %{links: links}) do
     %{data: render_many(links, LinkhutWeb.Api.IFTT.TriggersView, "link.json", as: :link)}
   end
 

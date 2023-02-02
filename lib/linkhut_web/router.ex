@@ -57,6 +57,7 @@ defmodule LinkhutWeb.Router do
     get "/user/info", UserController, :info
 
     post "/triggers/new_public_link", TriggersController, :new_public_link
+    post "/triggers/new_public_link_tagged", TriggersController, :new_public_link_tagged
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do
