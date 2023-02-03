@@ -58,6 +58,9 @@ defmodule LinkhutWeb.Router do
 
     post "/triggers/new_public_link", TriggersController, :new_public_link
     post "/triggers/new_public_link_tagged", TriggersController, :new_public_link_tagged
+
+    post "/actions/add_public_link", ActionsController, :add_public_link
+    post "/actions/add_private_link", ActionsController, :add_private_link
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do

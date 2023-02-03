@@ -4,6 +4,7 @@ defmodule LinkhutWeb.FormHelpers do
   """
   use Phoenix.HTML
   alias Phoenix.HTML.Form
+  alias LinkhutWeb.ErrorHelpers
 
   @doc """
   Wraps a form input in a div that carries information on why it failed validation
@@ -34,7 +35,7 @@ defmodule LinkhutWeb.FormHelpers do
             content_tag(
               :ul,
               Enum.map(errors, fn error ->
-                content_tag(:li, translate_error(error), class: "invalid")
+                content_tag(:li, ErrorHelpers.translate_error(error), class: "invalid")
               end)
             )
           ]
@@ -47,32 +48,4 @@ defmodule LinkhutWeb.FormHelpers do
 
   defp value_to_string(list) when is_list(list), do: Enum.join(list, " ")
   defp value_to_string(value), do: value
-
-  @doc """
-  Translates an error message using gettext.
-  """
-  def translate_error({msg, opts}) do
-    # When using gettext, we typically pass the strings we want
-    # to translate as a static argument:
-    #
-    #     # Translate "is invalid" in the "errors" domain
-    #     dgettext("errors", "is invalid")
-    #
-    #     # Translate the number of files with plural rules
-    #     dngettext("errors", "1 file", "%{count} files", count)
-    #
-    # Because the error messages we show in our forms and APIs
-    # are defined inside Ecto, we need to translate them dynamically.
-    # This requires us to call the Gettext module passing our gettext
-    # backend as first argument.
-    #
-    # Note we use the "errors" domain, which means translations
-    # should be written to the errors.po file. The :count option is
-    # set by Ecto and indicates we should also apply plural rules.
-    if count = opts[:count] do
-      Gettext.dngettext(LinkhutWeb.Gettext, "errors", msg, msg, count, opts)
-    else
-      Gettext.dgettext(LinkhutWeb.Gettext, "errors", msg, opts)
-    end
-  end
 end

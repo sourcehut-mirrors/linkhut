@@ -33,6 +33,7 @@ defmodule Linkhut.Links.Link do
     |> validate_length(:url, max: 2048)
     |> validate_length(:title, max: 255)
     |> validate_length(:notes, max: 1024)
+    |> validate_url(:url)
     |> unique_constraint(:url, name: :links_pkey)
     |> update_unread_status()
     |> update_tags()
@@ -78,4 +79,14 @@ defmodule Linkhut.Links.Link do
 
   defp add_unread_tag(tags), do: ["unread" | tags]
   defp remove_unread_tag(tags), do: Enum.reject(tags, &Tags.is_unread?/1)
+
+  defp validate_url(changeset, field) do
+    validate_change(changeset, field, fn _, value ->
+      case URI.parse(value) do
+        %URI{scheme: nil} -> [{field, "is missing a scheme"}]
+        %URI{host: nil} -> [{field, "is missing a host"}]
+        _ -> []
+      end
+    end)
+  end
 end
