@@ -37,7 +37,7 @@
       <span>
         <span>&hellip;</span>
       </span>
-      <%= for p <- (pages - 2)..pages do %>
+      <%= for p <- (pages - 1)..pages do %>
         <a href={current_path(@conn, page: p)}>
           <span><%= p %></span>
         </a>
