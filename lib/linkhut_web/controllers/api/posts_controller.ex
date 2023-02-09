@@ -26,7 +26,7 @@ defmodule LinkhutWeb.Api.PostsController do
 
     link_params =
       Enum.into(
-        ~w(notes tags is_private is_unread inserted_at),
+        ~w(notes tags is_private is_unread),
         %{"title" => title},
         &{&1, value(&1, params)}
       )
