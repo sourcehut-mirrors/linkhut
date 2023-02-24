@@ -24,7 +24,7 @@ defmodule LinkhutWeb.Plugs.EnsureAuth do
     end
   end
 
-  defp get_user(conn) do
+  def get_user(conn) do
     case conn.assigns[:current_user] do
       nil ->
         fetch_user(conn)

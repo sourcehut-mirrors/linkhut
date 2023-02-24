@@ -12,6 +12,7 @@ defmodule Linkhut.Accounts.User do
   schema "users" do
     field :username, :string
     field :bio, :string
+    field :type, :string, default: "user"
     has_one :credential, Credential
 
     timestamps(type: :utc_datetime)
@@ -31,5 +32,12 @@ defmodule Linkhut.Accounts.User do
         [username: ~s('#{username}' is reserved)]
       end
     end)
+  end
+
+  @spec changeset_role(Ecto.Schema.t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
+  def changeset_role(user, attrs) do
+    user
+    |> cast(attrs, [:role])
+    |> validate_inclusion(:role, ~w(user admin))
   end
 end

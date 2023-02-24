@@ -149,6 +149,26 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
+  Promotes an existing user to admin.
+
+  ## Examples
+
+      iex> set_admin_role(user)
+      {:ok, %User{}}
+
+  """
+  @spec set_admin_role(User.t()) :: {:ok, User.t()} | {:error, changeset(User.t())}
+  def set_admin_role(user) do
+    user
+    |> User.changeset_role(%{role: "admin"})
+    |> Repo.update()
+  end
+
+  @spec is_admin?(User.t()) :: boolean()
+  def is_admin?(%{type: "admin"}), do: true
+  def is_admin?(_any), do: false
+
+  @doc """
   Updates a credential.
 
   ## Examples

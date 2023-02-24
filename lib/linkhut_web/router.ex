@@ -28,6 +28,10 @@ defmodule LinkhutWeb.Router do
     plug :accepts, ["xml", "json"]
   end
 
+  pipeline :admin do
+    plug LinkhutWeb.Plugs.EnsureRole, :admin
+  end
+
   scope "/_/v1/" do
     pipe_through :api
 
@@ -128,12 +132,11 @@ defmodule LinkhutWeb.Router do
     delete "/authorize", OauthController, :delete_authorization
   end
 
-  # Enables LiveDashboard only for development
-  if Mix.env() == :dev do
-    scope "/_/admin" do
-      pipe_through :browser
-      live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry, ecto_repos: [Linkhut.Repo]
-    end
+  scope "/_/admin" do
+    pipe_through [:browser, :admin]
+    get "/", LinkhutWeb.Settings.AdminController, :show
+
+    live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry, ecto_repos: [Linkhut.Repo]
   end
 
   scope "/_", LinkhutWeb do

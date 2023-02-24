@@ -1,4 +1,4 @@
-<%= render("_menu.html", conn: @conn) %>
+<%= render("_menu.html", assigns) %>
 <div>
   <%= form_for @changeset, Routes.profile_path(@conn, :update), fn f -> %>
     <fieldset>

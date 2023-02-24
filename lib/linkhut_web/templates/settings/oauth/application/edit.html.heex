@@ -1,4 +1,4 @@
-<%= render("_menu.html", conn: @conn) %>
+<%= render("_menu.html", assigns) %>
 <section class="settings">
   <h4>OAuth application settings</h4>
   <%= form_for @changeset, Routes.oauth_path(@conn, :update_application, @changeset.data.uid), fn f -> %>

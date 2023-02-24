@@ -53,6 +53,7 @@ defmodule Linkhut.MixProject do
       {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.8"},
+      {:ecto_psql_extras, "~> 0.6"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_machina, "~> 2.7", only: :test},
       {:gettext, "~> 0.20"},
@@ -61,8 +62,8 @@ defmodule Linkhut.MixProject do
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
       {:phoenix_html_sanitizer, "~> 1.1.1"},
-      {:phoenix_live_dashboard, "~> 0.6"},
-      {:phoenix_live_reload, "~> 1.3", only: :dev},
+      {:phoenix_live_dashboard, "~> 0.7"},
+      {:phoenix_live_reload, "~> 1.3"},
       {
         :phoenix_oauth2_provider,
         # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96

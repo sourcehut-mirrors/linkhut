@@ -6,6 +6,9 @@
     <%= nav_link(@conn, gettext("Export"), to: Routes.export_path(@conn, :show), wrap_with: :li) %>
     <%= nav_link(@conn, gettext("Misc"), to: Routes.misc_path(@conn, :show), wrap_with: :li) %>
     <%= nav_link(@conn, gettext("OAuth"), to: Routes.oauth_path(@conn, :show), wrap_with: :li) %>
+    <%= if Linkhut.Accounts.is_admin?(@current_user) do %>
+      <%= nav_link(@conn, gettext("Admin"), to: Routes.admin_path(@conn, :show), wrap_with: :li) %>
+    <% end %>
   </ul>
 </div>
 <hr />
