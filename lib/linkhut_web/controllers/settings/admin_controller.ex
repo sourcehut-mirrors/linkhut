@@ -9,5 +9,4 @@ defmodule LinkhutWeb.Settings.AdminController do
   def show(conn, _) do
     render(conn, "admin.html")
   end
-
 end

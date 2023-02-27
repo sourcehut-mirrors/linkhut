@@ -136,7 +136,10 @@ defmodule LinkhutWeb.Router do
     pipe_through [:browser, :admin]
     get "/", LinkhutWeb.Settings.AdminController, :show
 
-    live_dashboard "/dashboard", metrics: LinkhutWeb.Telemetry, ecto_repos: [Linkhut.Repo]
+    live_dashboard "/dashboard",
+      metrics: LinkhutWeb.Telemetry,
+      ecto_repos: [Linkhut.Repo],
+      metrics_history: {LinkhutWeb.MetricsStorage, :metrics_history, []}
   end
 
   scope "/_", LinkhutWeb do

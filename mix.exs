@@ -47,6 +47,7 @@ defmodule Linkhut.MixProject do
     [
       {:argon2_elixir, "~> 3.0"},
       {:atomex, "~> 0.5"},
+      {:circular_buffer, "~> 0.4"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:phoenix_copy, "~> 0.1.1", runtime: Mix.env() == :dev},
       {:dart_sass, "~> 0.5", runtime: Mix.env() == :dev},
