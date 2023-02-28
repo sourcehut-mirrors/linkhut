@@ -28,7 +28,7 @@ hr, .no-css-label {
 }
 
 main {
-    height: 100%;
+    flex-grow: 1;
 }
 
 header, main, footer {
@@ -1173,4 +1173,11 @@ span.code {
 
 form.inline {
     display: inline-block;
+}
+
+replay-web-page {
+    border-style: solid;
+    border-width: 1px;
+    border-color: $gray;
+    padding: $spacing-tiny;
 }

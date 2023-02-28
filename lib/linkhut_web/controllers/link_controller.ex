@@ -167,8 +167,8 @@ defmodule LinkhutWeb.LinkController do
 
     links_query =
       case view do
-        :recent -> Links.recent()
-        :popular -> Links.popular()
+        :recent -> Links.recent(ordering(conn))
+        :popular -> Links.popular(ordering(conn))
       end
 
     conn

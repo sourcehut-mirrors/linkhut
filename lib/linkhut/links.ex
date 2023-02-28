@@ -203,7 +203,7 @@ defmodule Linkhut.Links do
   @doc """
   Returns most recent public links
   """
-  def recent(days \\ 30) do
+  def recent(params, days \\ 30) do
     datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
@@ -215,14 +215,14 @@ defmodule Linkhut.Links do
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([l], l.inserted_at >= ^datetime)
-    |> order_by(desc: :inserted_at)
+    |> ordering(params)
     |> preload([_, _, u], user: u)
   end
 
   @doc """
   Returns the most popular public links
   """
-  def popular(popularity \\ 3) do
+  def popular(params, popularity \\ 3) do
     links()
     |> join(:inner, [l, _], u in assoc(l, :user))
     |> join(:left, [l, _, _], earliest in subquery(earliest()),
@@ -236,7 +236,7 @@ defmodule Linkhut.Links do
       [l, s, _, latest],
       s.savers > ^popularity and l.url == latest.url and l.inserted_at == latest.inserted_at
     )
-    |> order_by([l, s, _, _], desc: s.savers, desc: l.inserted_at)
+    |> ordering(params)
     |> preload([_, _, u], user: u)
   end
 
@@ -312,8 +312,8 @@ defmodule Linkhut.Links do
 
     filter_order_by =
       case sort_direction do
-        :asc -> [asc: column]
-        :desc -> [desc: column]
+        :asc -> [asc: column, asc: :inserted_at]
+        :desc -> [desc: column, desc: :inserted_at]
       end
 
     query |> order_by(^filter_order_by)
