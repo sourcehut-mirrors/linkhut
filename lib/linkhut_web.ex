@@ -17,6 +17,8 @@ defmodule LinkhutWeb do
   and import those modules here.
   """
 
+  def static_paths, do: ~w(robots.txt)
+
   def controller do
     quote do
       use Phoenix.Controller, namespace: LinkhutWeb
@@ -24,6 +26,34 @@ defmodule LinkhutWeb do
       import Plug.Conn
       import LinkhutWeb.Gettext
       alias LinkhutWeb.Router.Helpers, as: Routes
+
+      unquote(verified_routes())
+    end
+  end
+
+  def html do
+    quote do
+      use Phoenix.Component,
+        root: "lib/linkhut_web/templates",
+        pattern: "**/*",
+        namespace: LinkhutWeb
+
+      # For migration from views to components
+      import Phoenix.View
+
+      # Import convenience functions from controllers
+      import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
+
+      # Use all HTML functionality (forms, tags, etc)
+      use Phoenix.HTML
+      use PhoenixHtmlSanitizer, :basic_html
+
+      import LinkhutWeb.FormHelpers
+      import LinkhutWeb.Gettext
+      import LinkhutWeb.Helpers
+      alias LinkhutWeb.Router.Helpers, as: Routes
+
+      unquote(verified_routes())
     end
   end
 
@@ -45,6 +75,17 @@ defmodule LinkhutWeb do
       import LinkhutWeb.Gettext
       import LinkhutWeb.Helpers
       alias LinkhutWeb.Router.Helpers, as: Routes
+
+      unquote(verified_routes())
+    end
+  end
+
+  def verified_routes do
+    quote do
+      use Phoenix.VerifiedRoutes,
+        endpoint: LinkhutWeb.Endpoint,
+        router: LinkhutWeb.Router,
+        statics: LinkhutWeb.static_paths()
     end
   end
 

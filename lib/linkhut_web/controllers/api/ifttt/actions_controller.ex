@@ -59,7 +59,4 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
     |> put_status(400)
     |> render("error.json", errors: ["missing parameters"])
   end
-
-  defp save(conn, user, params) do
-  end
 end

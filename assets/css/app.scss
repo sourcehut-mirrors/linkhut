@@ -27,6 +27,10 @@ hr, .no-css-label {
     display: none;
 }
 
+main {
+    height: 100%;
+}
+
 header, main, footer {
     padding: $spacing-tiny;
 }
@@ -281,14 +285,20 @@ button, input:not([type=checkbox]) {
 nav {
     color: $muted;
     display: flex;
-    flex-direction: row-reverse;
+    flex-direction: column;
     flex-wrap: nowrap;
     justify-content: space-between;
     line-height: 1rem;
     padding: $spacing-tiny;
 
+    @media #{$not-small} {
+        flex-direction: row-reverse;
+    }
+
     & div.session {
         flex-shrink: 0;
+        display: flex;
+        justify-content: flex-end;
     }
 
     & ul {
@@ -436,6 +446,7 @@ nav {
             & > span.url {
                 color: $foreground;
                 flex-grow: 0;
+                word-break: break-word;
 
                 &::before {
                     color: $light-purple;
@@ -606,6 +617,58 @@ div#controls {
         }
     }
 }
+
+div#sort-options {
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    font-size: $font-tiny;
+    margin-bottom: $spacing-tiny;
+    margin-top: $spacing-small;
+
+    @media #{$large} {
+        justify-content: end;
+        padding-right: 2 * $spacing-large;
+        margin-top: 0;
+    }
+
+    & > div {
+        display: flex;
+        flex-direction: row;
+        color: $muted;
+        margin-left: 0;
+        margin-right: $spacing-tiny;
+        @media #{$large} {
+            margin-left: $spacing-tiny;
+            margin-right: 0;
+        }
+
+        & > ul {
+            display: flex;
+            flex-direction: row;
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+
+            & > li {
+                margin-left: $spacing-tiny;
+
+                & > a {
+                    display: inline-block;
+
+                    &:hover {
+                        background-color: $light-gray;
+                    }
+
+                    &.active {
+                        font-weight: bold;
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 div.date-group {
     display: flex;

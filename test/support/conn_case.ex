@@ -28,6 +28,8 @@ defmodule LinkhutWeb.ConnCase do
 
       # The default endpoint for testing
       @endpoint LinkhutWeb.Endpoint
+
+      use LinkhutWeb, :verified_routes
     end
   end
 

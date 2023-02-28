@@ -13,7 +13,7 @@ defmodule LinkhutWeb.Endpoint do
     at: "/",
     from: :linkhut,
     gzip: true,
-    only: ~w(robots.txt)
+    only: LinkhutWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

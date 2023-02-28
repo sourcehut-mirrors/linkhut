@@ -243,12 +243,12 @@ defmodule Linkhut.Links do
   @doc """
   Returns the unread links for a user
   """
-  def unread(user_id) do
+  def unread(user_id, params) do
     links()
     |> join(:inner, [l, _], u in assoc(l, :user))
     |> where(user_id: ^user_id)
     |> where(is_unread: true)
-    |> order_by(desc: :inserted_at)
+    |> ordering(params)
     |> preload([_, _, u], user: u)
   end
 
@@ -297,5 +297,25 @@ defmodule Linkhut.Links do
     |> where(is_unread: false)
     |> group_by([x], x.url)
     |> select([x], %{url: x.url, inserted_at: max(x.inserted_at)})
+  end
+
+  def ordering(query, opts) do
+    sort_column = Keyword.get(opts, :sort_by, :recency)
+    sort_direction = Keyword.get(opts, :order, :desc)
+
+    column =
+      case sort_column do
+        :recency -> dynamic([l], field(l, :inserted_at))
+        :popularity -> dynamic([_], fragment("savers"))
+        :relevancy -> dynamic([_], selected_as(:score))
+      end
+
+    filter_order_by =
+      case sort_direction do
+        :asc -> [asc: column]
+        :desc -> [desc: column]
+      end
+
+    query |> order_by(^filter_order_by)
   end
 end

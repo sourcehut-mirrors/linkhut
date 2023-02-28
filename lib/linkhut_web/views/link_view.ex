@@ -56,6 +56,11 @@ defmodule LinkhutWeb.LinkView do
     current_path(conn, context(conn), Map.put(params, :p, page))
   end
 
+  def current_path(%Plug.Conn{query_params: params} = conn, query_params)
+      when is_map(query_params) do
+    Phoenix.Controller.current_path(conn, Map.merge(Map.drop(params, ["p"]), query_params))
+  end
+
   def current_path(conn, %Context{} = context, params) do
     case context do
       %{from: user, url: url, tagged_with: tags}
@@ -119,6 +124,27 @@ defmodule LinkhutWeb.LinkView do
 
   defp context(%Plug.Conn{} = conn) do
     conn.assigns.context
+  end
+
+  def is_search_result?(%Plug.Conn{query_params: params} = _conn) do
+    case params do
+      %{"query" => query} when is_binary(query) and query != "" -> true
+      _ -> false
+    end
+  end
+
+  def sort_option(%Plug.Conn{query_params: params} = conn) do
+    case params do
+      %{"sort" => sort_option} -> sort_option
+      _ -> if is_search_result?(conn), do: "relevance", else: "recency"
+    end
+  end
+
+  def order_option(%Plug.Conn{query_params: params} = _conn) do
+    case params do
+      %{"order" => order_option} -> order_option
+      _ -> "desc"
+    end
   end
 
   @doc """

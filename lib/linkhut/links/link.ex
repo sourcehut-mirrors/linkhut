@@ -19,8 +19,9 @@ defmodule Linkhut.Links.Link do
     field :tags, Tags, default: []
     field :is_private, :boolean, default: false
     field :language, :string
-    field :savers, :integer, default: 0, virtual: true
     field :is_unread, :boolean, default: false
+    field :savers, :integer, default: 0, virtual: true
+    field :score, :float, default: 0.0, virtual: true
 
     timestamps(type: :utc_datetime)
   end

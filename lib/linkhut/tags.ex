@@ -27,7 +27,7 @@ defmodule Linkhut.Tags do
   Returns a set of tags associated with a given link query
   """
   def for_query(query, limit: limit) do
-    query_tags(query |> exclude(:preload) |> exclude(:select))
+    query_tags(query |> exclude(:preload) |> exclude(:select) |> exclude(:order_by))
     |> limit(^limit)
     |> Repo.all()
   end

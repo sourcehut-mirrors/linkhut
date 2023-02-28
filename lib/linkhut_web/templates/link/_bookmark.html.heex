@@ -1,6 +1,6 @@
 <div class="bookmark-card">
   <div class="bookmark">
-    <div data-posted-on={@link.inserted_at} data-savers={@link.savers} class="title">
+    <div data-posted-on={@link.inserted_at} data-savers={@link.savers} data-relevance={@link.score} class="title">
       <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
       <%= if @link.is_private do %>
         <span class="no-css-label"><%= gettext("Private") %></span>
@@ -24,7 +24,7 @@
       <span>
         <%= Timex.format!(@link.inserted_at, "{relative}", :relative) %>
       </span>
-      <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.savers > 1 do %>
+      <%= if @context.url == nil and not (@link.is_private) and @link.savers > 1 do %>
         <span class="savers">
           <%= gettext("saved") %> <a href={Routes.bookmark_path(@conn, :show, @link.url)}><%= @link.savers %></a> <%= ngettext("time", "times", @link.savers) %>
         </span>

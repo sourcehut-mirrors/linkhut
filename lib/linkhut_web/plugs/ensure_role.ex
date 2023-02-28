@@ -37,6 +37,7 @@ defmodule LinkhutWeb.Plugs.EnsureRole do
   defp has_role?(_user, _role), do: false
 
   defp maybe_halt(true, conn), do: conn
+
   defp maybe_halt(_any, conn) do
     conn
     |> put_flash(:error, "Unauthorized access")

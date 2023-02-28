@@ -121,7 +121,7 @@ defmodule LinkhutWeb.LinkController do
   def unread(conn, params) do
     user = conn.assigns[:current_user]
     page = page(params)
-    links_query = Links.unread(user.id)
+    links_query = Links.unread(user.id, ordering(conn))
 
     conn
     |> render("index.html",
@@ -131,6 +131,31 @@ defmodule LinkhutWeb.LinkController do
       context: context(params),
       title: :unread
     )
+  end
+
+  defp ordering(%Plug.Conn{query_params: query_params} = _conn) do
+    order =
+      case query_params do
+        %{"order" => "asc"} -> :asc
+        %{"order" => "desc"} -> :desc
+        _ -> nil
+      end
+
+    sort_by =
+      case query_params do
+        %{"sort" => "recency"} -> :recency
+        %{"sort" => "popularity"} -> :popularity
+        %{"sort" => "relevancy"} -> :relevancy
+        %{"query" => query} when is_binary(query) and query != "" -> :relevancy
+        _ -> nil
+      end
+
+    case {sort_by, order} do
+      {nil, nil} -> []
+      {nil, order} -> [order: order]
+      {sort_by, nil} -> [sort_by: sort_by]
+      {sort_by, order} -> [sort_by: sort_by, order: order]
+    end
   end
 
   defp explore(conn, view, page) do
@@ -163,7 +188,7 @@ defmodule LinkhutWeb.LinkController do
         current_user -> %Context{context | visible_as: current_user.username}
       end
 
-    links_query = Search.search(context, query)
+    links_query = Search.search(context, query, ordering(conn))
 
     conn
     |> render(:index,
@@ -181,7 +206,7 @@ defmodule LinkhutWeb.LinkController do
         current_user -> %Context{context | visible_as: current_user.username}
       end
 
-    links_query = Search.search(context, "")
+    links_query = Search.search(context, "", ordering(conn))
 
     conn
     |> render(:index,

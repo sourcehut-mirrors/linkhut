@@ -10,18 +10,21 @@ defmodule Linkhut.Search do
 
   def search(context, query, params \\ [])
 
-  def search(context, "", _params) do
+  def search(context, "", params) do
     links_for_context(context)
     |> preload([_, _, u], user: u)
-    |> order_by(desc: :inserted_at)
+    |> Links.ordering(params)
   end
 
-  def search(context, query, _params) do
+  def search(context, query, params) do
     links_for_context(context)
-    |> Map.merge(%{score: 0})
+    |> select_merge([_, _, _], %{
+      score:
+        fragment("ts_rank(search_vector, websearch_to_tsquery(?))", ^query) |> selected_as(:score)
+    })
     |> where([l, _, _], fragment("? @@ phraseto_tsquery(?)", l.search_vector, ^query))
     |> preload([_, _, u], user: u)
-    |> order_by(desc: :inserted_at)
+    |> Links.ordering(params)
   end
 
   defp links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as, url: url}) do
