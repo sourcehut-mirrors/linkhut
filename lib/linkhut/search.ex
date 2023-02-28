@@ -22,7 +22,7 @@ defmodule Linkhut.Search do
       score:
         fragment("ts_rank(search_vector, websearch_to_tsquery(?))", ^query) |> selected_as(:score)
     })
-    |> where([l, _, _], fragment("? @@ phraseto_tsquery(?)", l.search_vector, ^query))
+    |> where([l, _, _], fragment("? @@ websearch_to_tsquery(?)", l.search_vector, ^query))
     |> preload([_, _, u], user: u)
     |> Links.ordering(params)
   end
