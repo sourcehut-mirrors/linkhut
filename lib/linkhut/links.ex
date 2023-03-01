@@ -256,7 +256,7 @@ defmodule Linkhut.Links do
     from(l in Link,
       left_join: s in subquery(get_savers()),
       on: [url: l.url, user_id: l.user_id],
-      select_merge: %{savers: s.savers}
+      select_merge: %{savers: coalesce(s.savers, 1)}
     )
   end
 
@@ -272,13 +272,6 @@ defmodule Linkhut.Links do
       },
       windows: [distinct_link: [partition_by: :url]]
     )
-  end
-
-  defp earliest() do
-    Link
-    |> where(is_private: false)
-    |> where(is_unread: false)
-    |> select([x], %{url: x.url, inserted_at: over(min(x.inserted_at), partition_by: :url)})
   end
 
   def ordering(query, opts) do
