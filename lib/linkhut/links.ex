@@ -208,10 +208,7 @@ defmodule Linkhut.Links do
 
     links()
     |> join(:inner, [l], u in assoc(l, :user))
-    |> join(:left, [l], latest in subquery(latest()),
-      on: l.url == latest.url and l.inserted_at == latest.inserted_at
-    )
-    |> where([l, _, _, latest], l.url == latest.url and l.inserted_at == latest.inserted_at)
+    |> where([l, s, _], l.inserted_at == s.latest)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([l], l.inserted_at >= ^datetime)
@@ -225,17 +222,10 @@ defmodule Linkhut.Links do
   def popular(params, popularity \\ 3) do
     links()
     |> join(:inner, [l, _], u in assoc(l, :user))
-    |> join(:left, [l, _, _], earliest in subquery(earliest()),
-      on: l.url == earliest.url and l.inserted_at == earliest.inserted_at
-    )
-    |> where([l, s], s.savers > 1)
-    |> where([l, _, _, latest], l.url == latest.url and l.inserted_at == latest.inserted_at)
+    |> where([l, s, _], l.inserted_at == s.earliest)
     |> where(is_private: false)
     |> where(is_unread: false)
-    |> where(
-      [l, s, _, latest],
-      s.savers > ^popularity and l.url == latest.url and l.inserted_at == latest.inserted_at
-    )
+    |> where([_, s, _], s.savers >= ^popularity)
     |> ordering(params)
     |> preload([_, _, u], user: u)
   end
@@ -272,14 +262,15 @@ defmodule Linkhut.Links do
 
   defp get_savers() do
     from(l in Link,
-      join: o in Link,
-      on: [url: l.url],
-      group_by: [l.url, l.user_id],
+      where: [is_private: false, is_unread: false],
       select: %{
         url: l.url,
         user_id: l.user_id,
-        savers: count(o.url) |> filter(not o.is_private and not o.is_unread)
-      }
+        savers: over(count(l.url), :distinct_link),
+        earliest: over(min(l.inserted_at), :distinct_link),
+        latest: over(max(l.inserted_at), :distinct_link)
+      },
+      windows: [distinct_link: [partition_by: :url]]
     )
   end
 
@@ -287,16 +278,7 @@ defmodule Linkhut.Links do
     Link
     |> where(is_private: false)
     |> where(is_unread: false)
-    |> group_by([x], x.url)
-    |> select([x], %{url: x.url, inserted_at: min(x.inserted_at)})
-  end
-
-  defp latest() do
-    Link
-    |> where(is_private: false)
-    |> where(is_unread: false)
-    |> group_by([x], x.url)
-    |> select([x], %{url: x.url, inserted_at: max(x.inserted_at)})
+    |> select([x], %{url: x.url, inserted_at: over(min(x.inserted_at), partition_by: :url)})
   end
 
   def ordering(query, opts) do
@@ -306,7 +288,7 @@ defmodule Linkhut.Links do
     column =
       case sort_column do
         :recency -> dynamic([l], field(l, :inserted_at))
-        :popularity -> dynamic([_], fragment("savers"))
+        :popularity -> dynamic([_, s], field(s, :savers))
         :relevancy -> dynamic([_], selected_as(:score))
       end
 
