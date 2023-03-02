@@ -249,15 +249,17 @@ defmodule Linkhut.Links do
     links()
     |> where(user_id: ^user_id)
     |> where(is_unread: true)
+    |> exclude(:preload)
     |> Repo.aggregate(:count)
   end
 
-  def links() do
+  def links(params \\ []) do
     from(l in Link,
       left_join: s in subquery(get_savers()),
       on: [url: l.url, user_id: l.user_id],
       select_merge: %{savers: coalesce(s.savers, 1)}
     )
+    |> where(^filter_where(params))
   end
 
   defp get_savers() do

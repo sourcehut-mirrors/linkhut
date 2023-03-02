@@ -11,13 +11,13 @@ defmodule Linkhut.Search do
   def search(context, query, params \\ [])
 
   def search(context, "", params) do
-    links_for_context(context)
+    links_for_context(context, params)
     |> preload([_, _, u], user: u)
     |> Links.ordering(params)
   end
 
   def search(context, query, params) do
-    links_for_context(context)
+    links_for_context(context, params)
     |> select_merge([_, _, _], %{
       score:
         fragment("ts_rank(search_vector, websearch_to_tsquery(?))", ^query) |> selected_as(:score)
@@ -27,8 +27,8 @@ defmodule Linkhut.Search do
     |> Links.ordering(params)
   end
 
-  defp links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as, url: url}) do
-    Links.links()
+  defp links_for_context(%Context{from: from, tagged_with: tags, visible_as: visible_as, url: url}, params) do
+    Links.links(params)
     |> join(:inner, [l, _], u in assoc(l, :user))
     |> from_user(from)
     |> tagged_with(tags)

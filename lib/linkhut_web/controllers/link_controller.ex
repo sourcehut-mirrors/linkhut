@@ -121,13 +121,14 @@ defmodule LinkhutWeb.LinkController do
   def unread(conn, params) do
     user = conn.assigns[:current_user]
     page = page(params)
-    links_query = Links.unread(user.id, ordering(conn))
+    query = Map.get(params, "query", "")
+    links_query = Search.search(%{context(params) | from: user, visible_as: user.username}, query, Keyword.put(ordering(conn), :is_unread, true))
 
     conn
     |> render("index.html",
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
-      query: "",
+      query: query,
       context: context(params),
       title: :unread
     )
