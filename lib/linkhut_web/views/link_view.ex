@@ -52,6 +52,10 @@ defmodule LinkhutWeb.LinkView do
     )
   end
 
+  def current_path(%Plug.Conn{path_info: path_info, query_params: params} = conn, page: page) when path_info == ["_", "unread"] do
+    RouteHelpers.unread_path(conn, :unread, Map.put(params, :p, page))
+  end
+
   def current_path(%Plug.Conn{query_params: params} = conn, page: page) do
     current_path(conn, context(conn), Map.put(params, :p, page))
   end
