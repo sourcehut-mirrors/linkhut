@@ -44,7 +44,8 @@ defmodule LinkhutWeb.Endpoint do
   plug Plug.Session,
     store: :cookie,
     key: "_linkhut_key",
-    signing_salt: "i2qrSlZN"
+    signing_salt: "i2qrSlZN",
+    max_age: 6 * 30 * 24 * 60 * 60 # ~6 months
 
   plug LinkhutWeb.Plugs.FeedRedirect
   plug LinkhutWeb.Router
