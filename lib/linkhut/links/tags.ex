@@ -52,5 +52,7 @@ defmodule Linkhut.Links.Tags do
     |> (&(&1 == "unread" or &1 == "toread")).()
   end
 
-  defp valid?(tag), do: String.valid?(tag) && String.length(tag) <= 128
+  defp valid?(tag) do
+    String.valid?(tag) && String.length(tag) <= 128 && not String.starts_with?(tag, "~")
+  end
 end
