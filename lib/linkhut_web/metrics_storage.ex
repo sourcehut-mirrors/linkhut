@@ -1,4 +1,6 @@
 defmodule LinkhutWeb.MetricsStorage do
+  @moduledoc false
+
   use GenServer
 
   @history_buffer_size 50

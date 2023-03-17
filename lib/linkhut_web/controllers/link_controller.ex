@@ -122,7 +122,13 @@ defmodule LinkhutWeb.LinkController do
     user = conn.assigns[:current_user]
     page = page(params)
     query = Map.get(params, "query", "")
-    links_query = Search.search(%{context(params) | from: user, visible_as: user.username}, query, Keyword.put(ordering(conn), :is_unread, true))
+
+    links_query =
+      Search.search(
+        %{context(params) | from: user.username, visible_as: user.username},
+        query,
+        Keyword.put(ordering(conn), :is_unread, true)
+      )
 
     conn
     |> render("index.html",

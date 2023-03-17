@@ -4,6 +4,7 @@ defmodule Linkhut.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
   alias Linkhut.Accounts.Credential
+  alias Linkhut.Links.Link
 
   @type t :: Ecto.Schema.t()
 
@@ -14,6 +15,8 @@ defmodule Linkhut.Accounts.User do
     field :bio, :string
     field :type, :string, default: "user"
     has_one :credential, Credential
+
+    has_many :links, Link, references: :id
 
     timestamps(type: :utc_datetime)
   end

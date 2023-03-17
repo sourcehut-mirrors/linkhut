@@ -20,8 +20,11 @@ defmodule Linkhut.Links.Link do
     field :is_private, :boolean, default: false
     field :language, :string
     field :is_unread, :boolean, default: false
-    field :savers, :integer, default: 0, virtual: true
+    field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
+
+    many_to_many :savers, User, join_through: __MODULE__, join_keys: [url: :url, user_id: :id]
+    has_many :variants, __MODULE__, references: :url, foreign_key: :url
 
     timestamps(type: :utc_datetime)
   end

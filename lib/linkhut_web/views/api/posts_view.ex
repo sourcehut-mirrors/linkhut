@@ -146,7 +146,7 @@ defmodule LinkhutWeb.Api.PostsView do
       description: link.title,
       extended: link.notes,
       hash: md5(link.url),
-      others: max(0, link.savers - 1),
+      others: max(0, link.saves - 1),
       tag: Enum.join(link.tags, " "),
       time: DateTime.to_iso8601(link.inserted_at)
     }
@@ -167,7 +167,7 @@ defmodule LinkhutWeb.Api.PostsView do
       description: link.title,
       extended: link.notes,
       hash: md5(link.url),
-      others: max(0, link.savers - 1),
+      others: max(0, link.saves - 1),
       tags: Enum.join(link.tags, " "),
       shared: if(link.is_private, do: "no", else: "yes"),
       time: DateTime.to_iso8601(link.inserted_at),

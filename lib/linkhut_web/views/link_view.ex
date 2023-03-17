@@ -2,7 +2,6 @@ defmodule LinkhutWeb.LinkView do
   use LinkhutWeb, :view
 
   alias Atomex.{Entry, Feed}
-  alias Linkhut.Accounts
   alias Linkhut.Search.Context
   alias LinkhutWeb.Router.Helpers, as: RouteHelpers
 
@@ -33,13 +32,13 @@ defmodule LinkhutWeb.LinkView do
   def current_path(%Plug.Conn{query_params: params} = conn, username: username) do
     current_path(
       conn,
-      %Context{Map.drop(context(conn), [:url]) | from: Accounts.get_user(username)},
+      %{Map.drop(context(conn), [:url]) | from: username},
       Map.drop(params, ["p"])
     )
   end
 
   def current_path(%Plug.Conn{query_params: params} = conn, url: url) do
-    current_path(conn, %Context{context(conn) | url: url}, Map.drop(params, ["p"]))
+    current_path(conn, %{context(conn) | url: url}, Map.drop(params, ["p"]))
   end
 
   def current_path(%Plug.Conn{query_params: params} = conn, tag: tag) do
@@ -52,7 +51,8 @@ defmodule LinkhutWeb.LinkView do
     )
   end
 
-  def current_path(%Plug.Conn{path_info: path_info, query_params: params} = conn, page: page) when path_info == ["_", "unread"] do
+  def current_path(%Plug.Conn{path_info: path_info, query_params: params} = conn, page: page)
+      when path_info == ["_", "unread"] do
     RouteHelpers.unread_path(conn, :unread, Map.put(params, :p, page))
   end
 
@@ -65,14 +65,14 @@ defmodule LinkhutWeb.LinkView do
     Phoenix.Controller.current_path(conn, Map.merge(Map.drop(params, ["p"]), query_params))
   end
 
-  def current_path(conn, %Context{} = context, params) do
+  def current_path(conn, %{} = context, params) do
     case context do
       %{from: user, url: url, tagged_with: tags}
       when not is_nil(user) and is_binary(url) and tags != [] ->
-        RouteHelpers.user_bookmark_tags_path(conn, :show, user.username, url, tags, params)
+        RouteHelpers.user_bookmark_tags_path(conn, :show, user, url, tags, params)
 
       %{from: user, url: url} when not is_nil(user) and is_binary(url) ->
-        RouteHelpers.user_bookmark_path(conn, :show, user.username, url, params)
+        RouteHelpers.user_bookmark_path(conn, :show, user, url, params)
 
       %{url: url, tagged_with: tags} when is_binary(url) and tags != [] ->
         RouteHelpers.bookmark_tags_path(conn, :show, url, tags, params)
@@ -81,10 +81,10 @@ defmodule LinkhutWeb.LinkView do
         RouteHelpers.bookmark_path(conn, :show, url, params)
 
       %{from: user, tagged_with: tags} when not is_nil(user) and tags != [] ->
-        RouteHelpers.user_tags_path(conn, :show, user.username, tags, params)
+        RouteHelpers.user_tags_path(conn, :show, user, tags, params)
 
       %{from: user} when not is_nil(user) ->
-        RouteHelpers.user_path(conn, :show, user.username, params)
+        RouteHelpers.user_path(conn, :show, user, params)
 
       %{tagged_with: tags} when tags != [] ->
         RouteHelpers.tags_path(conn, :show, tags, params)
@@ -101,10 +101,10 @@ defmodule LinkhutWeb.LinkView do
     case context(conn) do
       %{from: user, url: url, tagged_with: tags}
       when not is_nil(user) and is_binary(url) and tags != [] ->
-        RouteHelpers.feed_user_bookmark_tags_path(conn, :show, user.username, url, tags)
+        RouteHelpers.feed_user_bookmark_tags_path(conn, :show, user, url, tags)
 
       %{from: user, url: url} when not is_nil(user) and is_binary(url) ->
-        RouteHelpers.feed_user_bookmark_path(conn, :show, user.username, url)
+        RouteHelpers.feed_user_bookmark_path(conn, :show, user, url)
 
       %{url: url, tagged_with: tags} when is_binary(url) and tags != [] ->
         RouteHelpers.feed_bookmark_tags_path(conn, :show, url, tags)
@@ -113,10 +113,10 @@ defmodule LinkhutWeb.LinkView do
         RouteHelpers.feed_bookmark_path(conn, :show, url)
 
       %{from: user, tagged_with: tags} when not is_nil(user) and tags != [] ->
-        RouteHelpers.feed_user_tags_path(conn, :show, user.username, tags)
+        RouteHelpers.feed_user_tags_path(conn, :show, user, tags)
 
       %{from: user} when not is_nil(user) ->
-        RouteHelpers.feed_user_path(conn, :show, user.username)
+        RouteHelpers.feed_user_path(conn, :show, user)
 
       %{tagged_with: tags} when tags != [] ->
         RouteHelpers.feed_tags_path(conn, :show, tags)
@@ -127,7 +127,13 @@ defmodule LinkhutWeb.LinkView do
   end
 
   defp context(%Plug.Conn{} = conn) do
-    conn.assigns.context
+    case conn.assigns.context do
+      %{from: user} = context when not is_nil(user) ->
+        %{context | from: context.from.username}
+
+      context ->
+        context
+    end
   end
 
   def is_search_result?(%Plug.Conn{query_params: params} = _conn) do
@@ -156,9 +162,9 @@ defmodule LinkhutWeb.LinkView do
   """
   def render("index.xml", %{
         conn: conn,
-        context: %Context{} = context,
         links: links
       }) do
+    context = context(conn)
     title = title(context)
     uri = %URI{scheme: conn.scheme |> to_string, host: conn.host, port: conn.port}
     feed_url = URI.merge(uri, feed_path(conn))
@@ -167,7 +173,7 @@ defmodule LinkhutWeb.LinkView do
     render_feed(title, feed_url, html_url, links)
   end
 
-  defp title(%Context{} = context) do
+  defp title(%{} = context) do
     case context do
       %{from: user, url: url, tagged_with: tags}
       when not is_nil(user) and is_binary(url) and tags != [] ->
@@ -175,13 +181,13 @@ defmodule LinkhutWeb.LinkView do
           "Bookmarks for url: %{url} by linkhut user: %{user} tagged with: %{tags}",
           url: url,
           tags: Enum.join(tags, ","),
-          user: user.username
+          user: user
         )
 
       %{from: user, url: url} when not is_nil(user) and is_binary(url) ->
         LinkhutWeb.Gettext.gettext("Bookmarks for url: %{url} by linkhut user: %{user}",
           url: url,
-          user: user.username
+          user: user
         )
 
       %{url: url, tagged_with: tags} when is_binary(url) and tags != [] ->
@@ -196,11 +202,11 @@ defmodule LinkhutWeb.LinkView do
       %{from: user, tagged_with: tags} when not is_nil(user) and tags != [] ->
         LinkhutWeb.Gettext.gettext("Bookmarks by linkhut user: %{user} tagged with: %{tags}",
           tags: Enum.join(tags, ","),
-          user: user.username
+          user: user
         )
 
       %{from: user} when not is_nil(user) ->
-        LinkhutWeb.Gettext.gettext("Bookmarks by linkhut user: %{user}", user: user.username)
+        LinkhutWeb.Gettext.gettext("Bookmarks by linkhut user: %{user}", user: user)
 
       %{tagged_with: tags} when tags != [] ->
         LinkhutWeb.Gettext.gettext("Bookmarks tagged with: %{tags}", tags: Enum.join(tags, ","))

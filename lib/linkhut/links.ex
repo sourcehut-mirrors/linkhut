@@ -139,46 +139,66 @@ defmodule Linkhut.Links do
   end
 
   defp filter_where(params) do
-    Enum.reduce(params, dynamic(true), fn
-      {:user_id, id}, dynamic ->
-        dynamic([l], ^dynamic and l.user_id == ^id)
-
-      {:url, url}, dynamic ->
-        dynamic([l], ^dynamic and l.url == ^url)
-
-      {:is_private, is_private}, dynamic ->
-        dynamic([l], ^dynamic and l.is_private == ^is_private)
-
-      {:is_unread, is_unread}, dynamic ->
-        dynamic([l], ^dynamic and l.is_unread == ^is_unread)
-
-      {:dt, date}, dynamic ->
-        dynamic([l], ^dynamic and fragment("?::date", l.inserted_at) == ^date)
-
-      {:from, datetime}, dynamic when not is_nil(datetime) ->
-        dynamic([l], ^dynamic and l.inserted_at >= ^datetime)
-
-      {:to, datetime}, dynamic when not is_nil(datetime) ->
-        dynamic([l], ^dynamic and l.inserted_at <= ^datetime)
-
-      {:tags, tags}, dynamic when not is_nil(tags) and tags != [] ->
-        dynamic(
-          [l],
-          ^dynamic and
-            fragment(
-              "array_lowercase(?) @> string_to_array(?, ',')::varchar[]",
-              l.tags,
-              ^Enum.map_join(tags, ",", &String.downcase/1)
-            )
-        )
-
-      {:hashes, hashes}, dynamic when not is_nil(hashes) and hashes != [] ->
-        dynamic([l], ^dynamic and fragment("md5(?)", l.url) in ^hashes)
-
-      {_, _}, dynamic ->
-        dynamic
-    end)
+    Enum.reduce(params, dynamic(true), &filter/2)
   end
+
+  defp filter({:user_id, id}, dynamic) do
+    dynamic([l], ^dynamic and l.user_id == ^id)
+  end
+
+  defp filter({:visible_as, :public}, dynamic) do
+    dynamic([l], ^dynamic and not (l.is_private or l.is_unread))
+  end
+
+  defp filter({:visible_as, id}, dynamic) when is_number(id) do
+    dynamic([l], ^dynamic and (l.user_id == ^id or not (l.is_private or l.is_unread)))
+  end
+
+  defp filter({:url, url}, dynamic) do
+    dynamic([l], ^dynamic and l.url == ^url)
+  end
+
+  defp filter({:is_private, is_private}, dynamic) do
+    dynamic([l], ^dynamic and l.is_private == ^is_private)
+  end
+
+  defp filter({:is_unread, is_unread}, dynamic) do
+    dynamic([l], ^dynamic and l.is_unread == ^is_unread)
+  end
+
+  defp filter({:dt, date}, dynamic) do
+    dynamic([l], ^dynamic and fragment("?::date", l.inserted_at) == ^date)
+  end
+
+  defp filter({:from, datetime}, dynamic) when not is_nil(datetime) do
+    dynamic([l], ^dynamic and l.inserted_at >= ^datetime)
+  end
+
+  defp filter({:to, datetime}, dynamic) when not is_nil(datetime) do
+    dynamic([l], ^dynamic and l.inserted_at <= ^datetime)
+  end
+
+  defp filter({:query, query}, dynamic) when is_binary(query) and query != "" do
+    dynamic([l], ^dynamic and fragment("? @@ websearch_to_tsquery(?)", l.search_vector, ^query))
+  end
+
+  defp filter({:tags, tags}, dynamic) when not is_nil(tags) and tags != [] do
+    dynamic(
+      [l],
+      ^dynamic and
+        fragment(
+          "array_lowercase(?) @> string_to_array(?, ',')::varchar[]",
+          l.tags,
+          ^Enum.map_join(tags, ",", &String.downcase/1)
+        )
+    )
+  end
+
+  defp filter({:hashes, hashes}, dynamic) when not is_nil(hashes) and hashes != [] do
+    dynamic([l], ^dynamic and fragment("md5(?)", l.url) in ^hashes)
+  end
+
+  defp filter({_, _}, dynamic), do: dynamic
 
   @doc """
   Returns all non-private links
@@ -207,13 +227,11 @@ defmodule Linkhut.Links do
     datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
-    |> join(:inner, [l], u in assoc(l, :user))
     |> where([l, s, _], l.inserted_at == s.latest)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([l], l.inserted_at >= ^datetime)
     |> ordering(params)
-    |> preload([_, _, u], user: u)
   end
 
   @doc """
@@ -221,13 +239,11 @@ defmodule Linkhut.Links do
   """
   def popular(params, popularity \\ 3) do
     links()
-    |> join(:inner, [l, _], u in assoc(l, :user))
     |> where([l, s, _], l.inserted_at == s.earliest)
     |> where(is_private: false)
     |> where(is_unread: false)
-    |> where([_, s, _], s.savers >= ^popularity)
+    |> where([_, s, _], s.saves >= ^popularity)
     |> ordering(params)
-    |> preload([_, _, u], user: u)
   end
 
   @doc """
@@ -235,11 +251,9 @@ defmodule Linkhut.Links do
   """
   def unread(user_id, params) do
     links()
-    |> join(:inner, [l, _], u in assoc(l, :user))
     |> where(user_id: ^user_id)
     |> where(is_unread: true)
     |> ordering(params)
-    |> preload([_, _, u], user: u)
   end
 
   @doc """
@@ -255,20 +269,45 @@ defmodule Linkhut.Links do
 
   def links(params \\ []) do
     from(l in Link,
-      left_join: s in subquery(get_savers()),
+      left_join: s in subquery(get_saves()),
       on: [url: l.url, user_id: l.user_id],
-      select_merge: %{savers: coalesce(s.savers, 1)}
+      join: u in assoc(l, :user),
+      select_merge: ^select_fields(params),
+      preload: [:user, :variants, :savers]
     )
     |> where(^filter_where(params))
   end
 
-  defp get_savers() do
+  defp select_fields(params) do
+    Enum.reduce(
+      params,
+      %{
+        saves: dynamic([_, s], coalesce(s.saves, 1))
+      },
+      &select_field/2
+    )
+  end
+
+  defp select_field({:query, query}, fields) when is_binary(query) and query != "" do
+    Map.merge(fields, %{
+      score:
+        dynamic(
+          [l],
+          fragment("ts_rank(search_vector, websearch_to_tsquery(?))", ^query)
+          |> selected_as(:score)
+        )
+    })
+  end
+
+  defp select_field({_, _}, fields), do: fields
+
+  defp get_saves() do
     from(l in Link,
       where: [is_private: false, is_unread: false],
       select: %{
         url: l.url,
         user_id: l.user_id,
-        savers: over(count(l.url), :distinct_link),
+        saves: over(count(l.url), :distinct_link),
         earliest: over(min(l.inserted_at), :distinct_link),
         latest: over(max(l.inserted_at), :distinct_link)
       },
@@ -283,7 +322,7 @@ defmodule Linkhut.Links do
     column =
       case sort_column do
         :recency -> dynamic([l], field(l, :inserted_at))
-        :popularity -> dynamic([_, s], field(s, :savers))
+        :popularity -> dynamic([_, s], field(s, :saves))
         :relevancy -> dynamic([_], selected_as(:score))
       end
 

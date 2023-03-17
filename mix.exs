@@ -76,7 +76,7 @@ defmodule Linkhut.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 0.5"},
+      {:telemetry_poller, "~> 1.0"},
       {:timex, "~> 3.7"},
       {:xml_builder, "~> 2.2"}
     ]

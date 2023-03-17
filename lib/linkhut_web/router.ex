@@ -139,6 +139,7 @@ defmodule LinkhutWeb.Router do
     live_dashboard "/dashboard",
       metrics: LinkhutWeb.Telemetry,
       ecto_repos: [Linkhut.Repo],
+      ecto_psql_extras_options: [long_running_queries: [threshold: "200 milliseconds"]],
       metrics_history: {LinkhutWeb.MetricsStorage, :metrics_history, []}
   end
 
