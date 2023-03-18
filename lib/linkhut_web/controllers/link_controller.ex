@@ -125,7 +125,7 @@ defmodule LinkhutWeb.LinkController do
 
     links_query =
       Search.search(
-        %{context(params) | from: user.username, visible_as: user.username},
+        %{context(params) | from: user, visible_as: user.username},
         query,
         Keyword.put(ordering(conn), :is_unread, true)
       )
