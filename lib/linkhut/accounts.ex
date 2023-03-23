@@ -160,13 +160,13 @@ defmodule Linkhut.Accounts do
   @spec set_admin_role(User.t()) :: {:ok, User.t()} | {:error, changeset(User.t())}
   def set_admin_role(user) do
     user
-    |> User.changeset_role(%{role: "admin"})
+    |> User.changeset_role(%{roles: [:admin]})
     |> Repo.update()
   end
 
   @spec is_admin?(User.t()) :: boolean()
-  def is_admin?(%{type: "admin"}), do: true
-  def is_admin?(_any), do: false
+  def is_admin?(%User{roles: roles}), do: Enum.any?(roles, fn r -> r == :admin end)
+  def is_admin?(_), do: false
 
   @doc """
   Updates a credential.

@@ -13,7 +13,12 @@ defmodule Linkhut.Accounts.User do
   schema "users" do
     field :username, :string
     field :bio, :string
-    field :type, :string, default: "user"
+
+    field :type, Ecto.Enum,
+      values: [:unconfirmed, :active_free, :active_paying],
+      default: :unconfirmed
+
+    field :roles, {:array, Ecto.Enum}, values: [:admin], default: []
     has_one :credential, Credential
 
     has_many :links, Link, references: :id
@@ -40,7 +45,7 @@ defmodule Linkhut.Accounts.User do
   @spec changeset_role(Ecto.Schema.t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
   def changeset_role(user, attrs) do
     user
-    |> cast(attrs, [:role])
-    |> validate_inclusion(:role, ~w(user admin))
+    |> cast(attrs, [:roles])
+    |> validate_subset(:roles, ~w(admin)a)
   end
 end
