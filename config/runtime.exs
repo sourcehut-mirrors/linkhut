@@ -63,7 +63,7 @@ if config_env() == :prod do
 
   dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")
   dkim_domain = System.get_env("SMTP_DKIM_DOMAIN")
-  dkim_private_key = System.get_env("SMTP_DKIM_PRIVATE_KEY")
+  dkim_private_key = System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null"
 
   config :linkhut, Linkhut.Mailer,
     adapter: Swoosh.Adapters.SMTP,
