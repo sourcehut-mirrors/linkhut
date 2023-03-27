@@ -143,6 +143,15 @@ defmodule LinkhutWeb.Router do
       metrics_history: {LinkhutWeb.MetricsStorage, :metrics_history, []}
   end
 
+  # Enable Swoosh mailbox preview in development
+  if Application.compile_env(:linkhut, :dev_routes) do
+    scope "/_" do
+      pipe_through :browser
+
+      forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+  end
+
   scope "/_", LinkhutWeb do
     pipe_through :browser
 

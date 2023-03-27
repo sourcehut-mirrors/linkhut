@@ -62,6 +62,8 @@ config :linkhut, PhoenixOauth2Provider,
   web_module: LinkhutWeb,
   current_resource_owner: :current_user
 
+config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

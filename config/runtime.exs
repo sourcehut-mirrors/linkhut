@@ -60,4 +60,25 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base
+
+  dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")
+  dkim_domain = System.get_env("SMTP_DKIM_DOMAIN")
+  dkim_private_key = System.get_env("SMTP_DKIM_PRIVATE_KEY")
+
+  config :linkhut, Linkhut.Mailer,
+    adapter: Swoosh.Adapters.SMTP,
+    relay: {:system, "SMTP_HOST"},
+    username: {:system, "SMTP_USERNAME"},
+    password: {:system, "SMTP_PASSWORD"},
+    ssl: false,
+    tls: :always,
+    auth: :always,
+    port: {:system, "SMTP_PORT"},
+    dkim: [
+      s: dkim_selector,
+      d: dkim_domain,
+      private_key: {:pem_plain, File.read!(dkim_private_key)}
+    ],
+    retries: 2,
+    no_mx_lookups: false
 end
