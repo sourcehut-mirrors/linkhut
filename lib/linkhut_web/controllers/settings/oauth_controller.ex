@@ -9,6 +9,13 @@ defmodule LinkhutWeb.Settings.OauthController do
   """
   plug :put_view, LinkhutWeb.SettingsView
 
+  @personal_access_token_scopes for(
+                                  scope <- ~w(posts tags),
+                                  access <- ~w(read write),
+                                  do: "#{scope}:#{access}"
+                                )
+                                |> Enum.join(" ")
+
   def show(conn, _) do
     user = conn.assigns[:current_user]
 
@@ -26,7 +33,12 @@ defmodule LinkhutWeb.Settings.OauthController do
   def create_personal_token(conn, %{"comment" => comment}) do
     user = conn.assigns[:current_user]
 
-    token = Oauth.create_token!(user, %{comment: String.trim(comment)})
+    token =
+      Oauth.create_token!(user, %{
+        comment: String.trim(comment),
+        scopes: @personal_access_token_scopes
+      })
+
     render(conn, "oauth/personal_token/show.html", token: token.token)
   end
 

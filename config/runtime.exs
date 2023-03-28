@@ -61,6 +61,7 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 
+  # Mailer config:
   dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")
   dkim_domain = System.get_env("SMTP_DKIM_DOMAIN")
   dkim_private_key = System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null"
@@ -81,4 +82,14 @@ if config_env() == :prod do
     ],
     retries: 2,
     no_mx_lookups: false
+
+  # IFTTT config:
+  ifttt_user_id = String.to_integer(System.get_env("IFTTT_USER_ID") || "0")
+  ifttt_application = System.get_env("IFTTT_APPLICATION") || ""
+  ifttt_service_key = System.get_env("IFTTT_SERVICE_KEY") || ""
+
+  config :linkhut, :ifttt,
+    user_id: ifttt_user_id,
+    application: ifttt_application,
+    service_key: ifttt_service_key
 end

@@ -38,12 +38,7 @@ defmodule Linkhut.Oauth do
 
   defp create_token(resource_owner, attrs) do
     %AccessToken{}
-    |> Map.put(
-      :scopes,
-      for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
-      |> Enum.join(" ")
-    )
-    |> Map.put(:resource_owner, resource_owner)
+    |> struct(resource_owner: resource_owner)
     |> put_application(attrs)
     |> do_create_token(attrs)
   end
@@ -135,6 +130,24 @@ defmodule Linkhut.Oauth do
   def create_application(%User{} = user, params) do
     user
     |> Applications.create_application(params, otp_app: :linkhut)
+  end
+
+  @doc """
+  Gets a single application by uid.
+
+  Raises `Ecto.NoResultsError` if the Application does not exist.
+
+  ## Examples
+
+    iex> get_application!("c341a5c7b331ef076eb4954668d54f590e0009e06b81b100191aa22c93044f3d")
+    %Application{}
+
+    iex> get_application!("75d72f326a69444a9287ea264617058dbbfe754d7071b8eef8294cbf4e7e0fdc")
+    ** (Ecto.NoResultsError)
+  """
+  @spec get_application!(binary()) :: Application.t() | no_return()
+  def get_application!(uid) do
+    Applications.get_application!(uid, otp_app: :linkhut)
   end
 
   @doc """
