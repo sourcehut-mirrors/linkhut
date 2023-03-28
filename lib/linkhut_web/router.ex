@@ -66,7 +66,7 @@ defmodule LinkhutWeb.Router do
   end
 
   scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTT, as: :ifttt do
-    pipe_through [:api, :ifttt, :token_auth]
+    pipe_through [:api, :token_auth]
 
     get "/user/info", UserController, :info
 
