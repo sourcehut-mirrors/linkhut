@@ -13,11 +13,6 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
         accessToken: token,
         samples: %{
           actions: %{
-            triggers: %{
-              new_public_link_tagged: %{
-                tag: "ifttt"
-              }
-            },
             add_public_link: %{
               url: public_url,
               tags: "ifttt test",
@@ -30,7 +25,12 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
               notes: "Testing IFTTT integration on #{date_time}",
               title: "IFTTT Test"
             }
-          }
+          },
+          triggers: %{
+            new_public_link_tagged: %{
+              tag: "ifttt"
+            }
+         }
         }
       }
     }

@@ -25,7 +25,7 @@ defmodule LinkhutWeb.Plugs.VerifyIFTTTHeader do
   @doc false
   def unauthorized(conn) do
     conn
-    |> Plug.Conn.send_resp(403, "Unauthorized")
+    |> Plug.Conn.send_resp(401, "Unauthorized")
     |> halt()
   end
 end
