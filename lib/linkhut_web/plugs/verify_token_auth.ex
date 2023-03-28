@@ -13,7 +13,7 @@ defmodule LinkhutWeb.Plugs.VerifyTokenAuth do
 
   plug VerifyHeader, otp_app: :linkhut, realm: "Bearer"
   plug :verify_request_parameter
-  plug EnsureAuthenticated, otp_app: :linkhut
+  plug EnsureAuthenticated, otp_app: :linkhut, handler: LinkhutWeb.Plugs.AuthErrorHandler
   plug :set_current_user
 
   defp verify_request_parameter(conn, _) do
