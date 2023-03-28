@@ -62,6 +62,7 @@ defmodule LinkhutWeb.Router do
   scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTT, as: :ifttt do
     pipe_through [:api, :ifttt]
 
+    get "/status", StatusController, :ok
     post "/test/setup", TestController, :setup
   end
 

@@ -3,7 +3,9 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
 
   plug :put_view, LinkhutWeb.Api.IFTT.ActionsView
 
-  plug ExOauth2Provider.Plug.EnsureScopes, scopes: ~w(ifttt)
+  plug ExOauth2Provider.Plug.EnsureScopes,
+    scopes: ~w(ifttt),
+    handler: LinkhutWeb.Plugs.AuthErrorHandler
 
   alias Linkhut.Links
   alias LinkhutWeb.ErrorHelpers

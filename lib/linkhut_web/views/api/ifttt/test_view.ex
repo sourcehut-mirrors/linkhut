@@ -30,7 +30,7 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
             new_public_link_tagged: %{
               tag: "ifttt"
             }
-         }
+          }
         }
       }
     }
