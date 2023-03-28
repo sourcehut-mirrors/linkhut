@@ -18,7 +18,7 @@ defmodule LinkhutWeb.Plugs.VerifyIFTTTHeader do
   @impl true
   def call(conn, service_key) do
     case Plug.Conn.get_req_header(conn, @header) do
-      [value] -> if String.trim(value) == service_key, do: conn, else: unauthorized(conn)
+      [value | _] -> if String.trim(value) == service_key, do: conn, else: unauthorized(conn)
       _ -> unauthorized(conn)
     end
   end
