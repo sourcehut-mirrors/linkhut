@@ -6,6 +6,7 @@ defmodule LinkhutWeb.Plugs.AuthErrorHandler do
   alias Plug.Conn
 
   @callback unauthorized(Conn.t(), map()) :: Conn.t()
+  @callback unauthenticated(Conn.t(), map()) :: Conn.t()
 
   @doc false
   @spec unauthorized(Conn.t(), map()) :: Conn.t()
@@ -13,5 +14,13 @@ defmodule LinkhutWeb.Plugs.AuthErrorHandler do
     conn
     |> Conn.put_resp_content_type("application/json")
     |> Conn.send_resp(401, Jason.encode!(%{errors: "Unauthorized"}))
+  end
+
+  @doc false
+  @spec unauthenticated(Conn.t(), map()) :: Conn.t()
+  def unauthenticated(conn, _params) do
+    conn
+    |> Conn.put_resp_content_type("application/json")
+    |> Conn.send_resp(401, Jason.encode!(%{errors: "Unauthenticated"}))
   end
 end
