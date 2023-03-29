@@ -12,7 +12,7 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
       data: %{
         accessToken: token,
         samples: %{
-          actions: %{
+          actionRecordSkipping: %{
             add_public_link: %{
               url: public_url,
               tags: "ifttt test unread",
