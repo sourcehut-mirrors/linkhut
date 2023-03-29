@@ -28,7 +28,7 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
           },
           triggers: %{
             new_public_link_tagged: %{
-              tag: "ifttt"
+              tag: "linkhut"
             }
           }
         }
