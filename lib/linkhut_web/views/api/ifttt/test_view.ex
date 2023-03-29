@@ -15,7 +15,7 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
           actions: %{
             add_public_link: %{
               url: public_url,
-              tags: "ifttt test",
+              tags: "ifttt test unread",
               notes: "Testing IFTTT integration on #{date_time}",
               title: "IFTTT Test"
             },
