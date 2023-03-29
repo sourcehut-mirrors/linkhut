@@ -32,9 +32,12 @@ defmodule LinkhutWeb.Api.IFTT.ActionsView do
 
   defp error_message(errors) do
     errors
-    |> Enum.map(fn {field, errors} ->
-      "#{Phoenix.Naming.humanize(field)}: #{Enum.join(errors, ", ")}"
-    end)
+    |> Enum.map(
+         fn
+           {field, errors} ->
+             "#{Phoenix.Naming.humanize(field)}: #{Enum.join(errors, ", ")}"
+           error -> error
+         end)
     |> Enum.join(". ")
   end
 end

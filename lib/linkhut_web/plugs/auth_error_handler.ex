@@ -13,7 +13,7 @@ defmodule LinkhutWeb.Plugs.AuthErrorHandler do
   def unauthorized(conn, _params) do
     conn
     |> Conn.put_resp_content_type("application/json")
-    |> Conn.send_resp(401, Jason.encode!(%{errors: "Unauthorized"}))
+    |> Conn.send_resp(401, Jason.encode!(%{errors: [%{message: "Unauthenticated"}]}))
   end
 
   @doc false
@@ -21,6 +21,6 @@ defmodule LinkhutWeb.Plugs.AuthErrorHandler do
   def unauthenticated(conn, _params) do
     conn
     |> Conn.put_resp_content_type("application/json")
-    |> Conn.send_resp(401, Jason.encode!(%{errors: "Unauthenticated"}))
+    |> Conn.send_resp(401, Jason.encode!(%{errors: [%{message: "Unauthenticated"}]}))
   end
 end

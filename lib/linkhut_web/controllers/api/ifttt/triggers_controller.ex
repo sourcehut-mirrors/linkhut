@@ -28,5 +28,9 @@ defmodule LinkhutWeb.Api.IFTT.TriggersController do
     |> render("links.json", links: links)
   end
 
-  def new_public_link_tagged(conn, _params), do: render(conn, "links.json", links: [])
+  def new_public_link_tagged(conn, _params) do
+    conn
+    |> put_status(400)
+    |> render("error.json", errors: ["missing parameters"])
+  end
 end
