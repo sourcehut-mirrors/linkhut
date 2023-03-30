@@ -10,20 +10,14 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
   alias Linkhut.Links
   alias LinkhutWeb.ErrorHelpers
 
-  def add_public_link(conn, %{"actionFields" => params}) do
+  def add_public_link(conn, %{"actionFields" => %{"url" => url} = params}) do
     user = conn.assigns[:current_user]
+    link = Links.get(url, user.id)
 
-    case Links.create_link(user, params) do
-      {:ok, link} ->
-        conn
-        |> render("success.json",
-          id: link.url,
-          url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
-        )
-
-      {:error, changeset} ->
-        raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
-              Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
+    if link != nil do
+      update_link(conn, link, params)
+    else
+      create_link(conn, params)
     end
   end
 
@@ -31,16 +25,32 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
     raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError, "missing parameters"
   end
 
-  def add_private_link(conn, %{"actionFields" => params}) do
+  def add_private_link(conn, %{"actionFields" => %{"url" => url} = params}) do
+    user = conn.assigns[:current_user]
+    link = Links.get(url, user.id)
+
+    params = Map.put(params, "is_private", true)
+    if link != nil do
+      update_link(conn, link, params)
+    else
+      create_link(conn, params)
+    end
+  end
+
+  def add_private_link(_conn, _params) do
+    raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError, "missing parameters"
+  end
+
+  defp update_link(conn, link, params) do
     user = conn.assigns[:current_user]
 
-    case Links.create_link(user, Map.put(params, "is_private", true)) do
+    case Links.update_link(link, params) do
       {:ok, link} ->
         conn
         |> render("success.json",
-          id: link.url,
-          url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
-        )
+             id: link.url,
+             url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
+           )
 
       {:error, changeset} ->
         raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
@@ -48,7 +58,21 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
     end
   end
 
-  def add_private_link(_conn, _params) do
-    raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError, "missing parameters"
+  defp create_link(conn, params) do
+    user = conn.assigns[:current_user]
+
+    case Links.create_link(user, params) do
+      {:ok, link} ->
+        conn
+        |> render("success.json",
+             id: link.url,
+             url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
+           )
+
+      {:error, changeset} ->
+        raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
+              Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
+    end
   end
+
 end
