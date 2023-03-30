@@ -137,6 +137,7 @@ defmodule LinkhutWeb.Router do
     post "/application/delete/:uid", OauthController, :delete_application
     post "/revoke-tokens/:uid", OauthController, :revoke_application
     post "/reset-secret/:uid", OauthController, :reset_application
+    post "/revoke-access/:uid", OauthController, :revoke_access
 
     get "/authorize", OauthController, :new_authorization
     post "/authorize", OauthController, :create_authorization

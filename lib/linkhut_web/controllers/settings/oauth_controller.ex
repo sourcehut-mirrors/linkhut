@@ -206,6 +206,21 @@ defmodule LinkhutWeb.Settings.OauthController do
     end
   end
 
+  def revoke_access(conn, %{"uid" => uid}) do
+    user = conn.assigns[:current_user]
+
+    app = Oauth.get_application!(uid)
+
+    app
+    |> Oauth.revoke_all_access_tokens_for(user)
+    |> case do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Revoked access to '#{app.name}'")
+    end
+    |> redirect(to: Routes.oauth_path(conn, :show))
+  end
+
   defp redirect_or_render({:redirect, redirect_uri}, conn) do
     redirect(conn, external: redirect_uri)
   end
