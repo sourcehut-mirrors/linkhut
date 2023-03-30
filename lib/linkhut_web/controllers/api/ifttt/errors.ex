@@ -9,7 +9,7 @@ defmodule LinkhutWeb.Api.IFTTT.Errors do
     end
 
     @impl true
-    def exception(errors) when is_list(errors), do: exception(error_message(errors))
+    def exception(errors) when is_map(errors), do: exception(error_message(errors))
 
     defp error_message(errors) do
       errors
