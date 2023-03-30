@@ -28,13 +28,13 @@ defmodule LinkhutWeb.Api.IFTT.TestView do
           },
           actionRecordSkipping: %{
             add_public_link: %{
-              url: public_url,
+              url: "",
               tags: "ifttt test unread",
               notes: "Testing IFTTT integration on #{date_time}",
               title: "IFTTT Test"
             },
             add_private_link: %{
-              url: private_url,
+              url: "",
               tags: "ifttt test",
               notes: "Testing IFTTT integration on #{date_time}",
               title: "IFTTT Test"
