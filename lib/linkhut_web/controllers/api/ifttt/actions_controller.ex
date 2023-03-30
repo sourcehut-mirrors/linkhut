@@ -22,18 +22,13 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
         )
 
       {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render("error.json",
-          errors: Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
-        )
+        raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
+              Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
     end
   end
 
-  def add_public_link(conn, _params) do
-    conn
-    |> put_status(400)
-    |> render("error.json", errors: ["missing parameters"])
+  def add_public_link(_conn, _params) do
+    raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError, "missing parameters"
   end
 
   def add_private_link(conn, %{"actionFields" => params}) do
@@ -48,17 +43,12 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
         )
 
       {:error, changeset} ->
-        conn
-        |> put_status(400)
-        |> render("error.json",
-          errors: Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
-        )
+        raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
+              Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
     end
   end
 
-  def add_private_link(conn, _params) do
-    conn
-    |> put_status(400)
-    |> render("error.json", errors: ["missing parameters"])
+  def add_private_link(_conn, _params) do
+    raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError, "missing parameters"
   end
 end
