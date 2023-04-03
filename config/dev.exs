@@ -79,7 +79,7 @@ config :phoenix, :plug_init_mode, :runtime
 config :linkhut, Linkhut,
   # IFTTT config
   ifttt: [
-    user_id: 141,
-    application: "a2ac2720c90e458752257e5acdc5cace7c1667e835fd833df3268f5d5bc3067b",
+    user_id: 0,
+    application: "aaabbb",
     service_key: "cccddd"
   ]
