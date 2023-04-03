@@ -4,11 +4,34 @@ defmodule Linkhut.Config do
     defexception [:message]
   end
 
-  @spec get(atom()) :: any()
-  def get(key) when is_atom(key), do: get([key])
+  def get(key), do: get(key, nil)
 
-  @spec get(list(atom())) :: any()
-  def get([root_key | keys]) do
+  def get([key], default), do: get(key, default)
+
+  def get([_ | _] = path, default) do
+    case fetch(path) do
+      {:ok, value} -> value
+      :error -> default
+    end
+  end
+
+  def get(key, default) do
+    Application.get_env(:linkhut, key, default)
+  end
+
+  def get!(key) do
+    value = get(key, nil)
+
+    if value == nil do
+      raise(Error, message: "Missing configuration value: #{inspect(key)}")
+    else
+      value
+    end
+  end
+
+  def fetch(key) when is_atom(key), do: fetch([key])
+
+  def fetch([root_key | keys]) do
     Enum.reduce_while(keys, Application.fetch_env(:linkhut, root_key), fn
       key, {:ok, config} when is_map(config) or is_list(config) ->
         case Access.fetch(config, key) do
@@ -24,39 +47,9 @@ defmodule Linkhut.Config do
     end)
   end
 
-  @spec get(atom() | list(atom())) :: any()
-  def get(key), do: get(key, nil)
-
-  @spec get(list(atom()), any()) :: any()
-  def get([key], default), do: get(key, default)
-
-  @spec get(list(atom()), any()) :: any()
-  def get([_ | _] = path, default) do
-    case get(path) do
-      {:ok, value} -> value
-      :error -> default
-    end
-  end
-
-  @spec get(atom(), any()) :: any()
-  def get(key, default) do
-    Application.get_env(:linkhut, key, default)
-  end
-
-  @spec get!(atom() | list(atom())) :: any()
-  def get!(key) do
-    value = get(key, nil)
-
-    if value == nil do
-      raise(Error, message: "Missing configuration value: #{inspect(key)}")
-    else
-      value
-    end
-  end
-
   @spec ifttt() :: keyword()
   def ifttt() do
-    get(:ifttt)
+    get([Linkhut, :ifttt])
   end
 
   @spec ifttt(atom(), any()) :: any()
