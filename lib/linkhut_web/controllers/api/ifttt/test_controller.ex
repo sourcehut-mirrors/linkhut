@@ -1,14 +1,14 @@
-defmodule LinkhutWeb.Api.IFTT.TestController do
+defmodule LinkhutWeb.Api.IFTTT.TestController do
   use LinkhutWeb, :controller
 
   alias Linkhut.Accounts
   alias Linkhut.Oauth
 
-  plug :put_view, LinkhutWeb.Api.IFTT.TestView
+  plug :put_view, LinkhutWeb.Api.IFTTT.TestView
 
   def setup(conn, _params) do
-    ifttt_user = Accounts.get_user!(config(:user_id))
-    ifttt_app = Oauth.get_application!(config(:application))
+    ifttt_user = Accounts.get_user!(Linkhut.Config.ifttt(:user_id))
+    ifttt_app = Oauth.get_application!(Linkhut.Config.ifttt(:application))
 
     access_token =
       Oauth.create_token!(ifttt_user, %{
@@ -26,9 +26,5 @@ defmodule LinkhutWeb.Api.IFTT.TestController do
       private_url: private_url,
       date_time: DateTime.now!("Etc/UTC")
     )
-  end
-
-  defp config(key, default \\ nil) do
-    Keyword.get(Application.get_env(:linkhut, :ifttt), key, default)
   end
 end

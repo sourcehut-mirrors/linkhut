@@ -4,7 +4,7 @@ defmodule LinkhutWeb.Api.PostsControllerTest do
   test "/v1/posts/update - Unauthenticated", %{conn: conn} do
     conn = get(conn, Routes.api_posts_path(conn, :update))
 
-    assert text_response(conn, 401) == "Unauthenticated"
+    assert json_response(conn, 401) == %{"errors" => [%{"message" => "Unauthenticated"}]}
   end
 
   test "/v1/posts/update [JSON] - empty", %{conn: conn} do

@@ -83,13 +83,11 @@ if config_env() == :prod do
     retries: 2,
     no_mx_lookups: false
 
-  # IFTTT config:
-  ifttt_user_id = String.to_integer(System.get_env("IFTTT_USER_ID") || "0")
-  ifttt_application = System.get_env("IFTTT_APPLICATION") || ""
-  ifttt_service_key = System.get_env("IFTTT_SERVICE_KEY") || ""
-
-  config :linkhut, :ifttt,
-    user_id: ifttt_user_id,
-    application: ifttt_application,
-    service_key: ifttt_service_key
+  config :linkhut, Linkhut,
+    # IFTTT config
+    ifttt: [
+      user_id: String.to_integer(System.get_env("IFTTT_USER_ID") || "0"),
+      application: System.get_env("IFTTT_APPLICATION") || "",
+      service_key: System.get_env("IFTTT_SERVICE_KEY") || ""
+    ]
 end

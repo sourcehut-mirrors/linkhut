@@ -1,7 +1,7 @@
-defmodule LinkhutWeb.Api.IFTT.ActionsController do
+defmodule LinkhutWeb.Api.IFTTT.ActionsController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.Api.IFTT.ActionsView
+  plug :put_view, LinkhutWeb.Api.IFTTT.ActionsView
 
   plug ExOauth2Provider.Plug.EnsureScopes,
     scopes: ~w(ifttt),
@@ -30,6 +30,7 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
     link = Links.get(url, user.id)
 
     params = Map.put(params, "is_private", true)
+
     if link != nil do
       update_link(conn, link, params)
     else
@@ -48,9 +49,9 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
       {:ok, link} ->
         conn
         |> render("success.json",
-             id: link.url,
-             url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
-           )
+          id: link.url,
+          url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
+        )
 
       {:error, changeset} ->
         raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
@@ -65,14 +66,13 @@ defmodule LinkhutWeb.Api.IFTT.ActionsController do
       {:ok, link} ->
         conn
         |> render("success.json",
-             id: link.url,
-             url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
-           )
+          id: link.url,
+          url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
+        )
 
       {:error, changeset} ->
         raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
               Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
     end
   end
-
 end

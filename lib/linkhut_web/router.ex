@@ -59,14 +59,14 @@ defmodule LinkhutWeb.Router do
     get "/tags/rename", TagsController, :rename
   end
 
-  scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTT, as: :ifttt do
+  scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTTT, as: :ifttt do
     pipe_through [:api, :ifttt]
 
     get "/status", StatusController, :ok
     post "/test/setup", TestController, :setup
   end
 
-  scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTT, as: :ifttt do
+  scope "/_/ifttt/v1/", LinkhutWeb.Api.IFTTT, as: :ifttt do
     pipe_through [:api, :token_auth]
 
     get "/user/info", UserController, :info

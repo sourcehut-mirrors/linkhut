@@ -1,7 +1,7 @@
-defmodule LinkhutWeb.Api.IFTT.TriggersController do
+defmodule LinkhutWeb.Api.IFTTT.TriggersController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.Api.IFTT.TriggersView
+  plug :put_view, LinkhutWeb.Api.IFTTT.TriggersView
 
   plug ExOauth2Provider.Plug.EnsureScopes,
     scopes: ~w(ifttt),

@@ -76,8 +76,10 @@ config :phoenix, :stacktrace_depth, 20
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# IFTTT config
-config :linkhut, :ifttt,
-  user_id: 0,
-  application: "aaabbb",
-  service_key: "cccddd"
+config :linkhut, Linkhut,
+  # IFTTT config
+  ifttt: [
+    user_id: 141,
+    application: "a2ac2720c90e458752257e5acdc5cace7c1667e835fd833df3268f5d5bc3067b",
+    service_key: "cccddd"
+  ]

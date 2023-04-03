@@ -1,4 +1,4 @@
-defmodule LinkhutWeb.Api.IFTT.StatusController do
+defmodule LinkhutWeb.Api.IFTTT.StatusController do
   use LinkhutWeb, :controller
 
   alias Plug.Conn

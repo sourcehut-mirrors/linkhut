@@ -1,4 +1,4 @@
-defmodule LinkhutWeb.Api.IFTT.ActionsView do
+defmodule LinkhutWeb.Api.IFTTT.ActionsView do
   @moduledoc false
   use LinkhutWeb, :view
 
