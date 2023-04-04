@@ -30,12 +30,12 @@
         </ul>
       </div>
     </div>
-    <%= Enum.map(@links.entries, fn [head | _] = links -> %>
+    <%= for [head | _] = links <- @links.entries do %>
       <div class="date-group">
         <h4 class="date"><span><%= prettify(head.inserted_at) %></span></h4>
         <%= render("_bookmarks.html", Map.put(assigns, :links, links)) %>
       </div>
-    <% end) %>
+    <% end %>
     <%= render("_pagination.html", Map.put(assigns, :page, Map.drop(@links, [:entries]))) %>
   </section>
   <%= render("_side-pannel.html", assigns) %>

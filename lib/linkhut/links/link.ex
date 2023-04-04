@@ -16,6 +16,7 @@ defmodule Linkhut.Links.Link do
     belongs_to :user, User, define_field: false
     field :title, :string
     field :notes, :string, default: ""
+    field :notes_html, :string, default: ""
     field :tags, Tags, default: []
     field :is_private, :boolean, default: false
     field :language, :string
@@ -30,9 +31,13 @@ defmodule Linkhut.Links.Link do
   end
 
   @doc false
-  def changeset(link, attrs) do
+  def changeset(link, attrs, opts \\ []) do
     link
-    |> cast(attrs, [:url, :user_id, :title, :notes, :tags, :is_private, :inserted_at, :is_unread])
+    |> cast(
+      attrs,
+      [:url, :user_id, :title, :notes, :tags, :is_private, :inserted_at, :is_unread],
+      opts
+    )
     |> validate_required([:url, :user_id, :title, :is_private])
     |> validate_length(:url, max: 2048)
     |> validate_length(:title, max: 255)
@@ -42,6 +47,21 @@ defmodule Linkhut.Links.Link do
     |> update_unread_status()
     |> update_tags()
     |> dedupe_tags()
+    |> maybe_generate_html()
+  end
+
+  defp maybe_generate_html(changeset) do
+    case get_change(changeset, :notes) do
+      nil ->
+        changeset
+
+      notes ->
+        force_change(
+          changeset,
+          :notes_html,
+          HtmlSanitizeEx.basic_html(Earmark.as_html!(notes, pure_links: false))
+        )
+    end
   end
 
   defp update_unread_status(changeset) do

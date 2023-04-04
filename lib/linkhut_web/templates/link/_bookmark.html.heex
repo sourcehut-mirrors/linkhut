@@ -13,7 +13,7 @@
       <a rel="nofollow" href={@link.url}><%= @link.url %></a>
     </div>
     <div class="description">
-      <%= sanitize(Earmark.as_html!(@link.notes, pure_links: false)) %>
+      <%= sanitize(@link.notes_html) %>
     </div>
     <div class="ownership">
       <%= unless @logged_in? && @link.user_id == @current_user.id do %>
