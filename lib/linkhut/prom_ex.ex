@@ -63,7 +63,7 @@ defmodule Linkhut.PromEx do
       Plugins.Application,
       Plugins.Beam,
       {Plugins.Phoenix, router: LinkhutWeb.Router, endpoint: LinkhutWeb.Endpoint},
-      Plugins.Ecto
+      {Plugins.Ecto, otp_app: :linkhut, repos: [Linkhut.Repo]},
 
       # Add your own PromEx metrics plugins
       # Linkhut.Users.PromExPlugin
