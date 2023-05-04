@@ -9,9 +9,7 @@
     <section>
       <h5><%= gettext("Tags") %></h5>
       <ul class="tag-cloud">
-        <%= for %{tag: tag, count: count} <- @tags do %>
-          <li><a href={current_path(@conn, tag: tag)} data-count={count}><%= tag %></a></li>
-        <% end %>
+        <.link_tag :for={%{tag: tag, count: count} <- @tags} path={html_path(@scope, tag: tag)} tag={tag} data-count={count} />
       </ul>
     </section>
   <% end %>
@@ -26,7 +24,7 @@
   </section>
   <section>
     <h5>
-      <a class="feed-link" href={feed_path(@conn)}><%= gettext("RSS feed") %></a>
+      <a class="feed-link" href={feed_path(@scope)}><%= gettext("RSS feed") %></a>
     </h5>
   </section>
 </aside>

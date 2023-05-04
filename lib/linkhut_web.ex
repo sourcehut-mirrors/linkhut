@@ -21,7 +21,9 @@ defmodule LinkhutWeb do
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: LinkhutWeb
+      use Phoenix.Controller,
+        namespace: LinkhutWeb,
+        formats: [:html, :json, :xml]
 
       import Plug.Conn
       import LinkhutWeb.Gettext
@@ -33,26 +35,39 @@ defmodule LinkhutWeb do
 
   def html do
     quote do
-      use Phoenix.Component,
-        root: "lib/linkhut_web/templates",
-        pattern: "**/*",
-        namespace: LinkhutWeb
-
-      # For migration from views to components
-      import Phoenix.View
+      use Phoenix.Component
 
       # Import convenience functions from controllers
-      import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
+      import Phoenix.Controller, only: [get_csrf_token: 0, view_module: 1, view_template: 1]
 
-      # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
-      use PhoenixHtmlSanitizer, :basic_html
+      # Include general helpers for rendering HTML
+      unquote(html_helpers())
+    end
+  end
 
-      import LinkhutWeb.FormHelpers
+  defp html_helpers do
+    quote do
+      # HTML escaping functionality
+      import Phoenix.HTML
+      # Core UI components and translation
+      # import LinkhutWeb.CoreComponents
       import LinkhutWeb.Gettext
-      import LinkhutWeb.Helpers
-      alias LinkhutWeb.Router.Helpers, as: Routes
 
+      # Shortcut for generating JS commands
+      alias Phoenix.LiveView.JS
+
+      # Routes generation with the ~p sigil
+      unquote(verified_routes())
+    end
+  end
+
+  def xml do
+    quote do
+      use Phoenix.Component
+
+      import LinkhutWeb.Gettext
+
+      # Routes generation with the ~p sigil
       unquote(verified_routes())
     end
   end

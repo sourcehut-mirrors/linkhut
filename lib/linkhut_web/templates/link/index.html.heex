@@ -1,4 +1,4 @@
-<%= render("_controls.html", assigns) %>
+<%= _controls(assigns) %>
 <div id="content">
   <section>
     <div id="sort-options">
@@ -7,14 +7,14 @@
         <ul>
           <%= if is_search_result?(@conn) do %>
             <li>
-              <a href={current_path(@conn, %{"sort" => "relevance"})} class={if sort_option(@conn) == "relevance", do: "active"}><%= gettext("relevance") %></a>
+              <a href={html_path(@scope, sort_by: "relevance")} class={if sort_option(@conn) == "relevance", do: "active"}><%= gettext("relevance") %></a>
             </li>
           <% end %>
           <li>
-            <a href={current_path(@conn, %{"sort" => "recency"})} class={if sort_option(@conn) == "recency", do: "active"}><%= gettext("recency") %></a>
+            <a href={html_path(@scope, sort_by: "recency")} class={if sort_option(@conn) == "recency", do: "active"}><%= gettext("recency") %></a>
           </li>
           <li>
-            <a href={current_path(@conn, %{"sort" => "popularity"})} class={if sort_option(@conn) == "popularity", do: "active"}><%= gettext("popularity") %></a>
+            <a href={html_path(@scope, sort_by: "popularity")} class={if sort_option(@conn) == "popularity", do: "active"}><%= gettext("popularity") %></a>
           </li>
         </ul>
       </div>
@@ -22,10 +22,10 @@
         <%= gettext("Order:") %>
         <ul>
           <li>
-            <a href={current_path(@conn, %{"order" => "desc"})} class={if order_option(@conn) == "desc", do: "active"}><%= gettext("descending") %></a>
+            <a href={html_path(@scope, ordering: "desc")} class={if order_option(@conn) == "desc", do: "active"}><%= gettext("descending") %></a>
           </li>
           <li>
-            <a href={current_path(@conn, %{"order" => "asc"})} class={if order_option(@conn) == "asc", do: "active"}><%= gettext("ascending") %></a>
+            <a href={html_path(@scope, ordering: "asc")} class={if order_option(@conn) == "asc", do: "active"}><%= gettext("ascending") %></a>
           </li>
         </ul>
       </div>
@@ -33,10 +33,14 @@
     <%= for [head | _] = links <- @links.entries do %>
       <div class="date-group">
         <h4 class="date"><span><%= prettify(head.inserted_at) %></span></h4>
-        <%= render("_bookmarks.html", Map.put(assigns, :links, links)) %>
+        <div class="bookmarks">
+          <%= for link <- links do %>
+            <%= _bookmark(Map.put_new(assigns, :link, link)) %>
+          <% end %>
+        </div>
       </div>
     <% end %>
-    <%= render("_pagination.html", Map.put(assigns, :page, Map.drop(@links, [:entries]))) %>
+    <%= _pagination(Map.put(assigns, :page, Map.drop(@links, [:entries]))) %>
   </section>
-  <%= render("_side-pannel.html", assigns) %>
+  <%= _side_pannel(assigns) %>
 </div>

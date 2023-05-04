@@ -174,9 +174,9 @@ defmodule LinkhutWeb.Router do
     post "/login", Auth.SessionController, :create
   end
 
-  scope "/_", LinkhutWeb do
+  scope "/_/unread", LinkhutWeb do
     pipe_through [:browser, :ensure_auth]
-    get "/unread", LinkController, :unread, as: :unread
+    get "/", LinkController, :unread, as: :unread
   end
 
   scope "/", LinkhutWeb do

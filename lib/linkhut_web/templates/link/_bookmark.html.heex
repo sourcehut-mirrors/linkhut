@@ -18,7 +18,7 @@
     <div class="ownership">
       <%= unless @logged_in? && @link.user_id == @current_user.id do %>
         <span>
-          <%= gettext("by") %> <a href={current_path(@conn, username: @link.user.username)}><%= @link.user.username %></a>
+          <%= gettext("by") %> <a href={html_path(@scope, user: @link.user.username)}><%= @link.user.username %></a>
         </span>
       <% end %>
       <span>
@@ -31,16 +31,7 @@
       <% end %>
     </div>
     <div class="meta">
-      <div class="tags">
-        <h5 class="label"><%= gettext("Tags:") %></h5>
-        <ul class="tags" data-label={gettext("tags")}>
-          <%= for tag <- @link.tags do %>
-            <li>
-              <a href={current_path(@conn, tag: tag)}><%= tag %></a>
-            </li>
-          <% end %>
-        </ul>
-      </div>
+      <.link_tags scope={@scope} link={@link} />
       <%= if @logged_in? do %>
         <div class="actions">
           <h5 class="label"><%= gettext("Actions:") %></h5>

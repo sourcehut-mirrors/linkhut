@@ -1,5 +1,0 @@
-<div class="bookmarks">
-  <%= for link <- @links do %>
-    <%= render(LinkhutWeb.LinkView, "_bookmark.html", Map.put_new(assigns, :link, link)) %>
-  <% end %>
-</div>

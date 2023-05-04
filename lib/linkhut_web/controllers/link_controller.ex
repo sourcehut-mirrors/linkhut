@@ -8,6 +8,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Search
   alias Linkhut.Search.Context
   alias Linkhut.Tags
+  alias LinkhutWeb.Controllers.Utils
 
   @links_per_page 20
   @related_tags_limit 400
@@ -184,7 +185,8 @@ defmodule LinkhutWeb.LinkController do
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: "",
       context: context,
-      title: view
+      title: view,
+      scope: Utils.scope(conn)
     )
   end
 
@@ -202,7 +204,8 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: query,
-      context: context
+      context: context,
+      scope: Utils.scope(conn)
     )
   end
 
@@ -220,7 +223,8 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: "",
-      context: context
+      context: context,
+      scope: Utils.scope(conn)
     )
   end
 

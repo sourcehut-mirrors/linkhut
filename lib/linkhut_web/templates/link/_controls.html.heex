@@ -6,11 +6,9 @@
       </form>
     </fieldset>
   </section>
-  <%= if @logged_in? do %>
-    <aside>
-      <div class="actions">
-        <a class="button primary" href={Routes.link_path(@conn, :new)}><span><%= gettext("Add a bookmark") %></span></a>
-      </div>
-    </aside>
-  <% end %>
+  <aside :if={@logged_in?}>
+    <div class="actions">
+      <a class="button primary" href={Routes.link_path(@conn, :new)}><span><%= gettext("Add a bookmark") %></span></a>
+    </div>
+  </aside>
 </div>
