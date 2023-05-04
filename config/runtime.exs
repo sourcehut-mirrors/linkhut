@@ -97,7 +97,7 @@ if config_env() == :prod do
 
   if System.get_env("GRAFANA_HOST") do
     # Configures PromEx
-    config :linkhut, SocialNetwork.PromEx,
+    config :linkhut, Linkhut.PromEx,
       manual_metrics_start_delay: :no_delay,
       grafana: [
         host: System.get_env("GRAFANA_HOST") || raise("GRAFANA_HOST is required"),
