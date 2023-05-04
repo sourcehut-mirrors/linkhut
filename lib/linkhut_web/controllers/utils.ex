@@ -48,7 +48,6 @@ defmodule LinkhutWeb.Controllers.Utils do
   def html_path(%Scope{} = scope, opts) do
     scope
     |> scope_to_map()
-    |> clean_params(opts)
     |> with_overrides(opts)
     |> html_route()
   end
@@ -88,7 +87,6 @@ defmodule LinkhutWeb.Controllers.Utils do
   def feed_path(%Scope{} = scope, opts) do
     scope
     |> scope_to_map()
-    |> clean_params(opts)
     |> with_overrides(opts)
     |> feed_route()
   end
@@ -141,7 +139,9 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp url_from_path(_), do: nil
 
   defp with_overrides(%{} = scope, user: user) do
-    Map.put(scope, :user, user)
+    scope
+    |> Map.put(:user, user)
+    |> Map.update(:params, %{}, fn p -> Map.drop(p, ["v"]) end)
   end
 
   defp with_overrides(%{} = scope, url: url) do
@@ -165,14 +165,6 @@ defmodule LinkhutWeb.Controllers.Utils do
   end
 
   defp with_overrides(%{} = scope, []), do: scope
-
-  defp clean_params(%{} = scope, opts) do
-    if opts != [] do
-      Map.update(scope, :params, %{}, fn p -> Map.drop(p, ["v"]) end)
-    else
-      scope
-    end
-  end
 
   defp clean_path(path) do
     if List.starts_with?(path, ["_", "feed"]) or List.starts_with?(path, ["_", "unread"]) do
