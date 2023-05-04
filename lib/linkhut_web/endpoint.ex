@@ -27,6 +27,8 @@ defmodule LinkhutWeb.Endpoint do
     param_key: "request_logger",
     cookie_key: "request_logger"
 
+  plug LinkhutWeb.Plugs.PromEx, path: "/_/admin/metrics", prom_ex_module: Linkhut.PromEx
+
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
@@ -45,7 +47,8 @@ defmodule LinkhutWeb.Endpoint do
     store: :cookie,
     key: "_linkhut_key",
     signing_salt: "i2qrSlZN",
-    max_age: 6 * 30 * 24 * 60 * 60 # ~6 months
+    # ~6 months
+    max_age: 6 * 30 * 24 * 60 * 60
 
   plug LinkhutWeb.Plugs.FeedRedirect
   plug LinkhutWeb.Router
