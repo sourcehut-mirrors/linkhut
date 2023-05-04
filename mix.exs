@@ -50,7 +50,7 @@ defmodule Linkhut.MixProject do
       {:circular_buffer, "~> 0.4"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:phoenix_copy, "~> 0.1.1", runtime: Mix.env() == :dev},
-      {:dart_sass, "~> 0.5", runtime: Mix.env() == :dev},
+      {:dart_sass, "~> 0.6", runtime: Mix.env() == :dev},
       {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.9"},
