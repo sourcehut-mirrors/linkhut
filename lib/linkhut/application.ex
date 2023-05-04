@@ -10,6 +10,8 @@ defmodule Linkhut.Application do
     children = [
       # Start the PubSub system
       {Phoenix.PubSub, name: Linkhut.PubSub},
+      # Start the PromEx module
+      Linkhut.PromEx,
       # Start the Ecto repository
       Linkhut.Repo,
       # Start the telemetry module
@@ -20,7 +22,6 @@ defmodule Linkhut.Application do
       LinkhutWeb.Endpoint,
       # Starts a worker by calling: Linkhut.Worker.start_link(arg)
       # {Linkhut.Worker, arg},
-      Linkhut.PromEx
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
