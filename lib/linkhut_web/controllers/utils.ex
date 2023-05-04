@@ -137,7 +137,7 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp fetch_url(%{} = scope, path), do: Map.put(scope, :url, url_from_path(path))
 
   defp url_from_path(["~" <> _ | path]), do: url_from_path(path)
-  defp url_from_path(["-" <> url | _]), do: url
+  defp url_from_path(["-" <> url | _]), do: URI.decode(url)
   defp url_from_path(_), do: nil
 
   defp with_overrides(%{} = scope, user: user) do
