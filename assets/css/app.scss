@@ -556,8 +556,8 @@ div#content, div#controls {
 
                 }
 
-                &:not(:last-child) a::after {
-                    content: ", ";
+                &:not(:last-child)::after {
+                    content: ",\00a0";
                 }
             }
         }
@@ -918,8 +918,8 @@ div.bookmark {
 
                     }
 
-                    &:not(:last-child) > a::after {
-                        content: ", ";
+                    &:not(:last-child)::after {
+                        content: ",\00a0";
                     }
                 }
             }
