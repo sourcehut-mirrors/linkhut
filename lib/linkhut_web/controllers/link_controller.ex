@@ -137,7 +137,8 @@ defmodule LinkhutWeb.LinkController do
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: query,
       context: context(params),
-      title: :unread
+      title: :unread,
+      scope: Utils.scope(conn)
     )
   end
 
