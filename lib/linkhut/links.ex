@@ -260,7 +260,7 @@ defmodule Linkhut.Links do
   Returns the number of unread links for a user
   """
   def unread_count(user_id) do
-    links()
+    Link
     |> where(user_id: ^user_id)
     |> where(is_unread: true)
     |> exclude(:preload)
