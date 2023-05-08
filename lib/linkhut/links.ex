@@ -7,6 +7,7 @@ defmodule Linkhut.Links do
 
   alias Linkhut.Accounts.User
   alias Linkhut.Links.Link
+  alias Linkhut.Links.PublicLink
   alias Linkhut.Repo
 
   @typedoc """
@@ -227,7 +228,7 @@ defmodule Linkhut.Links do
     datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
-    |> where([l, s, _], l.inserted_at == s.latest)
+    |> where([l, s, _], l.inserted_at == s.last)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([l], l.inserted_at >= ^datetime)
@@ -239,7 +240,7 @@ defmodule Linkhut.Links do
   """
   def popular(params, popularity \\ 3) do
     links()
-    |> where([l, s, _], l.inserted_at == s.earliest)
+    |> where([l, s, _], l.inserted_at == s.first)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([_, s, _], s.saves >= ^popularity)
@@ -269,7 +270,7 @@ defmodule Linkhut.Links do
 
   def links(params \\ []) do
     from(l in Link,
-      left_join: s in subquery(get_saves()),
+      left_join: s in PublicLink,
       on: [url: l.url, user_id: l.user_id],
       join: u in assoc(l, :user),
       select_merge: ^select_fields(params),
@@ -300,20 +301,6 @@ defmodule Linkhut.Links do
   end
 
   defp select_field({_, _}, fields), do: fields
-
-  defp get_saves() do
-    from(l in Link,
-      where: [is_private: false, is_unread: false],
-      select: %{
-        url: l.url,
-        user_id: l.user_id,
-        saves: over(count(l.url), :distinct_link),
-        earliest: over(min(l.inserted_at), :distinct_link),
-        latest: over(max(l.inserted_at), :distinct_link)
-      },
-      windows: [distinct_link: [partition_by: :url]]
-    )
-  end
 
   def ordering(query, opts) do
     sort_column = Keyword.get(opts, :sort_by, :recency)
