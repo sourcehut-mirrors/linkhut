@@ -94,17 +94,4 @@ if config_env() == :prod do
       application: System.get_env("IFTTT_APPLICATION") || "",
       service_key: System.get_env("IFTTT_SERVICE_KEY") || ""
     ]
-
-  if System.get_env("GRAFANA_HOST") do
-    # Configures PromEx
-    config :linkhut, Linkhut.PromEx,
-      manual_metrics_start_delay: :no_delay,
-      grafana: [
-        host: System.get_env("GRAFANA_HOST") || raise("GRAFANA_HOST is required"),
-        auth_token: System.get_env("GRAFANA_TOKEN") || raise("GRAFANA_TOKEN is required"),
-        upload_dashboards_on_start: true,
-        folder_name: "Linkhut Dashboards",
-        annotate_app_lifecycle: true
-      ]
-  end
 end
