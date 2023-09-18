@@ -211,12 +211,12 @@ defmodule Linkhut.Links do
   end
 
   @doc """
-  Returns the most recent link inserted by a user
+  Returns the most recent link modified (as in inserted or updated) by a user
   """
   def most_recent(%User{} = user) do
     links()
     |> where(user_id: ^user.id)
-    |> order_by(desc: :inserted_at)
+    |> order_by([l], desc: fragment("greatest(?, ?)", l.inserted_at, l.updated_at))
     |> limit(1)
     |> Repo.one()
   end

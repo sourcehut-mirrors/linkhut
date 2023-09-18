@@ -209,7 +209,7 @@ defmodule LinkhutWeb.Api.PostsController do
 
   defp last_update(user) do
     case link = Links.most_recent(user) do
-      %Link{} -> link.inserted_at
+      %Link{} -> max(link.inserted_at, link.updated_at)
       nil -> DateTime.from_unix!(0)
     end
   end
