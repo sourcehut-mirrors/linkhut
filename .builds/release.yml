@@ -1,7 +1,12 @@
-image: archlinux
+image: ubuntu/lts
 packages:
     - rsync
     - elixir
+    - erlang-dev
+    - erlang-os-mon
+    - erlang-xmerl
+repositories:
+  rabbitmq: https://ppa.launchpadcontent.net/rabbitmq/rabbitmq-erlang/ubuntu jammy main 0xB279943D2A549531E144B875F77F1EDA57EBB1CC
 secrets:
     - 9a147ee3-2828-4ec6-84b5-7f1cca42d9b1
     - 5b7a28c5-476f-4b14-b40c-8e5567b9f188
