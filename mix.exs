@@ -63,7 +63,11 @@ defmodule Linkhut.MixProject do
       {:phoenix, "~> 1.7"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
-      {:phoenix_html_sanitizer, "~> 1.1.1"},
+      {
+        :phoenix_html_sanitizer,
+        # pending https://github.com/elixirstatus/phoenix_html_sanitizer/pull/7
+        git: "https://github.com/idyll/phoenix_html_sanitizer", branch: "elixir-1.15"
+      },
       {:phoenix_live_dashboard, "~> 0.7"},
       {:phoenix_live_reload, "~> 1.3"},
       {:phoenix_live_view, "~> 0.18"},
