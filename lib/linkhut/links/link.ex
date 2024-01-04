@@ -14,7 +14,6 @@ defmodule Linkhut.Links.Link do
     field :url, :string, primary_key: true
     field :user_id, :id, primary_key: true
     belongs_to :user, User, define_field: false
-    field :url_id, :id
     field :title, :string
     field :notes, :string, default: ""
     field :notes_html, :string, default: ""
