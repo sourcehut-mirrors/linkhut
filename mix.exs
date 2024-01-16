@@ -5,7 +5,7 @@ defmodule Linkhut.MixProject do
     [
       app: :linkhut,
       version: "0.1.0",
-      elixir: "~> 1.14",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [] ++ Mix.compilers(),
       dialyzer: [plt_add_deps: :transitive],
@@ -55,7 +55,7 @@ defmodule Linkhut.MixProject do
       {:earmark, "~> 1.4"},
       {:ecto_sql, "~> 3.9"},
       {:ecto_psql_extras, "~> 0.7"},
-      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:ex_machina, "~> 2.7", only: :test},
       {:gettext, "~> 0.20"},
       {:gen_smtp, "~> 1.2"},
