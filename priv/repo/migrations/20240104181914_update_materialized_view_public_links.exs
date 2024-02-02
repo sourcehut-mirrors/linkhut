@@ -3,7 +3,7 @@ defmodule Linkhut.Repo.Migrations.UpdateMaterializedViewPublicLinks do
 
   def change do
     execute "ALTER MATERIALIZED VIEW public_links RENAME TO public_links_old;",
-            "ALTER MATERIALIZED VIEW IF EXISTS public_links_old TO public_links;"
+            "ALTER MATERIALIZED VIEW IF EXISTS public_links_old RENAME TO public_links;"
 
     execute """
             CREATE MATERIALIZED VIEW public_links AS
