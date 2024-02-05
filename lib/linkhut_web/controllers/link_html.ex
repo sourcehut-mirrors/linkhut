@@ -20,10 +20,12 @@ defmodule LinkhutWeb.LinkHTML do
   def link_tags(assigns) do
     ~H"""
     <div class="tags">
+    <%= if @link.tags != [] do %>
       <h5 class="label"><%= gettext("Tags:") %></h5>
       <ul class="tags" data-label={gettext("tags")}>
         <.link_tag :for={tag <- @link.tags} path={html_path(@scope, tag: tag)} tag={tag} />
       </ul>
+      <% end %>
     </div>
     """
   end
