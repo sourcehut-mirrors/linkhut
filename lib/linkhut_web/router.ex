@@ -81,7 +81,7 @@ defmodule LinkhutWeb.Router do
     post "/actions/add_private_link", ActionsController, :add_private_link
   end
 
-  scope "/_/feed/unread", LinkhutWeb do
+  scope "/_/feed/unread", LinkhutWeb, as: :feed do
     pipe_through [:feed, :token_auth]
 
     get "/", LinkController, :unread, as: :unread
