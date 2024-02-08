@@ -14,7 +14,7 @@ defmodule Linkhut.Pagination do
 
   def page(query, page, per_page: per_page) do
     page = max(page - 1, 0)
-    count = per_page + 1
+    count = per_page
 
     result =
       query
@@ -22,11 +22,12 @@ defmodule Linkhut.Pagination do
       |> offset(^(page * per_page))
       |> Repo.all()
 
-    has_next = length(result) == count
-    has_prev = page > 0
-
     total_count =
       Repo.one(from t in (query |> exclude(:preload) |> subquery()), select: count("*"))
+
+    num_pages = ceil(total_count / per_page)
+    has_next = num_pages > page
+    has_prev = page > 0
 
     %Page{
       has_next: has_next,
@@ -37,7 +38,8 @@ defmodule Linkhut.Pagination do
       first: page * per_page + 1,
       last: Enum.min([(page + 1) * per_page, total_count]),
       count: total_count,
-      entries: Enum.slice(result, 0, count - 1)
+      entries: result,
+      num_pages: num_pages
     }
   end
 end

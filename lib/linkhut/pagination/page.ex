@@ -11,6 +11,7 @@ defmodule Linkhut.Pagination.Page do
   * `first` - number of the first element in this page
   * `last` - number of the last element in this page
   * `count` - total number of elements
+  * `num_pages` - number of pages
   """
 
   @type t(data_type) :: %__MODULE__{
@@ -22,7 +23,8 @@ defmodule Linkhut.Pagination.Page do
           page: integer(),
           first: integer(),
           last: integer(),
-          count: integer()
+          count: integer(),
+          num_pages: integer()
         }
 
   defstruct [
@@ -34,6 +36,7 @@ defmodule Linkhut.Pagination.Page do
     :page,
     :first,
     :last,
-    :count
+    :count,
+    :num_pages
   ]
 end

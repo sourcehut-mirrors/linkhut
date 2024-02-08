@@ -3,21 +3,20 @@
     <span>❮</span>
     <span class="no-css-label"><%= gettext("Previous") %></span>
   </a>
-  <% pages = ceil(@page.count / LinkhutWeb.LinkController.links_per_page()) %>
   <%= cond do %>
-    <% pages <= 1 -> %>
-    <% pages <= 7 -> %>
-      <a :for={p <- 1..pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
+    <% @page.num_pages <= 1 -> %>
+    <% @page.num_pages <= 7 -> %>
+      <a :for={p <- 1..@page.num_pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
         <span><%= p %></span>
       </a>
-    <% @page.page < 3 or @page.page > pages - 2 -> %>
+    <% @page.page < 3 or @page.page > @page.num_pages - 2 -> %>
       <a :for={p <- 1..3} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
         <span><%= p %></span>
       </a>
       <span>
         <span>&hellip;</span>
       </span>
-      <a :for={p <- (pages - 2)..pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
+      <a :for={p <- (@page.num_pages - 2)..@page.num_pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
         <span><%= p %></span>
       </a>
     <% @page.page == 3 -> %>
@@ -27,17 +26,17 @@
       <span>
         <span>&hellip;</span>
       </span>
-      <a :for={p <- (pages - 1)..pages} href={html_path(@scope, page: p)}>
+      <a :for={p <- (@page.num_pages - 1)..@page.num_pages} href={html_path(@scope, page: p)}>
         <span><%= p %></span>
       </a>
-    <% @page.page == pages - 2 -> %>
+    <% @page.page == @page.num_pages - 2 -> %>
       <a :for={p <- 1..2} href={html_path(@scope, page: p)}>
         <span><%= p %></span>
       </a>
       <span>
         <span>&hellip;</span>
       </span>
-      <a :for={p <- (pages - 3)..pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
+      <a :for={p <- (@page.num_pages - 3)..@page.num_pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
         <span><%= p %></span>
       </a>
     <% true -> %>
@@ -53,8 +52,8 @@
       <span>
         <span>&hellip;</span>
       </span>
-      <a href={html_path(@scope, page: pages)}>
-        <span><%= pages %></span>
+      <a href={html_path(@scope, page: @page.num_pages)}>
+        <span><%= @page.num_pages %></span>
       </a>
   <% end %>
   <a :if={@page.has_next} href={html_path(@scope, page: @page.next_page)}>
