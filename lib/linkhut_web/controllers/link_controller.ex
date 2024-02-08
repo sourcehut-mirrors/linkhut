@@ -132,7 +132,7 @@ defmodule LinkhutWeb.LinkController do
       )
 
     conn
-    |> render("index.html",
+    |> render(:index,
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, limit: @related_tags_limit),
       query: query,

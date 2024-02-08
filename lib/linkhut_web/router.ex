@@ -18,10 +18,13 @@ defmodule LinkhutWeb.Router do
 
   pipeline :token_auth do
     plug LinkhutWeb.Plugs.VerifyTokenAuth
+    plug ExOauth2Provider.Plug.EnsureAuthenticated, otp_app: :linkhut, handler: LinkhutWeb.Plugs.AuthErrorHandler
   end
 
   pipeline :feed do
+    plug :fetch_session
     plug :accepts, ["xml"]
+    plug LinkhutWeb.Plugs.VerifyTokenAuth
   end
 
   pipeline :api do
@@ -76,6 +79,12 @@ defmodule LinkhutWeb.Router do
 
     post "/actions/add_public_link", ActionsController, :add_public_link
     post "/actions/add_private_link", ActionsController, :add_private_link
+  end
+
+  scope "/_/feed/unread", LinkhutWeb do
+    pipe_through [:feed, :token_auth]
+
+    get "/", LinkController, :unread, as: :unread
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do

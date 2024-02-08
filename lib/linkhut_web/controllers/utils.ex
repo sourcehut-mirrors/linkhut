@@ -8,9 +8,10 @@ defmodule LinkhutWeb.Controllers.Utils do
             user: String.t(),
             tags: [String.t()],
             url: String.t(),
+            view: atom(),
             params: map()
           }
-    defstruct user: nil, tags: [], url: nil, params: %{}
+    defstruct user: nil, tags: [], url: nil, view: nil, params: %{}
   end
 
   @doc """
@@ -91,6 +92,7 @@ defmodule LinkhutWeb.Controllers.Utils do
     |> feed_route()
   end
 
+  defp html_route(%{view: :unread, params: p}), do: ~p"/_/unread?#{p}"
   defp html_route(%{user: u, url: l, tags: t, params: p}), do: ~p"/~#{u}/-#{l}/#{t}?#{p}"
   defp html_route(%{user: u, url: l, params: p}), do: ~p"/~#{u}/-#{l}?#{p}"
   defp html_route(%{url: l, tags: t, params: p}), do: ~p"/-#{l}/#{t}?#{p}"
@@ -100,6 +102,7 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp html_route(%{tags: t, params: p}), do: ~p"/#{t}?#{p}"
   defp html_route(%{params: p}), do: ~p"/?#{p}"
 
+  defp feed_route(%{view: :unread, params: p}), do: ~p"/_/feed/unread?#{p}"
   defp feed_route(%{user: u, url: l, tags: t, params: p}), do: ~p"/_/feed/~#{u}/-#{l}/#{t}?#{p}"
   defp feed_route(%{user: u, url: l, params: p}), do: ~p"/_/feed/~#{u}/-#{l}?#{p}"
   defp feed_route(%{url: l, tags: t, params: p}), do: ~p"/_/feed/-#{l}/#{t}?#{p}"
@@ -111,10 +114,10 @@ defmodule LinkhutWeb.Controllers.Utils do
 
   @spec scope(Plug.Conn.t()) :: Scope.t()
   def scope(%Plug.Conn{path_info: path, query_params: params}) do
-    path = clean_path(path)
+    {view, path} = clean_path(path)
 
     fields =
-      %{params: Map.drop(params, ["p"])}
+      %{params: Map.drop(params, ["p"]), view: view}
       |> fetch_user(path)
       |> fetch_tags(path)
       |> fetch_url(path)
@@ -167,10 +170,11 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp with_overrides(%{} = scope, []), do: scope
 
   defp clean_path(path) do
-    if List.starts_with?(path, ["_", "feed"]) or List.starts_with?(path, ["_", "unread"]) do
-      Enum.drop(path, 2)
-    else
-      path
+    cond do
+      List.starts_with?(path, ["_", "feed", "unread"]) -> {:unread, Enum.drop(path, 3)}
+      List.starts_with?(path, ["_", "feed"]) -> {nil, Enum.drop(path, 2)}
+      List.starts_with?(path, ["_", "unread"]) -> {:unread, Enum.drop(path, 2)}
+      true -> {nil, path}
     end
   end
 

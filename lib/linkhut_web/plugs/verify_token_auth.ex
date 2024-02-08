@@ -5,15 +5,13 @@ defmodule LinkhutWeb.Plugs.VerifyTokenAuth do
   use Plug.Builder
 
   alias ExOauth2Provider.Plug.{
-    VerifyHeader,
-    EnsureAuthenticated
+    VerifyHeader
   }
 
   import ExOauth2Provider.Plug, only: [current_resource_owner: 1]
 
   plug VerifyHeader, otp_app: :linkhut, realm: "Bearer"
   plug :verify_request_parameter
-  plug EnsureAuthenticated, otp_app: :linkhut, handler: LinkhutWeb.Plugs.AuthErrorHandler
   plug :set_current_user
 
   defp verify_request_parameter(conn, _) do
@@ -41,7 +39,7 @@ defmodule LinkhutWeb.Plugs.VerifyTokenAuth do
     if user = current_resource_owner(conn) do
       assign(conn, :current_user, user)
     else
-      halt(conn)
+      conn
     end
   end
 end
