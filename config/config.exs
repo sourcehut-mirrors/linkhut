@@ -27,6 +27,9 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# Filter out sensitive parameters
+config :phoenix, :filter_parameters, ["auth_token"]
+
 config :mime, :types, %{
   "application/xml" => ["xml"]
 }
