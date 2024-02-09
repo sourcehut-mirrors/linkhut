@@ -1,5 +1,4 @@
 defmodule LinkhutWeb.Controllers.Utils.Tags do
-
   @related_tags_limit 400
 
   def parse_options(params \\ %{}) do

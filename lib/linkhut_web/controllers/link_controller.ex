@@ -11,9 +11,6 @@ defmodule LinkhutWeb.LinkController do
   alias LinkhutWeb.Controllers.Utils
 
   @links_per_page 20
-  @related_tags_limit 400
-
-  def links_per_page, do: @links_per_page
 
   def new(conn, params) do
     conn
@@ -112,10 +109,17 @@ defmodule LinkhutWeb.LinkController do
   defp has_filters?(_), do: false
 
   def show(conn, params) do
+    tag_options = Utils.Tags.parse_options(params)
+
     cond do
-      has_query?(params) -> query(conn, context(params), Map.get(params, "query"), page(params))
-      has_filters?(params) -> filter(conn, context(params), page(params))
-      true -> explore(conn, view(params), page(params))
+      has_query?(params) ->
+        query(conn, context(params), Map.get(params, "query"), page(params), tag_options)
+
+      has_filters?(params) ->
+        filter(conn, context(params), page(params), tag_options)
+
+      true ->
+        explore(conn, view(params), page(params), tag_options)
     end
   end
 
@@ -134,7 +138,7 @@ defmodule LinkhutWeb.LinkController do
     conn
     |> render(:index,
       links: realize_query(links_query, page),
-      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      tags: Tags.for_query(links_query, Utils.Tags.parse_options(params)),
       query: query,
       context: context(params),
       title: :unread,
@@ -167,7 +171,7 @@ defmodule LinkhutWeb.LinkController do
     end
   end
 
-  defp explore(conn, view, page) do
+  defp explore(conn, view, page, tag_options) do
     context =
       case conn.assigns[:current_user] do
         nil -> %Context{}
@@ -183,7 +187,7 @@ defmodule LinkhutWeb.LinkController do
     conn
     |> render(:index,
       links: realize_query(links_query, page),
-      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      tags: Tags.for_query(links_query, tag_options),
       query: "",
       context: context,
       title: view,
@@ -191,7 +195,7 @@ defmodule LinkhutWeb.LinkController do
     )
   end
 
-  defp query(conn, context, query, page) do
+  defp query(conn, context, query, page, tag_options) do
     context =
       case conn.assigns[:current_user] do
         nil -> context
@@ -203,14 +207,14 @@ defmodule LinkhutWeb.LinkController do
     conn
     |> render(:index,
       links: realize_query(links_query, page),
-      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      tags: Tags.for_query(links_query, tag_options),
       query: query,
       context: context,
       scope: Utils.scope(conn)
     )
   end
 
-  defp filter(conn, %Context{} = context, page) do
+  defp filter(conn, %Context{} = context, page, tag_options) do
     context =
       case conn.assigns[:current_user] do
         nil -> context
@@ -222,7 +226,7 @@ defmodule LinkhutWeb.LinkController do
     conn
     |> render(:index,
       links: realize_query(links_query, page),
-      tags: Tags.for_query(links_query, limit: @related_tags_limit),
+      tags: Tags.for_query(links_query, tag_options),
       query: "",
       context: context,
       scope: Utils.scope(conn)

@@ -29,8 +29,9 @@ defmodule Linkhut.Tags do
   def for_query(query, params \\ []) do
     limit = Keyword.get(params, :limit)
 
-    query = query_tags(query |> exclude(:preload) |> exclude(:select) |> exclude(:order_by))
-    |> ordering(params)
+    query =
+      query_tags(query |> exclude(:preload) |> exclude(:select) |> exclude(:order_by))
+      |> ordering(params)
 
     case limit do
       nil -> Repo.all(query)
@@ -69,18 +70,24 @@ defmodule Linkhut.Tags do
         count: count("*")
       },
       group_by: fragment("lower(?)", t.tag)
-      #order_by: [desc: count("*"), asc: fragment("label")]
+
+    # order_by: [desc: count("*"), asc: fragment("label")]
   end
 
   defp ordering(query, opts) do
     sort_column = Keyword.get(opts, :sort_by, :usage)
-    sort_direction = case Keyword.get(opts, :order, :default) do
-      :default -> case sort_column do
-                    :usage -> :desc
-                    :alpha -> :asc
-                  end
-      order -> order
-    end
+
+    sort_direction =
+      case Keyword.get(opts, :order, :default) do
+        :default ->
+          case sort_column do
+            :usage -> :desc
+            :alpha -> :asc
+          end
+
+        order ->
+          order
+      end
 
     column =
       case sort_column do
