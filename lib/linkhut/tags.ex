@@ -26,10 +26,16 @@ defmodule Linkhut.Tags do
   @doc """
   Returns a set of tags associated with a given link query
   """
-  def for_query(query, limit: limit) do
-    query_tags(query |> exclude(:preload) |> exclude(:select) |> exclude(:order_by))
-    |> limit(^limit)
-    |> Repo.all()
+  def for_query(query, params \\ []) do
+    limit = Keyword.get(params, :limit)
+
+    query = query_tags(query |> exclude(:preload) |> exclude(:select) |> exclude(:order_by))
+    |> ordering(params)
+
+    case limit do
+      nil -> Repo.all(query)
+      _ -> query |> limit(^limit) |> Repo.all()
+    end
   end
 
   def for_links(links) when is_list(links) do
@@ -62,7 +68,32 @@ defmodule Linkhut.Tags do
         tag: fragment("mode() within group (order by ?) as label", t.tag),
         count: count("*")
       },
-      group_by: fragment("lower(?)", t.tag),
-      order_by: [desc: count("*"), asc: fragment("label")]
+      group_by: fragment("lower(?)", t.tag)
+      #order_by: [desc: count("*"), asc: fragment("label")]
+  end
+
+  defp ordering(query, opts) do
+    sort_column = Keyword.get(opts, :sort_by, :usage)
+    sort_direction = case Keyword.get(opts, :order, :default) do
+      :default -> case sort_column do
+                    :usage -> :desc
+                    :alpha -> :asc
+                  end
+      order -> order
+    end
+
+    column =
+      case sort_column do
+        :usage -> dynamic([t], field(t, :count))
+        :alpha -> dynamic([_], fragment("label"))
+      end
+
+    filter_order_by =
+      case sort_direction do
+        :asc -> [asc: column]
+        :desc -> [desc: column]
+      end
+
+    query |> order_by(^filter_order_by)
   end
 end

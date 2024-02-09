@@ -536,6 +536,16 @@ div#content, div#controls {
             border-top-width: 1px;
         }
 
+        & h5 div#all-tags {
+            display: inline;
+            font-size: $font-tiny;
+            float: right;
+            & a {
+                color: $muted;
+                vertical-align: sub;
+            }
+        }
+
         & section {
             margin-bottom: $spacing-large;
         }
@@ -618,7 +628,14 @@ div#controls {
     }
 }
 
-div#sort-options {
+div#content > section > div.sort-options {
+    @media #{$large} {
+        justify-content: end;
+        padding-right: 2 * $spacing-large;
+    }
+}
+
+div.sort-options {
     display: flex;
     flex-direction: row;
     justify-content: start;
@@ -627,8 +644,6 @@ div#sort-options {
     margin-top: $spacing-small;
 
     @media #{$large} {
-        justify-content: end;
-        padding-right: 2 * $spacing-large;
         margin-top: 0;
     }
 
@@ -638,9 +653,16 @@ div#sort-options {
         color: $muted;
         margin-left: 0;
         margin-right: $spacing-tiny;
-        @media #{$large} {
-            margin-left: $spacing-tiny;
-            margin-right: 0;
+        &:not(:last-child) {
+            @media #{$large} {
+                margin-right: $spacing-tiny;
+                margin-left: 0;
+            }
+        }
+        &:last-child {
+            @media #{$large} {
+                margin-right: 0;
+            }
         }
 
         & > ul {

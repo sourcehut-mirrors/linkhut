@@ -7,7 +7,8 @@
   <% end %>
   <%= if length(@tags) > 0 do %>
     <section>
-      <h5><%= gettext("Tags") %></h5>
+      <h5><%= gettext("Tags") %> <.tag_show_all scope={@scope} tag_options={Tags.parse_options(@conn.query_params)} tag_count={Enum.count(@tags)} /></h5>
+      <.tag_sort_options scope={@scope} tag_options={Tags.parse_options(@conn.query_params)} />
       <ul class="tag-cloud">
         <.link_tag :for={%{tag: tag, count: count} <- @tags} path={html_path(@scope, tag: tag)} tag={tag} data-count={count} />
       </ul>

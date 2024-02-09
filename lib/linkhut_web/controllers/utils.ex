@@ -3,15 +3,18 @@ defmodule LinkhutWeb.Controllers.Utils do
 
   use LinkhutWeb, :verified_routes
 
+  alias LinkhutWeb.Controllers.Utils.Tags
+
   defmodule Scope do
     @type t() :: %__MODULE__{
             user: String.t(),
             tags: [String.t()],
             url: String.t(),
             view: atom(),
+            tag_options: Keyword.t(),
             params: map()
           }
-    defstruct user: nil, tags: [], url: nil, view: nil, params: %{}
+    defstruct user: nil, tags: [], url: nil, view: nil, tag_options: [], params: %{}
   end
 
   @doc """
@@ -121,8 +124,13 @@ defmodule LinkhutWeb.Controllers.Utils do
       |> fetch_user(path)
       |> fetch_tags(path)
       |> fetch_url(path)
+      |> fetch_tag_options(params)
 
     struct(Scope, fields)
+  end
+
+  defp fetch_tag_options(%{} = scope, params) do
+    Map.put(scope, :tag_options, Tags.parse_options(params))
   end
 
   defp fetch_user(%{} = scope, ["~" <> user | _]), do: Map.put(scope, :user, user)
@@ -165,6 +173,11 @@ defmodule LinkhutWeb.Controllers.Utils do
 
   defp with_overrides(%{} = scope, ordering: ordering) do
     Map.update(scope, :params, %{"order" => ordering}, fn p -> Map.put(p, "order", ordering) end)
+  end
+
+  defp with_overrides(%{} = scope, tag_opts: params) do
+    tag_opts = Tags.to_map(params)
+    Map.update(scope, :params, tag_opts, fn p -> Map.merge(p, tag_opts) end)
   end
 
   defp with_overrides(%{} = scope, []), do: scope

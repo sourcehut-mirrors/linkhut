@@ -11,6 +11,7 @@ defmodule LinkhutWeb.LinkHTML do
   alias LinkhutWeb.Router.Helpers, as: Routes
   alias Linkhut.Search.Context
   alias LinkhutWeb.Controllers.Utils
+  alias LinkhutWeb.Controllers.Utils.Tags
 
   embed_templates "../templates/link/*"
 
@@ -59,5 +60,43 @@ defmodule LinkhutWeb.LinkHTML do
       %{"order" => order_option} -> order_option
       _ -> "desc"
     end
+  end
+
+  attr :scope, Utils.Scope, required: true
+  attr :tag_count, :integer, required: true
+  attr :tag_options, :list, required: true
+
+  def tag_show_all(assigns) do
+    ~H"""
+    <div id="all-tags">
+    <%= if @tag_count == 400 and Keyword.get(@tag_options, :limit) do %>
+      <a href={html_path(@scope, tag_opts: [limit: false])}><%= gettext("Show all tags") %></a>
+    <% end %>
+    </div>
+    """
+  end
+
+  attr :scope, Utils.Scope, required: true
+  attr :tag_options, :list, required: true
+
+  def tag_sort_options(assigns) do
+    ~H"""
+    <div class="sort-options">
+      <div>
+      <%= gettext("Sort by:") %>
+      <ul>
+        <li><a href={html_path(@scope, tag_opts: [sort_by: :alpha])} class={if Keyword.get(@tag_options, :sort_by, :usage) == :alpha, do: "active"}><%= gettext("label") %></a></li>
+        <li><a href={html_path(@scope, tag_opts: [sort_by: :usage])} class={if Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: "active"}><%= gettext("usage") %></a></li>
+      </ul>
+      </div>
+      <div>
+      <%= gettext("Order:") %>
+      <ul>
+        <li><a href={html_path(@scope, tag_opts: [order: :asc])} class={if Keyword.get(@tag_options, :order, (if Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: :desc, else: :asc)) == :asc, do: "active"}><%= gettext("ascending") %></a></li>
+        <li><a href={html_path(@scope, tag_opts: [order: :desc])} class={if Keyword.get(@tag_options, :order, (if Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: :desc, else: :asc)) == :desc, do: "active"}><%= gettext("descending") %></a></li>
+      </ul>
+      </div>
+    </div>
+    """
   end
 end
