@@ -28,7 +28,9 @@ defmodule LinkhutWeb.LinkXML do
     |> Enum.filter(fn {_, v} -> v != nil and v != [] end)
     |> Enum.into(%{})
     |> case do
-      %{view: :unread} -> Gettext.gettext("Your Unread Bookmarks")
+      %{view: :unread} ->
+        Gettext.gettext("Your Unread Bookmarks")
+
       %{user: user, url: url, tags: tags} ->
         Gettext.gettext(
           "Bookmarks for url: %{url} by linkhut user: %{user} tagged with: %{tags}",
