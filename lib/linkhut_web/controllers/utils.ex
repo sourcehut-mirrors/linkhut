@@ -136,7 +136,7 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp fetch_user(%{} = scope, ["~" <> user | _]), do: Map.put(scope, :user, user)
   defp fetch_user(%{} = scope, _), do: scope
 
-  defp fetch_tags(%{} = scope, path), do: Map.put(scope, :tags, tags_from_path(path))
+  defp fetch_tags(%{} = scope, path), do: Map.put(scope, :tags, tags_from_path(path) |> Enum.map(&URI.decode_www_form/1))
 
   defp tags_from_path(["~" <> _ | path]), do: tags_from_path(path)
   defp tags_from_path(["-" <> _ | path]), do: tags_from_path(path)
