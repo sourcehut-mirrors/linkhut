@@ -95,6 +95,7 @@ defmodule LinkhutWeb.Controllers.Utils do
     |> feed_route()
   end
 
+  defp html_route(%{view: :unread, tags: t, params: p}), do: ~p"/_/unread/#{t}?#{p}"
   defp html_route(%{view: :unread, params: p}), do: ~p"/_/unread?#{p}"
   defp html_route(%{user: u, url: l, tags: t, params: p}), do: ~p"/~#{u}/-#{l}/#{t}?#{p}"
   defp html_route(%{user: u, url: l, params: p}), do: ~p"/~#{u}/-#{l}?#{p}"
@@ -105,6 +106,7 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp html_route(%{tags: t, params: p}), do: ~p"/#{t}?#{p}"
   defp html_route(%{params: p}), do: ~p"/?#{p}"
 
+  defp feed_route(%{view: :unread, tags: t, params: p}), do: ~p"/_/feed/unread/#{t}?#{p}"
   defp feed_route(%{view: :unread, params: p}), do: ~p"/_/feed/unread?#{p}"
   defp feed_route(%{user: u, url: l, tags: t, params: p}), do: ~p"/_/feed/~#{u}/-#{l}/#{t}?#{p}"
   defp feed_route(%{user: u, url: l, params: p}), do: ~p"/_/feed/~#{u}/-#{l}?#{p}"
@@ -136,7 +138,8 @@ defmodule LinkhutWeb.Controllers.Utils do
   defp fetch_user(%{} = scope, ["~" <> user | _]), do: Map.put(scope, :user, user)
   defp fetch_user(%{} = scope, _), do: scope
 
-  defp fetch_tags(%{} = scope, path), do: Map.put(scope, :tags, tags_from_path(path) |> Enum.map(&URI.decode_www_form/1))
+  defp fetch_tags(%{} = scope, path),
+    do: Map.put(scope, :tags, tags_from_path(path) |> Enum.map(&URI.decode_www_form/1))
 
   defp tags_from_path(["~" <> _ | path]), do: tags_from_path(path)
   defp tags_from_path(["-" <> _ | path]), do: tags_from_path(path)

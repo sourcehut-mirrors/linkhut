@@ -18,7 +18,10 @@ defmodule LinkhutWeb.Router do
 
   pipeline :token_auth do
     plug LinkhutWeb.Plugs.VerifyTokenAuth
-    plug ExOauth2Provider.Plug.EnsureAuthenticated, otp_app: :linkhut, handler: LinkhutWeb.Plugs.AuthErrorHandler
+
+    plug ExOauth2Provider.Plug.EnsureAuthenticated,
+      otp_app: :linkhut,
+      handler: LinkhutWeb.Plugs.AuthErrorHandler
   end
 
   pipeline :feed do
@@ -85,6 +88,7 @@ defmodule LinkhutWeb.Router do
     pipe_through [:feed, :token_auth]
 
     get "/", LinkController, :unread, as: :unread
+    get "/*tags", LinkController, :unread, as: :unread
   end
 
   scope "/_/feed", LinkhutWeb, as: :feed do
@@ -186,6 +190,7 @@ defmodule LinkhutWeb.Router do
   scope "/_/unread", LinkhutWeb do
     pipe_through [:browser, :ensure_auth]
     get "/", LinkController, :unread, as: :unread
+    get "/*tags", LinkController, :unread, as: :unread
   end
 
   scope "/", LinkhutWeb do
