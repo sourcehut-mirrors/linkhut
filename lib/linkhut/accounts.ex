@@ -265,14 +265,6 @@ defmodule Linkhut.Accounts do
       when not is_nil(token),
       do: true
 
-  def current_email_unconfirmed?(%{
-        credential: %{
-          email_confirmed_at: confirmation_time
-        }
-      })
-      when is_nil(confirmation_time),
-      do: true
-
   def current_email_unconfirmed?(_user),
     do: false
 
