@@ -138,7 +138,7 @@ defmodule Linkhut.Accounts.Credential do
     end
   end
 
-  defp put_email_confirmation_token(changeset) do
+  def put_email_confirmation_token(changeset) do
     changeset
     |> Changeset.put_change(
       :email_confirmation_token,
