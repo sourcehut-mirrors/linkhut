@@ -32,7 +32,7 @@ defmodule Linkhut.MixProject do
   def application do
     [
       mod: {Linkhut.Application, []},
-      extra_applications: [:logger, :runtime_tools, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :phoenix_html]
     ]
   end
 
@@ -68,9 +68,9 @@ defmodule Linkhut.MixProject do
         # pending https://github.com/elixirstatus/phoenix_html_sanitizer/pull/7
         git: "https://github.com/idyll/phoenix_html_sanitizer", branch: "elixir-1.15"
       },
-      {:phoenix_live_dashboard, "~> 0.7"},
-      {:phoenix_live_reload, "~> 1.3"},
-      {:phoenix_live_view, "~> 0.18"},
+      {:phoenix_live_dashboard, "~> 0.8"},
+      {:phoenix_live_reload, "~> 1.4"},
+      {:phoenix_live_view, "~> 0.19"},
       {
         :phoenix_oauth2_provider,
         # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96

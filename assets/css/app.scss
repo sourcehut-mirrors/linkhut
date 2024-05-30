@@ -253,6 +253,17 @@ fieldset {
             padding: 0;
         }
     }
+
+    & div.inline-info {
+        font-size: $font-tiny;
+        color: $muted;
+        margin-bottom: $spacing-small;
+        margin-top: -$spacing-tiny;
+
+        & > span {
+            color: $near-black;
+        }
+    }
 }
 
 form:not([itemprop="signout"]) {
@@ -1148,6 +1159,13 @@ section.settings {
         border-bottom: 1px solid;
         border-bottom-color: $background;
         padding-bottom: $spacing-tiny;
+    }
+
+    &.warning {
+        background-color: $washed-red;
+        border-color: $light-red;
+        border-style: solid;
+        border-width: 1px;
     }
 
     & dl {

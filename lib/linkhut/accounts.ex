@@ -3,10 +3,12 @@ defmodule Linkhut.Accounts do
   The Accounts context.
   """
 
+  import Ecto.Query
+
   import Argon2, only: [verify_pass: 2, no_user_verify: 1]
   alias Linkhut.Repo
 
-  alias Linkhut.Accounts.{Credential, User}
+  alias Linkhut.Accounts.{Credential, EmailToken, User, UserNotifier}
 
   @typedoc """
   A username.
@@ -229,5 +231,105 @@ defmodule Linkhut.Accounts do
       true -> {:ok, user}
       false -> {:error, :unauthorized}
     end
+  end
+
+  @doc """
+  Finds a user by the `email_confirmation_token` column.
+  """
+  @spec get_by_confirmation_token(binary()) :: Context.user() | nil
+  def get_by_confirmation_token(token) do
+    User
+    |> join(:left, [u], c in Credential, on: u.id == c.user_id)
+    |> where([_, c], c.email_confirmation_token == ^token)
+    |> Repo.one()
+    |> Repo.preload(:credential)
+  end
+
+  @doc """
+  Checks if the users current e-mail is unconfirmed.
+  """
+  @spec current_email_unconfirmed?(Context.user()) :: boolean()
+  def current_email_unconfirmed?(%{credential: %Ecto.Association.NotLoaded{}} = user) do
+    user
+    |> Repo.preload(:credential)
+    |> current_email_unconfirmed?()
+  end
+
+  def current_email_unconfirmed?(%{
+        credential: %{
+          unconfirmed_email: nil,
+          email_confirmation_token: token,
+          email_confirmed_at: nil
+        }
+      })
+      when not is_nil(token),
+      do: true
+
+  def current_email_unconfirmed?(_user),
+    do: false
+
+  @doc """
+  Checks if the user has a pending e-mail change.
+  """
+  @spec pending_email_change?(Context.user()) :: boolean()
+  def pending_email_change?(%{credential: %Ecto.Association.NotLoaded{}} = user) do
+    user
+    |> Repo.preload(:credential)
+    |> pending_email_change?()
+  end
+
+  def pending_email_change?(%{
+        credential: %{unconfirmed_email: email, email_confirmation_token: token}
+      })
+      when not is_nil(email) and not is_nil(token),
+      do: true
+
+  def pending_email_change?(_user), do: false
+
+  def deliver_email_confirmation_instructions(%User{} = user, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    user = Repo.preload(user, :credential)
+
+    if current_email_unconfirmed?(user) != nil do
+      token = EmailToken.new(user.credential, "confirm")
+      UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(token))
+    else
+      {:error, :already_confirmed}
+    end
+  end
+
+  def deliver_update_email_instructions(%User{} = user, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    user = Repo.preload(user, :credential)
+
+    if pending_email_change?(user) != nil do
+      token = EmailToken.new(user.credential, "confirm")
+      UserNotifier.deliver_update_email_instructions(user, confirmation_url_fun.(token))
+    else
+      {:error, :already_confirmed}
+    end
+  end
+
+  def confirm_email(token) do
+    case EmailToken.verify(token, "confirm") do
+      {:ok, token} -> validate_email_confirmation(token)
+      _ -> :error
+    end
+  end
+
+  defp validate_email_confirmation(token) do
+    case get_by_confirmation_token(token) do
+      %User{credential: _credential} = user ->
+        mark_as_verified(user)
+
+      _ ->
+        :error
+    end
+  end
+
+  defp mark_as_verified(%User{credential: _credential} = user) do
+    user
+    |> User.confirm_user(%{})
+    |> Repo.update()
   end
 end

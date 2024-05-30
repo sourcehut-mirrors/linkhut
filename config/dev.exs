@@ -77,6 +77,9 @@ config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
 config :linkhut, Linkhut,
+  mail: [
+    sender: {"linkhut", "no-reply@example.com"}
+  ],
   prometheus: [
     username: "prometheus",
     password: "metrics"

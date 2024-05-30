@@ -13,6 +13,7 @@ defmodule Linkhut.Accounts.User do
   schema "users" do
     field :username, :string
     field :bio, :string
+    field :unlisted, :boolean, default: false
 
     field :type, Ecto.Enum,
       values: [:unconfirmed, :active_free, :active_paying],
@@ -47,5 +48,15 @@ defmodule Linkhut.Accounts.User do
     user
     |> cast(attrs, [:roles])
     |> validate_subset(:roles, ~w(admin)a)
+  end
+
+  @spec confirm_user(Ecto.Schema.t() | Ecto.Changeset.t(), map()) :: Ecto.Changeset.t()
+  def confirm_user(%{credential: credential} = user, attrs) do
+    user
+    |> cast(attrs, [])
+    |> put_assoc(:credential, Credential.confirm_email_changeset(credential, attrs),
+      on_replace: :update
+    )
+    |> put_change(:type, :active_free)
   end
 end

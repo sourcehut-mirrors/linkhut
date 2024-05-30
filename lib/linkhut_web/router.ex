@@ -116,6 +116,8 @@ defmodule LinkhutWeb.Router do
     get "/misc", MiscController, :show
     get "/profile", ProfileController, :show
     put "/profile", ProfileController, :update
+
+    post "/confirm", EmailConfirmationController, :create
   end
 
   scope "/_", LinkhutWeb do
@@ -155,6 +157,12 @@ defmodule LinkhutWeb.Router do
     get "/authorize", OauthController, :new_authorization
     post "/authorize", OauthController, :create_authorization
     delete "/authorize", OauthController, :delete_authorization
+  end
+
+  scope "/_/", LinkhutWeb.Settings do
+    pipe_through [:browser]
+
+    get "/confirm", EmailConfirmationController, :confirm
   end
 
   scope "/_/admin" do

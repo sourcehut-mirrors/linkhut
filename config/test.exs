@@ -19,6 +19,9 @@ config :linkhut, LinkhutWeb.Endpoint,
 config :logger, level: :warn
 
 config :linkhut, Linkhut,
+  mail: [
+    sender: {"linkhut", "no-reply@example.com"}
+  ],
   # IFTTT config
   ifttt: [
     user_id: 0,

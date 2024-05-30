@@ -57,4 +57,15 @@ defmodule Linkhut.Config do
     ifttt()
     |> Keyword.get(key, value)
   end
+
+  @spec mail() :: keyword()
+  def mail() do
+    get([Linkhut, :mail])
+  end
+
+  @spec mail(atom(), any()) :: any()
+  def mail(key, value \\ nil) do
+    mail()
+    |> Keyword.get(key, value)
+  end
 end

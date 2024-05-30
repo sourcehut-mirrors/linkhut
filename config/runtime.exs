@@ -84,6 +84,9 @@ if config_env() == :prod do
     no_mx_lookups: false
 
   config :linkhut, Linkhut,
+    mail: [
+      sender: {System.get_env("EMAIL_FROM_NAME"), System.get_env("EMAIL_FROM_ADDRESS")}
+    ],
     prometheus: [
       username: System.get_env("PROMETHEUS_USERNAME"),
       password: System.get_env("PROMETHEUS_PASSWORD")
