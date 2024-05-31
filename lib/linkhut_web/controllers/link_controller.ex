@@ -272,7 +272,9 @@ defmodule LinkhutWeb.LinkController do
   end
 
   defp context(%{"tags" => tags}),
-    do: %Context{tagged_with: Enum.uniq_by(tags, &String.downcase/1) |> Enum.map(&URI.decode_www_form/1)}
+    do: %Context{
+      tagged_with: Enum.uniq_by(tags, &String.downcase/1) |> Enum.map(&URI.decode_www_form/1)
+    }
 
   defp context(%{"username" => username}), do: %Context{from: Accounts.get_user!(username)}
   defp context(%{"url" => url}), do: %Context{url: URI.decode(url)}

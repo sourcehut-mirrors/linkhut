@@ -19,7 +19,7 @@ defmodule Linkhut.Application do
       # Start genserver to store transient metrics
       {LinkhutWeb.MetricsStorage, LinkhutWeb.Telemetry.metrics()},
       # Start the endpoint when the application starts
-      LinkhutWeb.Endpoint,
+      LinkhutWeb.Endpoint
       # Starts a worker by calling: Linkhut.Worker.start_link(arg)
       # {Linkhut.Worker, arg},
     ]

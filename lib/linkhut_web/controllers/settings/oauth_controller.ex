@@ -67,7 +67,9 @@ defmodule LinkhutWeb.Settings.OauthController do
   end
 
   def new_application(conn, _) do
-    render(conn, "oauth/application/new.html", changeset: Oauth.change_application(%Application{}))
+    render(conn, "oauth/application/new.html",
+      changeset: Oauth.change_application(%Application{})
+    )
   end
 
   def create_application(conn, %{"application" => application_params}) do
@@ -114,7 +116,10 @@ defmodule LinkhutWeb.Settings.OauthController do
         |> redirect(to: Routes.oauth_path(conn, :show))
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "oauth/application/edit.html", changeset: changeset, application: application)
+        render(conn, "oauth/application/edit.html",
+          changeset: changeset,
+          application: application
+        )
     end
   end
 

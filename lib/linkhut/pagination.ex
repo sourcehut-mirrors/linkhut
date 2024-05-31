@@ -26,7 +26,7 @@ defmodule Linkhut.Pagination do
       Repo.one(from t in (query |> exclude(:preload) |> subquery()), select: count("*"))
 
     num_pages = ceil(total_count / per_page)
-    has_next = (num_pages - 1) > page
+    has_next = num_pages - 1 > page
     has_prev = page > 0
 
     %Page{
