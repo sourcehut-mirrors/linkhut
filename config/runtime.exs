@@ -68,13 +68,14 @@ if config_env() == :prod do
 
   config :linkhut, Linkhut.Mailer,
     adapter: Swoosh.Adapters.SMTP,
-    relay: {:system, "SMTP_HOST"},
-    username: {:system, "SMTP_USERNAME"},
-    password: {:system, "SMTP_PASSWORD"},
+    relay: System.get_env("SMTP_HOST"),
+    username: System.get_env("SMTP_USERNAME"),
+    password: System.get_env("SMTP_PASSWORD"),
     ssl: false,
     tls: :always,
+    tls_options: [verify: :verify_none],
     auth: :always,
-    port: {:system, "SMTP_PORT"},
+    port: System.get_env("SMTP_PORT"),
     dkim: [
       s: dkim_selector,
       d: dkim_domain,

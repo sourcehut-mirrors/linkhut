@@ -81,7 +81,7 @@ defmodule Linkhut.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:prom_ex, "~> 1.8.0"},
-      {:swoosh, "~> 1.9"},
+      {:swoosh, "~> 1.16"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:timex, "~> 3.7"},
