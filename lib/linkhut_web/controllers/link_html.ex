@@ -37,7 +37,7 @@ defmodule LinkhutWeb.LinkHTML do
 
   def link_tag(assigns) do
     ~H"""
-    <li><a href={@path} {@rest}><%= @tag %></a></li>
+    <li><a rel="tag" href={@path} {@rest}><%= @tag %></a></li>
     """
   end
 

@@ -1,7 +1,7 @@
 <div class="bookmark-card">
   <div class="bookmark">
     <div data-posted-on={@link.inserted_at} data-saves={@link.saves} data-relevance={@link.score} class="title">
-      <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
+      <h4><a rel="nofollow" class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
       <%= if @link.is_private do %>
         <span class="no-css-label"><%= gettext("Private") %></span>
       <% end %>
