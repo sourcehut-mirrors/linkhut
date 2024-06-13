@@ -310,17 +310,17 @@ defmodule Linkhut.Accounts do
     end
   end
 
-  def confirm_email(token) do
+  def confirm_email(user, token) do
     case EmailToken.verify(token, "confirm") do
-      {:ok, token} -> validate_email_confirmation(token)
+      {:ok, token} -> validate_email_confirmation(user, token)
       _ -> :error
     end
   end
 
-  defp validate_email_confirmation(token) do
+  defp validate_email_confirmation(user, token) do
     case get_by_confirmation_token(token) do
-      %User{credential: _credential} = user ->
-        mark_as_verified(user)
+      %User{id: id, credential: _credential} = unverified_user when id == user.id ->
+        mark_as_verified(unverified_user)
 
       _ ->
         :error

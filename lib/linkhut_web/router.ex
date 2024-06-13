@@ -160,7 +160,7 @@ defmodule LinkhutWeb.Router do
   end
 
   scope "/_/", LinkhutWeb.Settings do
-    pipe_through [:browser]
+    pipe_through [:browser, :ensure_auth]
 
     get "/confirm", EmailConfirmationController, :confirm
   end
