@@ -30,4 +30,14 @@
       <%= submit("Save") %>
     <% end %>
   </section>
+  <section class="settings">
+    <h4>Delete Account</h4>
+    <%= form_for @changeset, Routes.profile_path(@conn, :delete), fn f -> %>
+      <fieldset>
+        <%= input(f, :confirmed, type: :checkbox, label: "I acknowledge that I want to permanently delete my account and all data associated with it") %>
+        <%= error_tag(f, :applications) %>
+      </fieldset>
+      <%= submit("Delete") %>
+    <% end %>
+  </section>
 </div>

@@ -2,6 +2,8 @@ defmodule LinkhutWeb.SettingsView do
   use LinkhutWeb, :view
 
   use Phoenix.HTML
+  import LinkhutWeb.FormHelpers
+  import LinkhutWeb.ErrorHelpers
 
   @doc """
   Generates a bookmarklet link to add the current page to this linkhut instance

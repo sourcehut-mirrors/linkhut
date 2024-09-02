@@ -116,6 +116,7 @@ defmodule LinkhutWeb.Router do
     get "/misc", MiscController, :show
     get "/profile", ProfileController, :show
     put "/profile", ProfileController, :update
+    put "/profile/delete", ProfileController, :delete
 
     post "/confirm", EmailConfirmationController, :create
   end

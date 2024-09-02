@@ -122,16 +122,27 @@ defmodule Linkhut.Accounts do
 
   ## Examples
 
-      iex> delete_user(user)
+      iex> delete_user(user, %{"confirmed" => "true"})
       {:ok, %User{}}
 
-      iex> delete_user(user)
+      iex> delete_user(user, %{})
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_user(User.t()) :: {:ok, User.t()} | {:error, changeset(User.t())}
-  def delete_user(%User{} = user) do
-    Repo.delete(user)
+  @spec delete_user(changeset(User.t()), %{optional(any) => any}) ::
+          {:ok, User.t()} | {:error, changeset(User.t())}
+  def delete_user(%User{} = user, attrs) do
+    user
+    |> Repo.preload(:credential)
+    |> User.changeset(attrs)
+    |> Ecto.Changeset.validate_acceptance(:confirmed,
+      message: "Please confirm you want to delete your account"
+    )
+    |> Ecto.Changeset.no_assoc_constraint(:applications,
+      message:
+        "You still own OAuth applications, you must delete those before deleting your account"
+    )
+    |> Repo.delete()
   end
 
   @doc """

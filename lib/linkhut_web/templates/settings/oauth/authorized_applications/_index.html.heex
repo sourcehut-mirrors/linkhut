@@ -17,7 +17,7 @@
           <td><%= prettify(List.first(application.access_tokens).inserted_at) %></td>
           <td><%= prettify(NaiveDateTime.add(List.last(application.access_tokens).inserted_at, List.last(application.access_tokens).expires_in, :second)) %></td>
           <td>
-            <%= form_for %{uid: application.uid}, Routes.oauth_path(@conn, :revoke_access, application.uid), [class: "inline"], fn f -> %>
+            <%= form_for %{"uid" => application.uid}, Routes.oauth_path(@conn, :revoke_access, application.uid), [class: "inline"], fn f -> %>
               <%= hidden_input(f, :uid) %>
               <%= submit("Revoke") %>
             <% end %>

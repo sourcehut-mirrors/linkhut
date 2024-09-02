@@ -22,7 +22,19 @@ defmodule Linkhut.Accounts.User do
     field :roles, {:array, Ecto.Enum}, values: [:admin], default: []
     has_one :credential, Credential
 
-    has_many :links, Link, references: :id
+    has_many :links, Link, references: :id, on_delete: :delete_all
+
+    has_many :applications, Linkhut.Oauth.Application, foreign_key: :owner_id, references: :id
+
+    has_many :access_grants, Linkhut.Oauth.AccessGrant,
+      foreign_key: :resource_owner_id,
+      references: :id,
+      on_delete: :delete_all
+
+    has_many :access_tokens, Linkhut.Oauth.AccessToken,
+      foreign_key: :resource_owner_id,
+      references: :id,
+      on_delete: :delete_all
 
     timestamps(type: :utc_datetime)
   end

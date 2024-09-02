@@ -21,6 +21,28 @@ defmodule LinkhutWeb.Settings.ProfileController do
     |> update(conn.assigns[:current_user], user_params)
   end
 
+  require Logger
+
+  def delete(conn, %{"user" => user_params}) do
+    user = conn.assigns[:current_user]
+
+    case Accounts.delete_user(user, user_params) do
+      {:ok, user} ->
+        conn
+        |> put_flash(:info, "Deleted account for #{user.username}")
+        |> redirect(to: "/")
+        |> configure_session(drop: true)
+
+      {:error, changeset} ->
+        conn
+        |> render("profile.html",
+          user: user,
+          changeset: changeset,
+          current_email_unconfirmed?: Accounts.current_email_unconfirmed?(user)
+        )
+    end
+  end
+
   defp update(conn, user, params) when not is_nil(user) do
     case Accounts.update_user(user, params) do
       {:ok, user} ->
