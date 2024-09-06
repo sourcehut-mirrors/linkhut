@@ -25,8 +25,9 @@ defmodule LinkhutWeb do
         namespace: LinkhutWeb,
         formats: [:html, :json, :xml]
 
+      use Gettext, backend: LinkhutWeb.Gettext
+
       import Plug.Conn
-      import LinkhutWeb.Gettext
       alias LinkhutWeb.Router.Helpers, as: Routes
 
       unquote(verified_routes())
@@ -51,7 +52,7 @@ defmodule LinkhutWeb do
       import Phoenix.HTML
       # Core UI components and translation
       # import LinkhutWeb.CoreComponents
-      import LinkhutWeb.Gettext
+      use Gettext, backend: LinkhutWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
@@ -64,8 +65,7 @@ defmodule LinkhutWeb do
   def xml do
     quote do
       use Phoenix.Component
-
-      import LinkhutWeb.Gettext
+      use Gettext, backend: LinkhutWeb.Gettext
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
@@ -85,9 +85,9 @@ defmodule LinkhutWeb do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
       use PhoenixHtmlSanitizer, :basic_html
+      use Gettext, backend: LinkhutWeb.Gettext
 
       import LinkhutWeb.FormHelpers
-      import LinkhutWeb.Gettext
       import LinkhutWeb.Helpers
       alias LinkhutWeb.Router.Helpers, as: Routes
 

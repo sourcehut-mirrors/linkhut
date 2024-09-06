@@ -1,7 +1,7 @@
 defmodule LinkhutWeb.Helpers do
   @moduledoc false
 
-  require LinkhutWeb.Gettext
+  use Gettext, backend: LinkhutWeb.Gettext
   alias Timex
 
   @doc """
@@ -17,10 +17,10 @@ defmodule LinkhutWeb.Helpers do
         Timex.format!(time1, "{relative}", :relative)
 
       diff < 1 ->
-        LinkhutWeb.Gettext.gettext("Today")
+        gettext("Today")
 
       diff < 2 ->
-        LinkhutWeb.Gettext.gettext("Yesterday")
+        gettext("Yesterday")
 
       diff < 10 ->
         Timex.format!(time1, "{relative}", :relative)

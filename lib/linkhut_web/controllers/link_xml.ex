@@ -4,7 +4,6 @@ defmodule LinkhutWeb.LinkXML do
   import LinkhutWeb.Controllers.Utils
 
   alias Atomex.{Entry, Feed}
-  alias LinkhutWeb.Gettext
 
   @doc """
   Renders a feed of links
@@ -29,10 +28,10 @@ defmodule LinkhutWeb.LinkXML do
     |> Enum.into(%{})
     |> case do
       %{view: :unread} ->
-        Gettext.gettext("Your Unread Bookmarks")
+        gettext("Your Unread Bookmarks")
 
       %{user: user, url: url, tags: tags} ->
-        Gettext.gettext(
+        gettext(
           "Bookmarks for url: %{url} by linkhut user: %{user} tagged with: %{tags}",
           url: url,
           tags: Enum.join(tags, ","),
@@ -40,37 +39,37 @@ defmodule LinkhutWeb.LinkXML do
         )
 
       %{user: user, url: url} ->
-        Gettext.gettext("Bookmarks for url: %{url} by linkhut user: %{user}",
+        gettext("Bookmarks for url: %{url} by linkhut user: %{user}",
           url: url,
           user: user
         )
 
       %{url: url, tags: tags} ->
-        Gettext.gettext("Bookmarks for url: %{url} tagged with: %{tags}",
+        gettext("Bookmarks for url: %{url} tagged with: %{tags}",
           url: url,
           tags: Enum.join(tags, ",")
         )
 
       %{url: url} ->
-        Gettext.gettext("Bookmarks for url: %{url}", url: url)
+        gettext("Bookmarks for url: %{url}", url: url)
 
       %{user: user, tags: tags} ->
-        Gettext.gettext("Bookmarks by linkhut user: %{user} tagged with: %{tags}",
+        gettext("Bookmarks by linkhut user: %{user} tagged with: %{tags}",
           tags: Enum.join(tags, ","),
           user: user
         )
 
       %{user: user} ->
-        Gettext.gettext("Bookmarks by linkhut user: %{user}", user: user)
+        gettext("Bookmarks by linkhut user: %{user}", user: user)
 
       %{tags: tags} ->
-        Gettext.gettext("Bookmarks tagged with: %{tags}", tags: Enum.join(tags, ","))
+        gettext("Bookmarks tagged with: %{tags}", tags: Enum.join(tags, ","))
 
       %{params: %{"v" => "popular"}} ->
-        Gettext.gettext("Popular bookmarks")
+        gettext("Popular bookmarks")
 
       _ ->
-        Gettext.gettext("Recent bookmarks")
+        gettext("Recent bookmarks")
     end
   end
 
