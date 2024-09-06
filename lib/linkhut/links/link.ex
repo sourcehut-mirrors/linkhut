@@ -43,7 +43,7 @@ defmodule Linkhut.Links.Link do
     |> validate_length(:title, max: 255)
     |> validate_length(:notes, max: 1024)
     |> validate_url(:url)
-    |> unique_constraint(:url, name: :links_pkey)
+    |> unique_constraint(:url, name: :links_url_user_id_index, message: "has already been saved")
     |> update_unread_status()
     |> update_tags()
     |> dedupe_tags()
