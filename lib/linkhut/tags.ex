@@ -70,8 +70,6 @@ defmodule Linkhut.Tags do
         count: count("*")
       },
       group_by: fragment("lower(?)", t.tag)
-
-    # order_by: [desc: count("*"), asc: fragment("label")]
   end
 
   defp ordering(query, opts) do

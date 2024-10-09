@@ -8,11 +8,11 @@ defmodule Linkhut.Links.PublicLink do
 
   @primary_key false
   schema "public_links" do
-    field :url, :string, primary_key: true
-    field :user_id, :id, primary_key: true
+    field :id, :integer, primary_key: true
+    field :inserted_at, :utc_datetime
     belongs_to :user, User, define_field: false
     field :saves, :integer
-    field :first, :utc_datetime
-    field :last, :utc_datetime
+    field :rank, :float
+    field :user_daily_entry, :integer
   end
 end

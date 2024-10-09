@@ -228,9 +228,10 @@ defmodule Linkhut.Links do
     datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
-    |> where([l, s, _], l.inserted_at == s.last)
     |> where(is_private: false)
     |> where(is_unread: false)
+    |> where([_, s], s.user_daily_entry <= 2)
+    |> where([_, s], s.rank == 0.0)
     |> where([l], l.inserted_at >= ^datetime)
     |> ordering(params)
   end
@@ -240,7 +241,7 @@ defmodule Linkhut.Links do
   """
   def popular(params, popularity \\ 3) do
     links()
-    |> where([l, s, _], l.inserted_at == s.first)
+    |> where([l, s, _], s.rank == 1.0)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([_, s, _], s.saves >= ^popularity)
@@ -270,8 +271,8 @@ defmodule Linkhut.Links do
 
   def links(params \\ []) do
     from(l in Link,
-      left_join: s in PublicLink,
-      on: [url: l.url, user_id: l.user_id],
+      join: s in PublicLink,
+      on: [id: l.id],
       select_merge: ^select_fields(params),
       preload: [:user, :variants, :savers]
     )

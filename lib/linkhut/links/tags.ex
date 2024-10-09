@@ -53,6 +53,7 @@ defmodule Linkhut.Links.Tags do
   end
 
   defp valid?(tag) do
-    String.valid?(tag) && String.length(tag) <= 128 && not String.starts_with?(tag, "~")
+    String.valid?(tag) && String.length(tag) <= 128 && not String.starts_with?(tag, "~") &&
+      not String.starts_with?(tag, "-")
   end
 end
