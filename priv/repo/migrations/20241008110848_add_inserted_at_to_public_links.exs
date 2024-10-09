@@ -1,4 +1,4 @@
-defmodule Linkhut.Repo.Migrations.Eifjcbfrhgfnurctrtbiftnfliinivrdtvbrthfejdib do
+defmodule Linkhut.Repo.Migrations.AddInsertedAtToPublicLinks do
   use Ecto.Migration
 
   def up do
