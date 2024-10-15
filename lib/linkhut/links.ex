@@ -271,7 +271,7 @@ defmodule Linkhut.Links do
 
   def links(params \\ []) do
     from(l in Link,
-      join: s in PublicLink,
+      left_join: s in PublicLink,
       on: [id: l.id],
       select_merge: ^select_fields(params),
       preload: [:user, :variants, :savers]
