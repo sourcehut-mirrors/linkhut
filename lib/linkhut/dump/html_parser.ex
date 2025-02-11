@@ -89,15 +89,30 @@ defmodule Linkhut.Dump.HTMLParser do
        tags: Map.get(params, "tags", []),
        is_private: is_private(params),
        inserted_at:
-         DateTime.from_unix!(
-           Map.get(params, "add_date", Integer.to_string(:os.system_time(:second)))
-           |> String.to_integer()
-         )
+         Map.get(params, "add_date")
+         |> to_timestamp()
      }}
   end
 
   defp to_link(title, _, _) do
     {:error, "No URL found for entry with title: '#{title}'"}
+  end
+
+  defp to_timestamp(value) do
+    formats = [
+      "{s-epoch}",
+      "{ISO:Extended}",
+      "{ISO:Extended:Z}",
+      "{WDshort} {Mshort} {0D} {YYYY} {ISOtime} {Zabbr}{Z} (Coordinated Universal Time)"
+    ]
+
+    Enum.find_value(formats, Timex.now(), fn format ->
+      case Timex.parse(value, format) do
+        {:ok, datetime} -> datetime
+        {:error, _} -> nil
+      end
+    end)
+    |> Timex.to_datetime()
   end
 
   defp to_html(tokens) do
