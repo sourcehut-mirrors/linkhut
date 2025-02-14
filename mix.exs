@@ -60,14 +60,11 @@ defmodule Linkhut.MixProject do
       {:gettext, "~> 0.20"},
       {:gen_smtp, "~> 1.2"},
       {:jason, "~> 1.3"},
+      {:oban, "~> 2.19"},
       {:phoenix, "~> 1.7"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
-      {
-        :phoenix_html_sanitizer,
-        # pending https://github.com/elixirstatus/phoenix_html_sanitizer/pull/7
-        git: "https://github.com/idyll/phoenix_html_sanitizer", branch: "elixir-1.15"
-      },
+      {:phoenix_html_sanitizer, "~> 1.2"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.4"},
       {:phoenix_live_view, "~> 0.19"},

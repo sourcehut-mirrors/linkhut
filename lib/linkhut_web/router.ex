@@ -108,6 +108,7 @@ defmodule LinkhutWeb.Router do
     pipe_through [:browser, :ensure_auth]
 
     get "/import", ImportController, :show
+    get "/import/:task", ImportController, :status
     post "/import", ImportController, :upload
 
     get "/export", ExportController, :show

@@ -5,23 +5,8 @@ defmodule LinkhutWeb.SettingsView do
   import LinkhutWeb.FormHelpers
   import LinkhutWeb.ErrorHelpers
 
-  @doc """
-  Generates a bookmarklet link to add the current page to this linkhut instance
-  """
-  def bookmarklet(conn) do
-    new_link_url = Routes.link_url(conn, :new)
-
-    get_url_js = "encodeURIComponent(document.location)"
-    get_title_js = "encodeURIComponent(document.title)"
-
-    get_notes_js =
-      "(document.querySelector('meta[name=\"description\"]')!=null?document.querySelector('meta[name=\"description\"]').content:%22%22)"
-
-    get_tags_js =
-      "(document.querySelector('meta[name=\"keywords\"]')!=null?document.querySelector('meta[name=\"keywords\"]').content:%22%22)"
-
-    "javascript:window.location=%22#{new_link_url}?url=%22+#{get_url_js}+%22&title=%22+#{get_title_js}+%22&notes=%22+#{get_notes_js}+%22&tags=%22+#{get_tags_js}"
-  end
+  import LinkhutWeb.Settings.ImportHTML
+  import LinkhutWeb.Settings.MiscHTML
 
   def nav_link(conn, text, opts) do
     active? = active_path?(conn, opts)

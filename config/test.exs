@@ -28,3 +28,6 @@ config :linkhut, Linkhut,
     application: "a2ac2720c90e458752257e5acdc5cace7c1667e835fd833df3268f5d5bc3067b",
     service_key: "cccddd"
   ]
+
+# Oban configuration
+config :linkhut, Oban, testing: :manual

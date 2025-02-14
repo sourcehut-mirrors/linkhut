@@ -1074,9 +1074,13 @@ details {
         margin-top: 0;
 
         & > dt {
-            border-top: 1px solid $light-gray;
+            border-top: 1px solid $gray;
 
             @include link-title();
+
+            & > span {
+                font-weight: normal;
+            }
         }
 
         & > dd {

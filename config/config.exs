@@ -67,6 +67,12 @@ config :linkhut, PhoenixOauth2Provider,
 
 config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 
+# Oban configuration
+config :linkhut, Oban,
+  engine: Oban.Engines.Basic,
+  queues: [default: 10],
+  repo: Linkhut.Repo
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
