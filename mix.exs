@@ -66,8 +66,8 @@ defmodule Linkhut.MixProject do
       {:phoenix_html, "~> 3.2"},
       {:phoenix_html_sanitizer, "~> 1.2"},
       {:phoenix_live_dashboard, "~> 0.8"},
-      {:phoenix_live_reload, "~> 1.4"},
-      {:phoenix_live_view, "~> 0.19"},
+      {:phoenix_live_reload, "~> 1.5"},
+      {:phoenix_live_view, "~> 1.0"},
       {
         :phoenix_oauth2_provider,
         # pending https://github.com/danschultzer/ex_oauth2_provider/pull/96
