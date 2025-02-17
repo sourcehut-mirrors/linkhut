@@ -3,6 +3,24 @@ defmodule LinkhutWeb.Settings.MiscHTML do
 
   embed_templates "../templates/settings/*"
 
+  def misc(assigns) do
+    ~H"""
+    <%= LinkhutWeb.SettingsView."_menu.html"(assigns) %>
+    <div>
+      <section class="settings">
+        <h4>Bookmarklet</h4>
+        <p>
+          When you click on this bookmarklet, it will submit the page you're on.
+          To install, drag this button to your browser's toolbar:
+        </p>
+        <div style="text-align: center">
+          <.bookmarklet />
+        </div>
+      </section>
+    </div>
+    """
+  end
+
   def bookmarklet(assigns) do
     ~H"""
     <a class="button" href={bookmarklet()}>post to linkhut</a>

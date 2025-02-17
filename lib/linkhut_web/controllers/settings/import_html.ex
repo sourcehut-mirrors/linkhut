@@ -2,12 +2,30 @@ defmodule LinkhutWeb.Settings.ImportHTML do
   use LinkhutWeb, :html
   use Phoenix.Component
 
-  embed_templates "../templates/settings/*"
+  def import_page(assigns) do
+    ~H"""
+    <%= LinkhutWeb.SettingsView."_menu.html"(assigns) %>
+    <div>
+      <section class="">
+        <p>
+          Import bookmarks in the <a class="doc" href="https://en.wikipedia.org/wiki/Bookmark_(digital)#Storage">Netscape format</a>.
+        </p>
+        <.form :let={f} for={%{}} as={:upload} multipart action={~p"/_/import"}>
+          <fieldset>
+            <.input field={f[:file]} type="file" label="file" />
+          </fieldset>
+          <.button type="submit">Import</.button>
+        </.form>
+      </section>
+    </div>
+    """
+  end
 
   attr :job, Linkhut.Jobs.Import, required: true
 
   def import_job(assigns) do
     ~H"""
+    <%= LinkhutWeb.SettingsView."_menu.html"(assigns) %>
     <div>
       <section class="settings">
         <.summary job={@job} />

@@ -5,9 +5,6 @@ defmodule LinkhutWeb.SettingsView do
   import LinkhutWeb.FormHelpers
   import LinkhutWeb.ErrorHelpers
 
-  import LinkhutWeb.Settings.ImportHTML
-  import LinkhutWeb.Settings.MiscHTML
-
   def nav_link(conn, text, opts) do
     active? = active_path?(conn, opts)
 

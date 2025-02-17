@@ -4,13 +4,11 @@ defmodule LinkhutWeb.Settings.ImportController do
   @moduledoc """
   Controller for importing bookmarks
   """
-  plug :put_view, LinkhutWeb.SettingsView
-
   alias Linkhut.Workers.ImportWorker
   alias Linkhut.Jobs
 
   def show(conn, _) do
-    render(conn, :import)
+    render(conn, :import_page)
   end
 
   def upload(conn, %{

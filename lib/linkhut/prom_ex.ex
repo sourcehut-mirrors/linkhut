@@ -63,7 +63,8 @@ defmodule Linkhut.PromEx do
       Plugins.Application,
       Plugins.Beam,
       {Plugins.Phoenix, router: LinkhutWeb.Router, endpoint: LinkhutWeb.Endpoint},
-      {Plugins.Ecto, otp_app: :linkhut, repos: [Linkhut.Repo]}
+      {Plugins.Ecto, otp_app: :linkhut, repos: [Linkhut.Repo]},
+      Plugins.Oban
 
       # Add your own PromEx metrics plugins
       # Linkhut.Users.PromExPlugin
@@ -85,7 +86,8 @@ defmodule Linkhut.PromEx do
       {:prom_ex, "application.json"},
       {:prom_ex, "beam.json"},
       {:prom_ex, "phoenix.json"},
-      {:prom_ex, "ecto.json"}
+      {:prom_ex, "ecto.json"},
+      {:prom_ex, "oban.json"}
 
       # Add your dashboard definitions here with the format: {:otp_app, "path_in_priv"}
       # {:linkhut, "/grafana_dashboards/user_metrics.json"}

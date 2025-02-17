@@ -53,7 +53,7 @@ defmodule LinkhutWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
-      # import LinkhutWeb.CoreComponents
+      import LinkhutWeb.CoreComponents
       use Gettext, backend: LinkhutWeb.Gettext
 
       # Shortcut for generating JS commands

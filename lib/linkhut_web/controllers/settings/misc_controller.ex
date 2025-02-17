@@ -4,9 +4,8 @@ defmodule LinkhutWeb.Settings.MiscController do
   @moduledoc """
   Controller for miscellaneous settings
   """
-  plug :put_view, LinkhutWeb.SettingsView
 
   def show(conn, _) do
-    render(conn, "misc.html")
+    render(conn, :misc)
   end
 end
