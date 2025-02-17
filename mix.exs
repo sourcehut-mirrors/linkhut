@@ -5,7 +5,7 @@ defmodule Linkhut.MixProject do
     [
       app: :linkhut,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.18",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [] ++ Mix.compilers(),
       dialyzer: [plt_add_deps: :transitive],
@@ -77,9 +77,9 @@ defmodule Linkhut.MixProject do
       {:phoenix_view, "~> 2.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
-      {:prom_ex, "~> 1.9.0"},
+      {:prom_ex, "~> 1.11"},
       {:swoosh, "~> 1.16"},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:timex, "~> 3.7"},
       {:xml_builder, "~> 2.2"}
