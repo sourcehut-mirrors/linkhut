@@ -8,6 +8,6 @@ defmodule Linkhut.Workers.RefreshViewsWorker do
     ]
 
   def perform(%Oban.Job{} = _job) do
-    Linkhut.Repo.query!("refresh materialized view public_links;")
+    Linkhut.Repo.query("refresh materialized view public_links;")
   end
 end

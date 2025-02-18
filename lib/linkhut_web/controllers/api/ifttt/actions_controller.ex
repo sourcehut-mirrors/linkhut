@@ -61,6 +61,7 @@ defmodule LinkhutWeb.Api.IFTTT.ActionsController do
 
   defp create_link(conn, params) do
     user = conn.assigns[:current_user]
+    params = Map.update(params, "tags", "via:ifttt", fn tags -> tags <> " via:ifttt" end)
 
     case Links.create_link(user, params) do
       {:ok, link} ->

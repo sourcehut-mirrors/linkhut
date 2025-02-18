@@ -31,20 +31,18 @@ defmodule Linkhut.Workers.ImportWorker do
            saved:
              Enum.count(result, fn x ->
                case x,
-                 do:
-                   (
-                     {:ok, _} -> true
-                     _ -> false
-                   )
+                 do: (
+                   {:ok, _} -> true
+                   _ -> false
+                 )
              end),
            failed:
              Enum.count(result, fn x ->
                case x,
-                 do:
-                   (
-                     {:ok, _} -> false
-                     _ -> true
-                   )
+                 do: (
+                   {:ok, _} -> false
+                   _ -> true
+                 )
              end),
            failed_records:
              Enum.flat_map(result, fn x ->
