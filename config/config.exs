@@ -73,6 +73,8 @@ config :linkhut, Oban,
   queues: [default: 10],
   repo: Linkhut.Repo,
   plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Reindexer, schedule: "@weekly"},
     {Oban.Plugins.Cron,
      crontab: [
        {"* * * * *", Linkhut.Workers.RefreshViewsWorker}
