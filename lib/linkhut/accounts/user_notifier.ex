@@ -1,7 +1,4 @@
 defmodule Linkhut.Accounts.UserNotifier do
-  import Swoosh.Email
-
-  alias Linkhut.Mailer
 
   defp signature() do
     "-- \nadmin at ln.ht\n"
@@ -9,15 +6,8 @@ defmodule Linkhut.Accounts.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
-    email =
-      new()
-      |> to(recipient)
-      |> from(Keyword.get(Linkhut.Config.mail(), :sender))
-      |> subject(subject)
-      |> text_body(body)
-
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+    with {:ok, _job} <- Linkhut.Workers.MailerWorker.send(recipient, subject, body) do
+      {:ok, recipient}
     end
   end
 

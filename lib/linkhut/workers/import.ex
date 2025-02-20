@@ -18,6 +18,7 @@ defmodule Linkhut.Workers.ImportWorker do
     Jobs.create_import(user, job)
   end
 
+  @impl Oban.Worker
   def perform(%Oban.Job{id: id, args: %{"user_id" => user_id, "file" => file}}) do
     user = Accounts.get_user!(user_id)
     result = Dump.import(user, File.read!(file))
