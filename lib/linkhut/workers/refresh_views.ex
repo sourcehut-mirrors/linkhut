@@ -1,6 +1,6 @@
 defmodule Linkhut.Workers.RefreshViewsWorker do
   use Oban.Worker,
-    queue: :default,
+    queue: :scheduler,
     max_attempts: 1,
     unique: [
       period: {1, :minutes},

@@ -70,7 +70,7 @@ config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 # Oban configuration
 config :linkhut, Oban,
   engine: Oban.Engines.Basic,
-  queues: [default: 10, mailer: 5],
+  queues: [default: 10, mailer: 5, scheduler: 4],
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
