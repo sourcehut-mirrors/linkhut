@@ -70,15 +70,11 @@ config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 # Oban configuration
 config :linkhut, Oban,
   engine: Oban.Engines.Basic,
-  queues: [default: 10, mailer: 5, scheduler: 4],
+  queues: [default: 10, mailer: 5],
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-    {Oban.Plugins.Reindexer, schedule: "@weekly"},
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"* * * * *", Linkhut.Workers.RefreshViewsWorker}
-     ]}
+    {Oban.Plugins.Reindexer, schedule: "@weekly"}
   ]
 
 # Import environment specific config. This must remain at the bottom

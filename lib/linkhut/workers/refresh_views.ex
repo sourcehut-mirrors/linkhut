@@ -1,11 +1,7 @@
 defmodule Linkhut.Workers.RefreshViewsWorker do
   use Oban.Worker,
-    queue: :scheduler,
-    max_attempts: 1,
-    unique: [
-      period: {1, :minutes},
-      timestamp: :scheduled_at
-    ]
+    queue: :default,
+    max_attempts: 1
 
   @impl Oban.Worker
   def perform(%Oban.Job{} = _job) do

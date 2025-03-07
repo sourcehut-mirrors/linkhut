@@ -31,6 +31,7 @@ defmodule Linkhut.Links do
     %Link{user_id: user.id}
     |> Link.changeset(attrs)
     |> Repo.insert()
+    |> maybe_refresh_views()
   end
 
   @doc """
@@ -49,6 +50,7 @@ defmodule Linkhut.Links do
     link
     |> Link.changeset(attrs)
     |> Repo.update()
+    |> maybe_refresh_views()
   end
 
   @doc """
@@ -65,6 +67,7 @@ defmodule Linkhut.Links do
   """
   def delete_link(%Link{} = link) do
     Repo.delete(link)
+    |> maybe_refresh_views()
   end
 
   @doc """
@@ -321,4 +324,11 @@ defmodule Linkhut.Links do
 
     query |> order_by(^filter_order_by)
   end
+
+  defp maybe_refresh_views({:ok, %Link{is_private: false}} = result) do
+    Linkhut.Workers.RefreshViewsWorker.new(%{}) |> Oban.insert!()
+    result
+  end
+
+  defp maybe_refresh_views(result), do: result
 end

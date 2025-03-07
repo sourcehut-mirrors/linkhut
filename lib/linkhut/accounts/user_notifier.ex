@@ -1,5 +1,4 @@
 defmodule Linkhut.Accounts.UserNotifier do
-
   defp signature() do
     "-- \nadmin at ln.ht\n"
   end
