@@ -1,9 +1,11 @@
 // color palette
 $blue: #357EDD;
 $dark-blue: #00449E;
+$dark-brown: #212529;
 $dark-green: #137752;
 $dark-pink: #D5008F;
 $dark-red: #E7040F;
+$darker-brown: #131618;
 $gold: #FFB700;
 $gray: #777777;
 $green: #19A974;
@@ -35,6 +37,10 @@ $foreground: $near-black;
 $background: $white;
 $muted: $gray;
 $strong: $near-black;
+
+$foreground-dark: $white;
+$background-dark: $darker-brown;
+$muted-dark: $light-gray;
 
 // spacing
 $spacing-tiny: .25rem;

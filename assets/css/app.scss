@@ -14,6 +14,11 @@ body {
     font-size: 1rem;
     max-width: 100%;
 
+    @media (prefers-color-scheme: dark) {
+        background-color: $background-dark;
+        color: $foreground-dark;
+    }
+
     @media #{$extra-large} {
         max-width: 120rem;
     }
@@ -56,6 +61,13 @@ footer {
     & a {
         color: $muted;
         text-decoration: underline;
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
     }
 }
 
@@ -173,6 +185,10 @@ a:not(.doc) {
     text-decoration: none;
     transition: color .15s ease-in;
 
+    @media (prefers-color-scheme: dark) {
+        color: $foreground-dark;
+    }
+
     &:hover {
         text-decoration: underline;
         transition: color .15s ease-in;
@@ -207,6 +223,11 @@ fieldset {
         box-sizing: border-box;
         margin-bottom: $spacing-small;
         padding: $spacing-small;
+
+        @media (prefers-color-scheme: dark) {
+            background-color: $dark-brown;
+            color: $foreground-dark;
+        }
     }
 
     & textarea {
@@ -276,6 +297,12 @@ form:not([itemprop="signout"]) {
         color: $foreground;
         display: inline-block;
         padding: $spacing-small $spacing-medium;
+
+        @media (prefers-color-scheme: dark) {
+            background-color: $dark-brown;
+            border-color: $foreground-dark;
+            color: $foreground-dark;
+        }
 
         &:hover {
             cursor: pointer;
@@ -399,6 +426,10 @@ nav {
             opacity: 1;
             transition: opacity .15s ease-in;
 
+            @media (prefers-color-scheme: dark) {
+                color: $foreground-dark;
+            }
+
             // {{{ hack for degrading to favicon on small screens
             font-size: 0;
 
@@ -441,6 +472,10 @@ nav {
                 color: $foreground;
                 flex-grow: 0;
                 line-break: strict;
+
+                @media (prefers-color-scheme: dark) {
+                    color: $foreground-dark;
+                }
 
                 &::before {
                     color: $dark-pink;
@@ -488,6 +523,10 @@ nav {
                 & > a::before {
                     color: $dark-blue;
                     content: "\007E";
+
+                    @media (prefers-color-scheme: dark) {
+                        color: $light-blue;
+                    }
                 }
 
                 & > a {
@@ -576,6 +615,9 @@ div#content, div#controls {
                     color: $purple;
                     display: inline;
 
+                    @media (prefers-color-scheme: dark) {
+                        color: $light-purple;
+                    }
                 }
 
                 &:not(:last-child)::after {
@@ -692,6 +734,10 @@ div.sort-options {
 
                     &:hover {
                         background-color: $light-gray;
+
+                        @media (prefers-color-scheme: dark) {
+                            background-color: $dark-brown;
+                        }
                     }
 
                     &.active {
@@ -954,6 +1000,10 @@ div.bookmark {
                         color: $purple;
                         display: inline;
 
+                        @media (prefers-color-scheme: dark) {
+                            color: $light-purple;
+                        }
+
                     }
 
                     &:not(:last-child)::after {
@@ -975,6 +1025,10 @@ a.button {
     padding: $spacing-small $spacing-medium;
     text-decoration: none;
     background-color: $white;
+
+    @media (prefers-color-scheme: dark) {
+        background-color: $dark-brown;
+    }
 
     &.fill {
         display: block;
@@ -1047,6 +1101,10 @@ a.feed-link {
         vertical-align: middle;
         width: $font-normal;
         margin-right: 0.5 * $spacing-tiny;
+
+        @media (prefers-color-scheme: dark) {
+            content: rss($foreground-dark);
+        }
     }
 }
 
@@ -1138,6 +1196,10 @@ div.navigation {
 
             &.active, &:hover {
                 background-color: $light-gray;
+
+                @media (prefers-color-scheme: dark) {
+                    background-color: $dark-brown;
+                }
             }
 
             & > a {
@@ -1171,6 +1233,12 @@ section.settings {
         border-color: $light-red;
         border-style: solid;
         border-width: 1px;
+
+        @media (prefers-color-scheme: dark) {
+            background-color: $light-red;
+            border-color: $washed-red;
+            color: $foreground;
+        }
     }
 
     & dl {
@@ -1214,6 +1282,10 @@ section.settings {
     margin-top: $spacing-small;
     overflow-x: auto;
     padding: $spacing-small;
+
+    @media (prefers-color-scheme: dark) {
+        background-color: $gray;
+    }
 }
 
 span.code {
