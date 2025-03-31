@@ -26,6 +26,13 @@ body {
 
 input {
     font-size: 1rem;
+    &[disabled] {
+        background-color: $light-gray;
+
+        @media (prefers-color-scheme: dark) {
+            background-color: $dark-brown;
+        }
+    }
 }
 
 hr, .no-css-label {
@@ -73,6 +80,9 @@ footer {
 
 .strong {
     color: $strong;
+    @media (prefers-color-scheme: dark) {
+        color: $strong-dark;
+    }
 }
 
 @mixin banner($fg-color, $bg-color) {
@@ -107,6 +117,10 @@ footer {
         text-overflow: ellipsis;
         vertical-align: baseline;
         white-space: nowrap;
+
+        @media (prefers-color-scheme: dark) {
+            color: $bright-blue;
+        }
     }
 }
 
@@ -125,6 +139,10 @@ footer {
         text-overflow: ellipsis;
         vertical-align: baseline;
         white-space: nowrap;
+
+        @media (prefers-color-scheme: dark) {
+            color: $bright-green;
+        }
     }
 }
 
@@ -225,7 +243,7 @@ fieldset {
         padding: $spacing-small;
 
         @media (prefers-color-scheme: dark) {
-            background-color: $dark-brown;
+            background-color: $background-dark;
             color: $foreground-dark;
         }
     }
@@ -241,8 +259,13 @@ fieldset {
         width: 100%;
 
         &:focus {
+            outline: 0;
             border-color: $blue;
             box-shadow: 0 0 0 .2rem $light-blue;
+            @media (prefers-color-scheme: dark) {
+                border-color: $dark-blue;
+                box-shadow: 0 0 0 .2rem $bright-blue;
+            }
         }
     }
 
@@ -284,6 +307,14 @@ fieldset {
 
         & > span {
             color: $near-black;
+
+            @media (prefers-color-scheme: dark) {
+                color: $near-white;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
         }
     }
 }
@@ -299,7 +330,7 @@ form:not([itemprop="signout"]) {
         padding: $spacing-small $spacing-medium;
 
         @media (prefers-color-scheme: dark) {
-            background-color: $dark-brown;
+            background-color: $darker-brown;
             border-color: $foreground-dark;
             color: $foreground-dark;
         }
@@ -365,6 +396,9 @@ nav {
                     display: inline-block;
                     vertical-align: middle;
                     width: $font-small;
+                    @media (prefers-color-scheme: dark) {
+                        content: unread($bright-blue);
+                    }
                 }
                 &::after {
                     content: attr(data-count);
@@ -483,6 +517,10 @@ nav {
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
+
+                    @media (prefers-color-scheme: dark) {
+                        color: $bright-pink;
+                    }
                 }
 
                 & > span {
@@ -518,6 +556,10 @@ nav {
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
+
+                    @media (prefers-color-scheme: dark) {
+                        color: $bright-red;
+                    }
                 }
 
                 & > a::before {
@@ -525,7 +567,7 @@ nav {
                     content: "\007E";
 
                     @media (prefers-color-scheme: dark) {
-                        color: $light-blue;
+                        color: $bright-blue;
                     }
                 }
 
@@ -550,11 +592,19 @@ nav {
                         font-size: $font-normal;
                         margin-left: $spacing-tiny;
                         margin-right: $spacing-tiny;
+
+                        @media (prefers-color-scheme: dark) {
+                            color: $bright-blue;
+                        }
                     }
 
                     &:not(:first-child)::before {
                         content: "\002B";
                         color: $dark-green;
+
+                        @media (prefers-color-scheme: dark) {
+                            color: $bright-green;
+                        }
                     }
                 }
             }
@@ -585,6 +635,10 @@ div#content, div#controls {
             border-top-color: $light-gray;
             border-top-style: solid;
             border-top-width: 1px;
+
+            @media (prefers-color-scheme: dark) {
+                border-top-color: $muted-dark;
+            }
         }
 
         & h5 div#all-tags {
@@ -616,7 +670,7 @@ div#content, div#controls {
                     display: inline;
 
                     @media (prefers-color-scheme: dark) {
-                        color: $light-purple;
+                        color: $bright-purple;
                     }
                 }
 
@@ -779,6 +833,11 @@ div.date-group {
         @media #{$not-small} {
             width: 6em;
         }
+
+        @media (prefers-color-scheme: dark) {
+            border-top-color: $gray;
+            color: $muted-dark;
+        }
     }
 }
 
@@ -814,11 +873,22 @@ div.bookmark-card {
 
             &[data-icon-type="private"] {
                 content: hidden($blue);
+                @media (prefers-color-scheme: dark) {
+                    content: hidden($bright-blue);
+                }
             }
 
             &[data-icon-type="unread"] {
                 content: later($blue);
+                @media (prefers-color-scheme: dark) {
+                    content: later($bright-blue);
+                }
             }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            border-top-color: $gray;
+            background-color: $dark-gray;
         }
     }
 }
@@ -828,6 +898,7 @@ div.bookmark {
     overflow: hidden;
     padding-bottom: 2px;
     position: relative;
+    background-clip: content-box;
 
     & > div {
         padding-left: $spacing-tiny;
@@ -883,6 +954,14 @@ div.bookmark {
                             text-transform: uppercase;
                         }
                     }
+
+                    @media (prefers-color-scheme: dark) {
+                        background-color: $bright-green;
+                    }
+                }
+
+                @media (prefers-color-scheme: dark) {
+                    background-color: $bright-blue;
                 }
             }
         }
@@ -893,6 +972,10 @@ div.bookmark {
             min-width: 10%;
 
             @include link-title();
+        }
+
+        @media (prefers-color-scheme: dark) {
+            border-top-color: $gray;
         }
     }
 
@@ -1001,7 +1084,7 @@ div.bookmark {
                         display: inline;
 
                         @media (prefers-color-scheme: dark) {
-                            color: $light-purple;
+                            color: $bright-purple;
                         }
 
                     }
@@ -1009,9 +1092,19 @@ div.bookmark {
                     &:not(:last-child)::after {
                         content: ",\00a0";
                     }
+
+                    @media #{$not-small} {
+                        &:last-child {
+                           margin-right: $spacing-tiny;
+                        }
+                    }
                 }
             }
         }
+    }
+
+    @media (prefers-color-scheme: dark) {
+        background-color: $card-background-dark;
     }
 }
 
@@ -1027,7 +1120,9 @@ a.button {
     background-color: $white;
 
     @media (prefers-color-scheme: dark) {
-        background-color: $dark-brown;
+        background-color: $darker-brown;
+        border-color: $near-white;
+        color: $near-white;
     }
 
     &.fill {
@@ -1051,6 +1146,12 @@ a.button {
         cursor: pointer;
         text-decoration: none;
         box-shadow: 0 0 0 .2rem $light-blue;
+        outline: 0;
+
+        @media (prefers-color-scheme: dark) {
+            border-color: $dark-blue;
+            box-shadow: 0 0 0 .2rem $bright-blue;
+        }
     }
 
     &.primary {
@@ -1060,6 +1161,11 @@ a.button {
 
         &:hover, &:focus {
             transition: box-shadow .15s ease-in-out;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            border-color: $dark-blue;
+            background-color: $bright-blue;
         }
     }
 }
@@ -1078,10 +1184,16 @@ div.pagination {
 
     & > a {
         text-decoration: none;
+        border: 1px solid $background;
 
         &.active {
             background-color: $blue;
             color: $white;
+
+            @media (prefers-color-scheme: dark) {
+                background-color: $bright-blue;
+                color: $near-white;
+            }
         }
 
         &:hover {
@@ -1089,7 +1201,16 @@ div.pagination {
 
             &:not(.active) {
                 background-color: $light-gray;
+                border-color: $muted;
+
+                @media (prefers-color-scheme: dark) {
+                    background-color: $dark-brown;
+                    border-color: $muted-dark;
+                }
             }
+        }
+        @media (prefers-color-scheme: dark) {
+            border-color: $background-dark;
         }
     }
 }
@@ -1103,7 +1224,7 @@ a.feed-link {
         margin-right: 0.5 * $spacing-tiny;
 
         @media (prefers-color-scheme: dark) {
-            content: rss($foreground-dark);
+            content: rss($near-white);
         }
     }
 }
@@ -1183,6 +1304,10 @@ div.navigation {
         padding: 0;
         width: inherit;
 
+        @media (prefers-color-scheme: dark) {
+            border-bottom-color: $dark-brown;
+        }
+
         @media #{$not-small} {
             flex-direction: row;
         }
@@ -1226,6 +1351,10 @@ section.settings {
         border-bottom: 1px solid;
         border-bottom-color: $background;
         padding-bottom: $spacing-tiny;
+
+        @media (prefers-color-scheme: dark) {
+            border-bottom-color: $background-dark;
+        }
     }
 
     &.warning {
@@ -1276,15 +1405,19 @@ section.settings {
             border-top: 1px solid $gray;
             border-bottom: 1px solid $gray;
         }
+
+        @media (prefers-color-scheme: dark) {
+            background-color: $dark-gray;
+        }
     }
 
-    background: $light-gray;
+    background: $card-background;
     margin-top: $spacing-small;
     overflow-x: auto;
     padding: $spacing-small;
 
     @media (prefers-color-scheme: dark) {
-        background-color: $gray;
+        background-color: $card-background-dark;
     }
 }
 
@@ -1294,11 +1427,4 @@ span.code {
 
 form.inline {
     display: inline-block;
-}
-
-replay-web-page {
-    border-style: solid;
-    border-width: 1px;
-    border-color: $gray;
-    padding: $spacing-tiny;
 }

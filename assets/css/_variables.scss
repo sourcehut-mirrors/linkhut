@@ -1,11 +1,17 @@
 // color palette
 $blue: #357EDD;
+$bright-blue: #3395ff;
+$bright-green: #2bb34b;
+$bright-red: #ff3e3e;
+$bright-pink: #ff2fbb;
+$bright-purple: #ae81ff;
 $dark-blue: #00449E;
-$dark-brown: #212529;
+$dark-brown: #464850;
+$dark-gray: #343a40;
 $dark-green: #137752;
 $dark-pink: #D5008F;
 $dark-red: #E7040F;
-$darker-brown: #131618;
+$darker-brown: #2B2B2B;
 $gold: #FFB700;
 $gray: #777777;
 $green: #19A974;
@@ -20,6 +26,7 @@ $light-yellow: #FBF1A9;
 $lightest-blue: #CDECFF;
 $navy: #001B44;
 $near-black: #111111;
+$near-white: #f8f9fa;
 $orange: #FF6300;
 $pink: #FF80CC;
 $purple: #5E2CA5;
@@ -35,12 +42,15 @@ $yellow: #FFDE37;
 // theme colors
 $foreground: $near-black;
 $background: $white;
+$card-background: $light-gray;
 $muted: $gray;
 $strong: $near-black;
 
-$foreground-dark: $white;
+$foreground-dark: $near-white;
 $background-dark: $darker-brown;
-$muted-dark: $light-gray;
+$card-background-dark: $dark-brown;
+$strong-dark: $white;
+$muted-dark: $gray;
 
 // spacing
 $spacing-tiny: .25rem;
