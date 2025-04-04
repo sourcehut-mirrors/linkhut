@@ -8,6 +8,7 @@ defmodule Linkhut.Jobs.Import do
   schema "imports" do
     field :user_id, :id
     field :job_id, :id
+    field :overrides, :map
 
     field :state, Ecto.Enum,
       values: [:in_progress, :complete, :failed],
@@ -16,6 +17,7 @@ defmodule Linkhut.Jobs.Import do
     field :total, :integer
     field :saved, :integer
     field :failed, :integer
+    field :invalid, :integer
 
     embeds_many :failed_records, Record do
       field :url, :string
@@ -27,6 +29,8 @@ defmodule Linkhut.Jobs.Import do
       field :errors, {:map, {:array, :string}}
     end
 
+    field :invalid_entries, {:array, :string}
+
     belongs_to :user, User, define_field: false
 
     timestamps(type: :utc_datetime)
@@ -37,7 +41,7 @@ defmodule Linkhut.Jobs.Import do
     import
     |> cast(
       attrs,
-      [:user_id, :job_id, :state, :total, :saved, :failed],
+      [:user_id, :job_id, :state, :total, :saved, :invalid, :failed, :invalid_entries],
       opts
     )
     |> cast_embed(:failed_records, with: &record_changeset/2)

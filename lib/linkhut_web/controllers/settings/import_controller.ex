@@ -12,15 +12,18 @@ defmodule LinkhutWeb.Settings.ImportController do
   end
 
   def upload(conn, %{
-        "upload" => %{"file" => %Plug.Upload{content_type: "text/html", path: file} = upload}
+        "upload" =>
+          %{"file" => %Plug.Upload{content_type: "text/html", path: file} = upload} = params
       }) do
     user = conn.assigns[:current_user]
     Plug.Upload.give_away(upload, ImportWorker.get_pid())
-    {:ok, import} = ImportWorker.enqueue(user, file)
+    {:ok, import} = ImportWorker.enqueue(user, file, Map.take(params, ["is_private"]))
 
     conn
     |> redirect(to: ~p"/_/import/#{import.job_id}")
   end
+
+  def upload(conn, _), do: redirect(conn, to: ~p"/_/import")
 
   def status(conn, %{"task" => task}) do
     user = conn.assigns[:current_user]

@@ -9,19 +9,22 @@ defmodule Linkhut.Workers.ImportWorker do
     Oban.whereis(Oban)
   end
 
-  def enqueue(user, file) do
+  def enqueue(user, file, overrides \\ %{}) do
     {:ok, job} =
-      %{user_id: user.id, file: file}
+      %{user_id: user.id, file: file, overrides: overrides}
       |> Linkhut.Workers.ImportWorker.new()
       |> Oban.insert()
 
-    Jobs.create_import(user, job)
+    Jobs.create_import(user, job, overrides)
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{id: id, args: %{"user_id" => user_id, "file" => file}}) do
+  def perform(%Oban.Job{
+        id: id,
+        args: %{"user_id" => user_id, "file" => file, "overrides" => overrides}
+      }) do
     user = Accounts.get_user!(user_id)
-    result = Dump.import(user, File.read!(file))
+    result = Dump.import(user, File.read!(file), overrides)
     File.rm(file)
 
     job = Jobs.get_import(user_id, id)
@@ -42,7 +45,16 @@ defmodule Linkhut.Workers.ImportWorker do
                case x,
                  do: (
                    {:ok, _} -> false
+                   {:error, entry} when is_binary(entry) -> false
                    _ -> true
+                 )
+             end),
+           invalid:
+             Enum.count(result, fn x ->
+               case x,
+                 do: (
+                   {:error, entry} when is_binary(entry) -> true
+                   _ -> false
                  )
              end),
            failed_records:
@@ -63,6 +75,19 @@ defmodule Linkhut.Workers.ImportWorker do
                        end)
                      )
                    ]
+
+                 {:error, _} ->
+                   []
+               end
+             end),
+           invalid_entries:
+             Enum.flat_map(result, fn x ->
+               case x do
+                 {:error, entry} when is_binary(entry) ->
+                   [entry]
+
+                 {_, _} ->
+                   []
                end
              end)
          }) do

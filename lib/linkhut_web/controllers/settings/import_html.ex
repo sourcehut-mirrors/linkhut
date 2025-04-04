@@ -2,9 +2,16 @@ defmodule LinkhutWeb.Settings.ImportHTML do
   use LinkhutWeb, :html
   use Phoenix.Component
 
+  defp print_overrides(overrides) do
+    Enum.flat_map(overrides, fn
+      {"is_private", "true"} -> ["Links will be imported as private"]
+      _ -> []
+    end)
+  end
+
   def import_page(assigns) do
     ~H"""
-    <%= LinkhutWeb.SettingsView."_menu.html"(assigns) %>
+    {LinkhutWeb.SettingsView."_menu.html"(assigns)}
     <div>
       <section class="">
         <p>
@@ -13,6 +20,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
         <.form :let={f} for={%{}} as={:upload} multipart action={~p"/_/import"}>
           <fieldset>
             <.input field={f[:file]} type="file" label="file" />
+            <.input field={f[:is_private]} type="checkbox" label={gettext("Import all links as private")} />
           </fieldset>
           <.button type="submit">Import</.button>
         </.form>
@@ -25,12 +33,13 @@ defmodule LinkhutWeb.Settings.ImportHTML do
 
   def import_job(assigns) do
     ~H"""
-    <%= LinkhutWeb.SettingsView."_menu.html"(assigns) %>
+    {LinkhutWeb.SettingsView."_menu.html"(assigns)}
     <div>
       <section class="settings">
         <.summary job={@job} />
       </section>
       <.show_errors records={@job.failed_records} />
+      <.show_parse_errors entries={@job.invalid_entries} />
     </div>
     """
   end
@@ -40,27 +49,39 @@ defmodule LinkhutWeb.Settings.ImportHTML do
   def summary(assigns) do
     ~H"""
     <h4>Import Task Summary</h4>
-    <table>
-      <tbody>
-        <%= for {key, msg} <- [
-                                {:state, "Status"},
-                                {:total, "Links in archive"},
-                                {:saved, "Successfully imported"},
-                                {:failed, "Failed to import"},
-                              ] do %>
-          <tr>
-            <td><%= msg %></td>
-            <td>
-              <%= case Map.get(@job, key) do
-                value when is_atom(value) and not is_nil(value) -> Phoenix.Naming.humanize(value)
-                value when not is_nil(value) -> value
-                _ -> "N/A"
-              end %>
-            </td>
-          </tr>
+    <.table
+      id="test"
+      rows={[
+        {:state, "Status"},
+        {:total, "Links in archive"},
+        {:saved, "Successfully imported"},
+        {:failed, "Failed to import"},
+        {:invalid, "Parsing errors"},
+        {:overrides, "Overrides"}
+      ]}
+    >
+      <:col :let={{_, value}}>
+        {value}
+      </:col>
+      <:col :let={{key, _}}>
+        <%= case Map.get(@job, key) do %>
+          <% value when is_atom(value) and not is_nil(value) -> %>
+            {Phoenix.Naming.humanize(value)}
+          <% value when is_map(value) and map_size(value) > 0 -> %>
+            <%= if (overrides = print_overrides(value)) != [] do %>
+              <ul>
+                <li :for={override <- overrides}>{override}</li>
+              </ul>
+            <% else %>
+              None
+            <% end %>
+          <% value when not is_map(value) and not is_nil(value) -> %>
+            {value}
+          <% _ -> %>
+            N/A
         <% end %>
-      </tbody>
-    </table>
+      </:col>
+    </.table>
     """
   end
 
@@ -74,20 +95,42 @@ defmodule LinkhutWeb.Settings.ImportHTML do
           <summary>Failed links</summary>
           <dl>
             <%= for item <- @records do %>
-              <dt><span><%= item.title %></span></dt>
+              <dt><span>{item.title}</span></dt>
               <dd>
-                <div class="full-url"><span><%= item.url %></span></div>
+                <div class="full-url"><span>{item.url}</span></div>
                 <ul>
                   <%= for {key, [msg | _]} <- item.errors do %>
-                    <li><%= "#{key}: #{msg}" %></li>
+                    <li>{"#{key}: #{msg}"}</li>
                   <% end %>
                 </ul>
                 <ul class="actions">
                   <li>
-                    <a href={~p"/_/add?#{Map.drop(Map.from_struct(item), [:id, :inserted_at, :errors])}"}><%= gettext("edit and add") %></a>
+                    <a href={~p"/_/add?#{Map.drop(Map.from_struct(item), [:id, :inserted_at, :errors])}"}>{gettext("edit and add")}</a>
                   </li>
                 </ul>
               </dd>
+            <% end %>
+          </dl>
+        </details>
+      </section>
+    <% end %>
+    """
+  end
+
+  attr :entries, :list, required: true
+
+  def show_parse_errors(assigns) do
+    ~H"""
+    <%= unless length(@entries) == 0 do %>
+      <section class="settings">
+        <details class="error">
+          <summary>Parsing errors</summary>
+          <dl>
+            <%= for item <- @entries do %>
+              <dd></dd>
+              <dt>
+                <code>{item}</code>
+              </dt>
             <% end %>
           </dl>
         </details>

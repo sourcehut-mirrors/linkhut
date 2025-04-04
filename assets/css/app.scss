@@ -305,6 +305,15 @@ fieldset {
         vertical-align: middle;
     }
 
+    & > div > label {
+        display: flex;
+        flex-wrap: wrap;
+        font-size: $font-small;
+        font-weight: 400;
+        line-height: 1.5;
+        text-transform: uppercase;
+    }
+
     & div.invalid {
         & input, & textarea {
             background-color: $washed-red;
@@ -1452,6 +1461,15 @@ section.settings {
             padding: $spacing-tiny $spacing-tiny;
             border-top: 1px solid $gray;
             border-bottom: 1px solid $gray;
+        }
+
+        & ul {
+            margin: 0;
+            padding: 0;
+
+            & > li {
+                list-style-position: inside;
+            }
         }
 
         @media (prefers-color-scheme: dark) {
