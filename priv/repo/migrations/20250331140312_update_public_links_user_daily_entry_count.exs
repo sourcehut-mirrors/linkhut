@@ -2,7 +2,6 @@ defmodule Linkhut.Repo.Migrations.UpdatePublicLinksUserDailyEntryCount do
   use Ecto.Migration
 
   def change do
-
     execute "DROP MATERIALIZED VIEW IF EXISTS public_links;",
             """
             CREATE MATERIALIZED VIEW public_links AS

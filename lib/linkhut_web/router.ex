@@ -3,17 +3,20 @@ defmodule LinkhutWeb.Router do
   use PhoenixOauth2Provider.Router, otp_app: :linkhut
   import Phoenix.LiveDashboard.Router
 
+  import LinkhutWeb.UserAuth
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug LinkhutWeb.Plugs.SetCurrentUser
+    plug :fetch_current_user
+    plug LinkhutWeb.Plugs.GlobalAssigns
   end
 
   pipeline :ensure_auth do
-    plug LinkhutWeb.Plugs.EnsureAuth
+    plug :require_authenticated_user
   end
 
   pipeline :token_auth do
@@ -120,6 +123,12 @@ defmodule LinkhutWeb.Router do
     put "/profile/delete", ProfileController, :delete
 
     post "/confirm", EmailConfirmationController, :create
+  end
+
+  scope "/_", LinkhutWeb.Settings do
+    pipe_through [:browser, :require_sudo_mode]
+
+    get "/profile/delete", ProfileController, :remove
   end
 
   scope "/_", LinkhutWeb do

@@ -36,6 +36,8 @@ defmodule Linkhut.Accounts.User do
       references: :id,
       on_delete: :delete_all
 
+    field :authenticated_at, :utc_datetime, virtual: true
+
     timestamps(type: :utc_datetime)
   end
 

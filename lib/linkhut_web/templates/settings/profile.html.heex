@@ -15,29 +15,26 @@
     <h4>Profile Information</h4>
     <%= form_for @changeset, Routes.profile_path(@conn, :update), fn f -> %>
       <fieldset>
-        <%= input(f, :username, disabled: true) %>
+        {input(f, :username, disabled: true)}
         <%= inputs_for f, :credential, fn cf -> %>
-          <%= input(cf, :email) %>
+          {input(cf, :email)}
         <% end %>
         <%= unless @current_email_unconfirmed? do %>
           <div class="inline-info">
-            <%= gettext("Confirmed on:") %>
-            <span><%= Timex.format!(@changeset.data.credential.email_confirmed_at, "{YYYY}-{0M}-{0D}") %></span>
+            {gettext("Confirmed on:")}
+            <span>{Timex.format!(@changeset.data.credential.email_confirmed_at, "{YYYY}-{0M}-{0D}")}</span>
           </div>
         <% end %>
-        <%= input(f, :bio, placeholder: "Tell something about yourself", type: :textarea) %>
+        {input(f, :bio, placeholder: "Tell something about yourself", type: :textarea)}
       </fieldset>
-      <%= submit("Save") %>
+      {submit("Save")}
     <% end %>
   </section>
   <section class="settings">
     <h4>Delete Account</h4>
-    <%= form_for @changeset, Routes.profile_path(@conn, :delete), fn f -> %>
-      <fieldset>
-        <%= input(f, :confirmed, type: :checkbox, label: "I acknowledge that I want to permanently delete my account and all data associated with it") %>
-        <%= error_tag(f, :applications) %>
-      </fieldset>
-      <%= submit("Delete") %>
-    <% end %>
+    <p>
+      {gettext("To close your account, permanently removing your bookmarks and all personal data, you may do so here.")}
+    </p>
+    <a class="button" href={~p"/_/profile/delete"}>{gettext("Delete")}</a>
   </section>
 </div>

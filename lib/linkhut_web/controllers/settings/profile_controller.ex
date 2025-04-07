@@ -1,15 +1,13 @@
 defmodule LinkhutWeb.Settings.ProfileController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.SettingsView
-
   alias Linkhut.Accounts
 
   def show(conn, _) do
     user = conn.assigns[:current_user]
     changeset = Accounts.change_user(user)
 
-    render(conn, "profile.html",
+    render(conn, :profile,
       user: user,
       changeset: changeset,
       current_email_unconfirmed?: Accounts.current_email_unconfirmed?(user)
@@ -21,12 +19,16 @@ defmodule LinkhutWeb.Settings.ProfileController do
     |> update(conn.assigns[:current_user], user_params)
   end
 
-  require Logger
-
-  def delete(conn, %{"user" => user_params}) do
+  def remove(conn, _) do
     user = conn.assigns[:current_user]
 
-    case Accounts.delete_user(user, user_params) do
+    render(conn, :delete_account, changeset: Accounts.change_user(user))
+  end
+
+  def delete(conn, %{"delete_form" => delete_form}) do
+    user = conn.assigns[:current_user]
+
+    case Accounts.delete_user(user, delete_form) do
       {:ok, user} ->
         conn
         |> put_flash(:info, "Deleted account for #{user.username}")
@@ -35,11 +37,7 @@ defmodule LinkhutWeb.Settings.ProfileController do
 
       {:error, changeset} ->
         conn
-        |> render("profile.html",
-          user: user,
-          changeset: changeset,
-          current_email_unconfirmed?: Accounts.current_email_unconfirmed?(user)
-        )
+        |> render(:delete_account, changeset: changeset)
     end
   end
 
@@ -59,7 +57,7 @@ defmodule LinkhutWeb.Settings.ProfileController do
 
       {:error, changeset} ->
         conn
-        |> render("profile.html",
+        |> render(:profile,
           user: user,
           changeset: changeset,
           current_email_unconfirmed?: Accounts.current_email_unconfirmed?(user)

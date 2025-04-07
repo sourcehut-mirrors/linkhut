@@ -8,7 +8,7 @@ defmodule Linkhut.Accounts do
   import Argon2, only: [verify_pass: 2, no_user_verify: 1]
   alias Linkhut.Repo
 
-  alias Linkhut.Accounts.{Credential, EmailToken, User, UserNotifier}
+  alias Linkhut.Accounts.{Credential, EmailToken, User, UserToken, UserNotifier}
 
   @typedoc """
   A username.
@@ -349,5 +349,46 @@ defmodule Linkhut.Accounts do
     user
     |> User.confirm_user(%{})
     |> Repo.update()
+  end
+
+  ## Session
+
+  @doc """
+  Generates a session token.
+  """
+  def generate_user_session_token(user) do
+    {token, user_token} = UserToken.build_session_token(user)
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Checks whether the user is in sudo mode.
+
+  The user is in sudo mode when the last authentication was done no further
+  than 20 minutes ago. The limit can be given as second argument in minutes.
+  """
+  def sudo_mode?(user, minutes \\ -20)
+
+  def sudo_mode?(%User{authenticated_at: ts}, minutes) when is_struct(ts, DateTime) do
+    DateTime.after?(ts, DateTime.utc_now() |> DateTime.add(minutes, :minute))
+  end
+
+  def sudo_mode?(_user, _minutes), do: false
+
+  @doc """
+  Gets the user with the given signed token.
+  """
+  def get_user_by_session_token(token) do
+    {:ok, query} = UserToken.verify_session_token_query(token)
+    Repo.one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_user_session_token(token) do
+    Repo.delete_all(UserToken.by_token_and_context_query(token, "session"))
+    :ok
   end
 end

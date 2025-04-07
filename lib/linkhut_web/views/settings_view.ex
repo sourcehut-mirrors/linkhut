@@ -3,7 +3,6 @@ defmodule LinkhutWeb.SettingsView do
 
   use Phoenix.HTML
   import LinkhutWeb.FormHelpers
-  import LinkhutWeb.ErrorHelpers
 
   def nav_link(conn, text, opts) do
     active? = active_path?(conn, opts)
