@@ -22,6 +22,14 @@ body {
     @media #{$extra-large} {
         max-width: 120rem;
     }
+
+    a {
+        color: $blue;
+
+        @media (prefers-color-scheme: dark) {
+            color: $bright-blue;
+        }
+    }
 }
 
 input, select, button {
