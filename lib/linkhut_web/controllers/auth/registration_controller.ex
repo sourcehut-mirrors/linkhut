@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.Auth.RegistrationController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.AuthView
-
   alias Linkhut.Accounts
   alias Linkhut.Accounts.User
 
@@ -12,7 +10,7 @@ defmodule LinkhutWeb.Auth.RegistrationController do
       |> redirect(to: Routes.profile_path(conn, :show))
     else
       conn
-      |> render("register.html", changeset: Accounts.change_user(%User{}))
+      |> render(:register, changeset: Accounts.change_user(%User{}))
     end
   end
 
@@ -30,11 +28,11 @@ defmodule LinkhutWeb.Auth.RegistrationController do
         |> put_session(:user_id, user.id)
         |> configure_session(renew: true)
         |> put_flash(:info, "Welcome to linkhut!")
-        |> redirect(to: Routes.link_path(conn, :show, []))
+        |> redirect(to: ~p"/")
 
       {:error, changeset} ->
         conn
-        |> render("register.html", changeset: changeset)
+        |> render(:register, changeset: changeset)
     end
   end
 end
