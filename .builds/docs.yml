@@ -1,7 +1,15 @@
-image: archlinux
+image: ubuntu/24.04
 packages:
     - rsync
-    - elixir
+    - golang
+    - unzip
+    - erlang
+    - erlang-dev
+    - erlang-asn1
+    - erlang-os-mon
+    - erlang-xmerl
+repositories:
+  rabbitmq: https://ppa.launchpadcontent.net/rabbitmq/rabbitmq-erlang/ubuntu noble main 0xB279943D2A549531E144B875F77F1EDA57EBB1CC
 secrets:
     - 9a147ee3-2828-4ec6-84b5-7f1cca42d9b1
     - 5b7a28c5-476f-4b14-b40c-8e5567b9f188
@@ -9,11 +17,19 @@ sources:
     - git+ssh://git@git.sr.ht/~mlb/linkhut
 tasks:
     - bootstrap: |
+        go install github.com/asdf-vm/asdf/cmd/asdf@v0.16.0
+        export PATH="${GOPATH:-$HOME/go/bin}:$PATH"
+        export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
+        asdf plugin add elixir
+        asdf install elixir 1.18
+        asdf set elixir 1.18
         cd linkhut
         mix local.hex --force
         mix local.rebar --force
         mix deps.get
     - build-docs: |
+        export PATH="${GOPATH:-$HOME/go/bin}:$PATH"
+        export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
         cd linkhut
         mix docs --formatter html
     - upload-docs: |
