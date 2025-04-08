@@ -229,7 +229,7 @@ defmodule LinkhutWeb.CoreComponents do
         </thead>
         <tbody id={@id}>
           <tr :for={row <- @rows}>
-            <td :for={{col, i} <- Enum.with_index(@col)}>
+            <td :for={{col, _i} <- Enum.with_index(@col)}>
               <div>
                 <span>
                   {render_slot(col, @row_item.(row))}
