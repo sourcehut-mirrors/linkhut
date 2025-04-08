@@ -112,9 +112,9 @@ defmodule LinkhutWeb.Router do
 
     get "/import", ImportController, :show
     get "/import/:task", ImportController, :status
+    get "/export", ImportController, :show
     post "/import", ImportController, :upload
 
-    get "/export", ExportController, :show
     get "/download", ExportController, :download
 
     get "/misc", MiscController, :show

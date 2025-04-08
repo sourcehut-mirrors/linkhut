@@ -9,11 +9,12 @@ defmodule LinkhutWeb.Settings.ImportHTML do
     end)
   end
 
-  def import_page(assigns) do
+  def import_export(assigns) do
     ~H"""
     {LinkhutWeb.SettingsView."_menu.html"(assigns)}
     <div>
-      <section class="">
+      <section class="settings">
+        <h4>Import</h4>
         <p>
           Import bookmarks in the <a class="doc" href="https://en.wikipedia.org/wiki/Bookmark_(digital)#Storage">Netscape format</a>.
         </p>
@@ -24,6 +25,13 @@ defmodule LinkhutWeb.Settings.ImportHTML do
           </fieldset>
           <.button type="submit">Import</.button>
         </.form>
+      </section>
+      <section class="settings">
+        <h4>Export</h4>
+        <p>
+          Export your bookmarks in the <a class="doc" href="https://en.wikipedia.org/wiki/Bookmark_(digital)#Storage">Netscape format</a>.
+        </p>
+        <a class="button" download="bookmarks.html" href={~p"/_/download"}>Download</a>
       </section>
     </div>
     """

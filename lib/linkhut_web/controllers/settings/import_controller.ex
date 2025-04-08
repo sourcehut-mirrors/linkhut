@@ -8,7 +8,7 @@ defmodule LinkhutWeb.Settings.ImportController do
   alias Linkhut.Jobs
 
   def show(conn, _) do
-    render(conn, :import_page)
+    render(conn, :import_export)
   end
 
   def upload(conn, %{
