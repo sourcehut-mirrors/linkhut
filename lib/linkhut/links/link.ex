@@ -59,7 +59,10 @@ defmodule Linkhut.Links.Link do
         force_change(
           changeset,
           :notes_html,
-          HtmlSanitizeEx.basic_html(Earmark.as_html!(notes, pure_links: false))
+          HtmlSanitizeEx.Scrubber.scrub(
+            Earmark.as_html!(notes, pure_links: false),
+            Linkhut.Html.Scrubber
+          )
         )
     end
   end
