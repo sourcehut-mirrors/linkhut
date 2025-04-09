@@ -236,6 +236,8 @@ defmodule Linkhut.Links do
     |> where([_, s], s.user_daily_entry <= 2)
     |> where([_, s], s.rank == 0.0)
     |> where([l], l.inserted_at >= ^datetime)
+    |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
+    |> where([_, _, u], u.type != ^:unconfirmed)
     |> ordering(params)
   end
 
@@ -248,6 +250,8 @@ defmodule Linkhut.Links do
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([_, s, _], s.saves >= ^popularity)
+    |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
+    |> where([_, _, u], u.type != ^:unconfirmed)
     |> ordering(params)
   end
 
@@ -276,6 +280,7 @@ defmodule Linkhut.Links do
     from(l in Link,
       left_join: s in PublicLink,
       on: [id: l.id],
+      left_join: u in assoc(l, :user),
       select_merge: ^select_fields(params),
       preload: [:user, :variants, :savers]
     )
