@@ -11,9 +11,9 @@
     <tbody>
       <%= for application <- @applications do %>
         <tr>
-          <td><%= application.name %></td>
-          <td><code><%= application.uid %></code></td>
-          <td><code><%= Enum.count(Enum.uniq_by(application.access_tokens, fn t -> t.resource_owner_id end)) %></code></td>
+          <td>{application.name}</td>
+          <td><code>{application.uid}</code></td>
+          <td><code>{Enum.count(Enum.uniq_by(application.access_tokens, fn t -> t.resource_owner_id end))}</code></td>
           <td><a class="button fill" href={Routes.oauth_path(@conn, :edit_application, application.uid)}>Manage</a></td>
         </tr>
       <% end %>

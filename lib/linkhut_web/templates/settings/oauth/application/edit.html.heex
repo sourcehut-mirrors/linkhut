@@ -1,12 +1,12 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>OAuth application settings</h4>
   <%= form_for @changeset, Routes.oauth_path(@conn, :update_application, @changeset.data.uid), fn f -> %>
     <fieldset>
-      <%= input(f, :name) %>
-      <%= input(f, :redirect_uri) %>
+      {input(f, :name)}
+      {input(f, :redirect_uri)}
     </fieldset>
-    <%= submit("Update") %>
+    {submit("Update")}
   <% end %>
 </section>
 <section class="settings">
@@ -15,7 +15,7 @@
     If your application secret is compromised, regenerate it here.
   </p>
   <%= form_for @conn, Routes.oauth_path(@conn, :reset_application, @application.uid), fn _f -> %>
-    <%= submit("Reset application secret") %>
+    {submit("Reset application secret")}
   <% end %>
 </section>
 <section class="settings">
@@ -24,7 +24,7 @@
     You can revoke all issued OAuth tokens at once here.
   </p>
   <%= form_for @conn, Routes.oauth_path(@conn, :revoke_application, @application.uid), fn _f -> %>
-    <%= submit("Revoke all tokens") %>
+    {submit("Revoke all tokens")}
   <% end %>
 </section>
 <section class="settings">
@@ -33,6 +33,6 @@
     This will permenantely delete your OAuth application, <strong><%= @application.name %></strong>, and revoke all OAuth tokens you have been issued.
   </p>
   <%= form_for @conn, Routes.oauth_path(@conn, :delete_application, @application.uid), fn _f -> %>
-    <%= submit("Delete") %>
+    {submit("Delete")}
   <% end %>
 </section>

@@ -1,11 +1,13 @@
 defmodule LinkhutWeb.Settings.MiscHTML do
   use LinkhutWeb, :html
 
+  import LinkhutWeb.SettingsComponents
+
   embed_templates "../templates/settings/*"
 
   def misc(assigns) do
     ~H"""
-    <%= LinkhutWeb.SettingsView."_menu.html"(assigns) %>
+    <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
     <div>
       <section class="settings">
         <h4>Bookmarklet</h4>

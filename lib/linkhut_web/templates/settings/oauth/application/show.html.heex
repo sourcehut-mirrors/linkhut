@@ -1,4 +1,4 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>OAuth application registered</h4>
   <p>
@@ -6,9 +6,9 @@
   </p>
   <dl>
     <dt>Application ID</dt>
-    <dd><code><%= @application.uid %></code></dd>
+    <dd><code>{@application.uid}</code></dd>
     <dt>Application Secret</dt>
-    <dd><code><%= @application.secret %></code></dd>
+    <dd><code>{@application.secret}</code></dd>
   </dl>
   Your application secret <strong>will never be shown to you again</strong>, though you can reset it later if necessary. As the name implies, you should keep it secret.
   <p>

@@ -1,4 +1,4 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>Personal Access Token</h4>
   <p>
@@ -6,8 +6,8 @@
   </p>
   <%= form_for @conn, Routes.oauth_path(@conn, :create_personal_token), fn f -> %>
     <fieldset>
-      <%= input(f, :comment, placeholder: "Arbitrary comment for personal reference only", maxlength: 128) %>
+      {input(f, :comment, placeholder: "Arbitrary comment for personal reference only", maxlength: 128)}
     </fieldset>
-    <%= submit("Generate token") %>
+    {submit("Generate token")}
   <% end %>
 </section>

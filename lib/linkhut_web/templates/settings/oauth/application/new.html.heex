@@ -1,4 +1,4 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>Register OAuth application</h4>
   <p>
@@ -6,9 +6,9 @@
   </p>
   <%= form_for @changeset, Routes.oauth_path(@conn, :create_application), fn f -> %>
     <fieldset>
-      <%= input(f, :name) %>
-      <%= input(f, :redirect_uri) %>
+      {input(f, :name)}
+      {input(f, :redirect_uri)}
     </fieldset>
-    <%= submit("Register") %>
+    {submit("Register")}
   <% end %>
 </section>

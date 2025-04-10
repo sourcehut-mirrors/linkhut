@@ -2,6 +2,8 @@ defmodule LinkhutWeb.Settings.ImportHTML do
   use LinkhutWeb, :html
   use Phoenix.Component
 
+  import LinkhutWeb.SettingsComponents
+
   defp print_overrides(overrides) do
     Enum.flat_map(overrides, fn
       {"is_private", "true"} -> ["Links will be imported as private"]
@@ -11,7 +13,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
 
   def import_export(assigns) do
     ~H"""
-    {LinkhutWeb.SettingsView."_menu.html"(assigns)}
+    <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
     <div>
       <section class="settings">
         <h4>Import</h4>
@@ -41,7 +43,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
 
   def import_job(assigns) do
     ~H"""
-    {LinkhutWeb.SettingsView."_menu.html"(assigns)}
+    <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
     <div>
       <section class="settings">
         <.summary job={@job} />

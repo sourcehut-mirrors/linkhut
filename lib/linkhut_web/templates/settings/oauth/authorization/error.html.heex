@@ -1,4 +1,4 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>An error occured</h4>
   <p>
@@ -6,6 +6,6 @@
   </p>
 
   <p>
-    <%= @error.error_description %>
+    {@error.error_description}
   </p>
 </section>

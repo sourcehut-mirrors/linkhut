@@ -1,10 +1,10 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>Personal Access Token</h4>
   <p>
     <dl>
       <dt>Your token:</dt>
-      <dd><code><%= @token %></code></dd>
+      <dd><code>{@token}</code></dd>
     </dl>
   </p>
   This access token <strong>will never be shown to you again</strong>. Keep this secret.

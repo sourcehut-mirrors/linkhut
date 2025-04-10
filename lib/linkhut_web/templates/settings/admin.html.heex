@@ -1,7 +1,7 @@
-<%= render("_menu.html", assigns) %>
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
   <h4>Operational Status</h4>
   <p>
-    <a class="button" href={~p"/_/admin/dashboard/"} target="_blank"><%= gettext("Live Dashboard") %></a>
+    <a class="button" href={~p"/_/admin/dashboard/"} target="_blank">{gettext("Live Dashboard")}</a>
   </p>
 </section>

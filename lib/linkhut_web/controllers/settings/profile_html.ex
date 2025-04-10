@@ -2,6 +2,7 @@ defmodule LinkhutWeb.Settings.ProfileHTML do
   use LinkhutWeb, :html
   use Phoenix.Component
 
+  import LinkhutWeb.SettingsComponents
   import LinkhutWeb.ErrorHelpers
 
   def profile(assigns) do
@@ -12,7 +13,7 @@ defmodule LinkhutWeb.Settings.ProfileHTML do
 
   def delete_account(assigns) do
     ~H"""
-    {LinkhutWeb.SettingsView."_menu.html"(assigns)}
+    <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
     <div>
       <section class="settings">
         <h4>Delete Account</h4>

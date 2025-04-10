@@ -12,10 +12,10 @@
     <tbody>
       <%= for token <- @personal_access_tokens do %>
         <tr>
-          <td><code><%= String.slice(token.token, 0, 8) %>&hellip;</code></td>
-          <td><%= token.comment %></td>
-          <td><%= prettify(token.inserted_at) %></td>
-          <td><%= prettify(NaiveDateTime.add(token.inserted_at, token.expires_in, :second)) %></td>
+          <td><code>{String.slice(token.token, 0, 8)}&hellip;</code></td>
+          <td>{token.comment}</td>
+          <td>{prettify(token.inserted_at)}</td>
+          <td>{prettify(NaiveDateTime.add(token.inserted_at, token.expires_in, :second))}</td>
           <td><a class="button fill" href={Routes.oauth_path(@conn, :revoke_token, token.id)}>Revoke</a></td>
         </tr>
       <% end %>
