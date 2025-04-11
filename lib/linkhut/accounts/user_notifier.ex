@@ -5,8 +5,8 @@ defmodule Linkhut.Accounts.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
-    with {:ok, _job} <- Linkhut.Workers.MailerWorker.send(recipient, subject, body) do
-      {:ok, recipient}
+    with {:ok, %{args: args} = _job} <- Linkhut.Workers.MailerWorker.send(recipient, subject, body) do
+      {:ok, args}
     end
   end
 
@@ -15,7 +15,7 @@ defmodule Linkhut.Accounts.UserNotifier do
   """
   def deliver_confirmation_instructions(user, url) do
     deliver(user.credential.email, "Confirmation instructions", """
-    Hi #{user.username},
+    Hello #{user.username},
 
     You can confirm your account by visiting the URL below:
 
@@ -32,7 +32,7 @@ defmodule Linkhut.Accounts.UserNotifier do
   """
   def deliver_reset_password_instructions(user, url) do
     deliver(user.credential.email, "Reset password instructions", """
-    Hi #{user.username},
+    Hello #{user.username},
 
     You can reset your password by visiting the URL below:
 

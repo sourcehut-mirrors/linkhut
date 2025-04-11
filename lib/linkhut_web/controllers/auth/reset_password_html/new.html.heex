@@ -1,0 +1,10 @@
+<div>
+  <h3>Forgot your password?</h3>
+  <p>We'll send a password reset link to your inbox.</p>
+  <.form :let={f} for={@conn.params["credential"]} as={:credential} action={~p"/_/reset-password"}>
+    <fieldset>
+      <.input field={f[:email]} type="email" label={gettext("Email")} autocomplete="email" required />
+    </fieldset>
+    <.button type="submit">Send password reset link</.button>
+  </.form>
+</div>

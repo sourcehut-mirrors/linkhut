@@ -108,7 +108,7 @@ defmodule LinkhutWeb.Router do
   end
 
   scope "/_", LinkhutWeb.Settings do
-    pipe_through [:browser, :ensure_auth]
+    pipe_through [:browser, :require_authenticated_user]
 
     get "/import", ImportController, :show
     get "/import/:task", ImportController, :status
@@ -122,6 +122,8 @@ defmodule LinkhutWeb.Router do
     put "/profile", ProfileController, :update
     put "/profile/delete", ProfileController, :delete
 
+    get "/security", SecurityController, :show
+
     post "/confirm", EmailConfirmationController, :create
   end
 
@@ -132,7 +134,7 @@ defmodule LinkhutWeb.Router do
   end
 
   scope "/_", LinkhutWeb do
-    pipe_through [:browser, :ensure_auth]
+    pipe_through [:browser, :require_authenticated_user]
 
     get "/add", LinkController, :new
     post "/add", LinkController, :insert
@@ -147,7 +149,7 @@ defmodule LinkhutWeb.Router do
   end
 
   scope "/_/oauth", LinkhutWeb.Settings do
-    pipe_through [:browser, :ensure_auth]
+    pipe_through [:browser, :require_authenticated_user]
 
     get "/", OauthController, :show
     get "/personal-token", OauthController, :new_personal_token
@@ -171,7 +173,7 @@ defmodule LinkhutWeb.Router do
   end
 
   scope "/_/", LinkhutWeb.Settings do
-    pipe_through [:browser, :ensure_auth]
+    pipe_through [:browser, :require_authenticated_user]
 
     get "/confirm", EmailConfirmationController, :confirm
   end
@@ -204,10 +206,15 @@ defmodule LinkhutWeb.Router do
 
     get "/login", Auth.SessionController, :new
     post "/login", Auth.SessionController, :create
+
+    get "/reset-password", Auth.ResetPasswordController, :new
+    post "/reset-password", Auth.ResetPasswordController, :create
+    get "/reset-password/:token", Auth.ResetPasswordController, :edit
+    put "/reset-password/:token", Auth.ResetPasswordController, :update
   end
 
   scope "/_/unread", LinkhutWeb do
-    pipe_through [:browser, :ensure_auth]
+    pipe_through [:browser, :require_authenticated_user]
     get "/", LinkController, :unread, as: :unread
     get "/*tags", LinkController, :unread, as: :unread
   end

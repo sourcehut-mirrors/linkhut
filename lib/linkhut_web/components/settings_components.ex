@@ -25,8 +25,8 @@ defmodule LinkhutWeb.SettingsComponents do
     """
   end
 
-  attr :is_admin?, :boolean, required: true, doc: "should we show admin tabs"
-  attr :request_path, :string, required: true, doc: "current path"
+  attr :is_admin?, :boolean, required: true, doc: "flag for whether to show admin tabs"
+  attr :request_path, :string, required: true, doc: "the current path"
 
   def menu(assigns) do
     ~H"""
@@ -37,6 +37,7 @@ defmodule LinkhutWeb.SettingsComponents do
           :for={
             {to, name} <- [
               {~p"/_/profile", gettext("Profile")},
+              {~p"/_/security", gettext("Security")},
               {~p"/_/import", gettext("Import / Export")},
               {~p"/_/misc", gettext("Misc")},
               {~p"/_/oauth", gettext("OAuth")},

@@ -1,0 +1,10 @@
+<div>
+  <h3>Reset Password</h3>
+  <.form :let={f} for={@changeset} as={:credential} action={~p"/_/reset-password/#{@token}"}>
+    <fieldset>
+      <.input field={f[:password]} required type="password" label={gettext("New Password")} />
+      <.input field={f[:password_confirmation]} required type="password" label={gettext("Confirm New Password")} />
+    </fieldset>
+    <.button type="submit">Reset password</.button>
+  </.form>
+</div>

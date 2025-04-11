@@ -28,7 +28,7 @@ defmodule Linkhut.DataCase do
   setup tags do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Linkhut.Repo)
 
-    unless tags[:async] do
+    if !tags[:async] do
       Ecto.Adapters.SQL.Sandbox.mode(Linkhut.Repo, {:shared, self()})
     end
 

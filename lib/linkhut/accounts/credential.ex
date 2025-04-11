@@ -31,11 +31,12 @@ defmodule Linkhut.Accounts.Credential do
   end
 
   @doc false
-  def registration_changeset(user, attrs) do
-    user
+  def registration_changeset(credential, attrs) do
+    credential
     |> changeset(attrs)
     |> cast(attrs, [:password])
     |> validate_length(:password, min: 6)
+    |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash
   end
 
