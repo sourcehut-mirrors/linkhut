@@ -91,7 +91,7 @@ defmodule Linkhut.Accounts do
   def get_user_by_email(email) when is_binary(email) do
     from(u in User,
       join: c in assoc(u, :credential),
-      where: c.email == ^email
+      where: fragment("lower(?)", c.email) == ^String.downcase(email)
     )
     |> Repo.one()
   end

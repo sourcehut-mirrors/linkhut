@@ -4,7 +4,11 @@ defmodule Linkhut.AccountsFixtures do
   entities via the `Linkhut.Accounts` context.
   """
 
-  def valid_user_password, do: "hello world!"
+  def unique_user_email(), do: "user#{System.unique_integer([:positive])}@example.com"
+
+  def unique_username(), do: "user#{System.unique_integer([:positive])}"
+
+  def valid_user_password(), do: "hello world!"
 
   def valid_user_attributes(attrs \\ %{}) do
     number = System.unique_integer([:positive])

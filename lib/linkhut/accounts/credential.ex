@@ -10,7 +10,7 @@ defmodule Linkhut.Accounts.Credential do
 
   schema "credentials" do
     field :email, :string
-    field :password, :string, virtual: true
+    field :password, :string, virtual: true, redact: true
     field :password_hash, :string
     field :email_confirmed_at, :utc_datetime
     field :email_confirmation_token, :string
@@ -25,7 +25,9 @@ defmodule Linkhut.Accounts.Credential do
     credential
     |> cast(attrs, [:email])
     |> validate_required([:email])
+    |> unsafe_validate_unique(:email, Linkhut.Repo)
     |> unique_constraint(:email)
+    |> validate_length(:email, max: 160)
     |> validate_format(:email, @email_format)
     |> email_confirmation(attrs)
   end
@@ -35,7 +37,7 @@ defmodule Linkhut.Accounts.Credential do
     credential
     |> changeset(attrs)
     |> cast(attrs, [:password])
-    |> validate_length(:password, min: 6)
+    |> validate_length(:password, min: 6, max: 72)
     |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash
   end
@@ -164,11 +166,12 @@ defmodule Linkhut.Accounts.Credential do
   defp put_password_hash(
          %Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset
        ) do
-    put_change(
-      changeset,
+    changeset
+    |> put_change(
       :password_hash,
       Argon2.hash_pwd_salt(password)
     )
+    |> delete_change(:password)
   end
 
   defp put_password_hash(changeset), do: changeset
