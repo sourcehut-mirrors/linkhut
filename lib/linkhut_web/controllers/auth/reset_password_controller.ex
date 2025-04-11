@@ -19,12 +19,23 @@ defmodule LinkhutWeb.Auth.ResetPasswordController do
       )
     end
 
-    conn
-    |> put_flash(
-      :info,
-      "If your email is in our system, you will receive instructions to reset your password shortly."
-    )
-    |> redirect(to: ~p"/_/login")
+    case get_in(conn.assigns, [:current_user]) do
+      nil ->
+        conn
+        |> put_flash(
+          :info,
+          "If your email is in our system, you will receive instructions to reset your password shortly."
+        )
+        |> redirect(to: ~p"/_/login")
+
+      _ ->
+        conn
+        |> put_flash(
+          :info,
+          "Check your mailbox for instructions on how to complete your password reset."
+        )
+        |> redirect(to: ~p"/")
+    end
   end
 
   def edit(conn, _params) do

@@ -112,7 +112,10 @@ defmodule LinkhutWeb.ResetPasswordControllerTest do
       assert html_response(conn, 200) =~ "should be at least 6 character(s)"
     end
 
-    test "does not reset password on non-matching password confirmation", %{conn: conn, token: token} do
+    test "does not reset password on non-matching password confirmation", %{
+      conn: conn,
+      token: token
+    } do
       conn =
         put(conn, ~p"/_/reset-password/#{token}", %{
           "credential" => %{

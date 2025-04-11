@@ -12,7 +12,7 @@ defmodule LinkhutWeb.Settings.SecurityHTML do
         <p>
           A link to complete the process will be sent to the email on file for your account ({@email}).
         </p>
-        <.form :let={f} for={@form} as={:user} action={~p"/_/reset-password"} class="inline">
+        <.form :let={f} for={@form} as={:credential} action={~p"/_/reset-password"} class="inline">
           <.input type="hidden" field={f[:email]} />
           <.button type="submit">Send reset link</.button>
         </.form>

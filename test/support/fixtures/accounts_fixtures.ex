@@ -8,6 +8,7 @@ defmodule Linkhut.AccountsFixtures do
 
   def valid_user_attributes(attrs \\ %{}) do
     number = System.unique_integer([:positive])
+
     Enum.into(attrs, %{
       username: "user#{number}",
       credential: %{
