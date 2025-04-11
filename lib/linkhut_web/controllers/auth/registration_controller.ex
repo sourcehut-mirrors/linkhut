@@ -3,6 +3,7 @@ defmodule LinkhutWeb.Auth.RegistrationController do
 
   alias Linkhut.Accounts
   alias Linkhut.Accounts.User
+  alias LinkhutWeb.UserAuth
 
   def new(conn, _params) do
     if conn.assigns[:current_user] != nil do
@@ -25,10 +26,8 @@ defmodule LinkhutWeb.Auth.RegistrationController do
         end
 
         conn
-        |> put_session(:user_id, user.id)
-        |> configure_session(renew: true)
         |> put_flash(:info, "Welcome to linkhut!")
-        |> redirect(to: ~p"/")
+        |> UserAuth.log_in_user(user)
 
       {:error, changeset} ->
         conn

@@ -5,7 +5,7 @@ defmodule Linkhut.Accounts.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
-    with {:ok, %{args: args} = _job} <- Linkhut.Workers.MailerWorker.send(recipient, subject, body) do
+    with {:ok, %{args: args}} <- Linkhut.Workers.MailerWorker.send(recipient, subject, body) do
       {:ok, args}
     end
   end

@@ -1,4 +1,4 @@
-defmodule LinkhutWeb.ResetPasswordControllerTest do
+defmodule LinkhutWeb.Auth.ResetPasswordControllerTest do
   use LinkhutWeb.ConnCase
 
   alias Linkhut.Accounts
