@@ -120,7 +120,7 @@ defmodule Linkhut.MixProject do
   defp extras do
     [
       "docs/introduction/introduction.md",
-      "docs/introduction/installation.md",
+      "docs/installation/installation.md",
       "docs/api/overview.md",
       "docs/api/posts.md",
       "docs/api/tags.md"
@@ -130,6 +130,7 @@ defmodule Linkhut.MixProject do
   defp groups_for_extras do
     [
       Introduction: ~r/docs\/introduction\/.?/,
+      Installation: ~r/docs\/installation\/.?/,
       "External API": ~r/docs\/api\/.?/
     ]
   end
