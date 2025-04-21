@@ -1,6 +1,6 @@
 defmodule Linkhut.Accounts.UserNotifier do
   defp signature() do
-    "-- \nadmin at ln.ht\n"
+    "-- \nlinkhut admin at #{LinkhutWeb.Endpoint.url}"
   end
 
   # Delivers the email using the application mailer.
@@ -24,6 +24,9 @@ defmodule Linkhut.Accounts.UserNotifier do
     If you didn't create an account with us, please ignore this.
 
     #{signature()}
+
+    You’re receiving this email because someone signed up for a linkhut account using this email address.
+    If that wasn’t you, feel free to ignore this message.
     """)
   end
 
@@ -41,6 +44,9 @@ defmodule Linkhut.Accounts.UserNotifier do
     If you didn't request this change, please ignore this.
 
     #{signature()}
+
+    You’re receiving this email because someone requested a password reset for your linkhut account.
+    If that wasn’t you, you can safely ignore this message.
     """)
   end
 
@@ -60,6 +66,9 @@ defmodule Linkhut.Accounts.UserNotifier do
     If you didn't request this change, please ignore this.
 
     #{signature()}
+
+    You’re receiving this email because you updated your email on linkhut (#{LinkhutWeb.Endpoint.url}).
+    If you didn’t do this, ignore this message or contact support.
     """)
   end
 end
