@@ -62,27 +62,35 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 
   # Mailer config:
-  dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")
-  dkim_domain = System.get_env("SMTP_DKIM_DOMAIN")
-  dkim_private_key = System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null"
+  maybe_dkim_config =
+    if System.get_env("SMTP_DKIM_SELECTOR") = dkim_selector != nil do
+      [
+        dkim: [
+          s: dkim_selector,
+          d: System.get_env("SMTP_DKIM_DOMAIN"),
+          private_key:
+            {:pem_plain, File.read!(System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null")}
+        ]
+      ]
+    else
+      []
+    end
 
-  config :linkhut, Linkhut.Mailer,
-    adapter: Swoosh.Adapters.SMTP,
-    relay: System.get_env("SMTP_HOST"),
-    username: System.get_env("SMTP_USERNAME"),
-    password: System.get_env("SMTP_PASSWORD"),
-    ssl: false,
-    tls: :always,
-    tls_options: [verify: :verify_none],
-    auth: :always,
-    port: System.get_env("SMTP_PORT"),
-    dkim: [
-      s: dkim_selector,
-      d: dkim_domain,
-      private_key: {:pem_plain, File.read!(dkim_private_key)}
-    ],
-    retries: 2,
-    no_mx_lookups: false
+  config :linkhut,
+         Linkhut.Mailer,
+         [
+           adapter: Swoosh.Adapters.SMTP,
+           relay: System.get_env("SMTP_HOST"),
+           username: System.get_env("SMTP_USERNAME"),
+           password: System.get_env("SMTP_PASSWORD"),
+           ssl: false,
+           tls: :always,
+           tls_options: [verify: :verify_none],
+           auth: :always,
+           port: System.get_env("SMTP_PORT"),
+           retries: 2,
+           no_mx_lookups: false
+         ] ++ maybe_dkim_config
 
   config :linkhut, Linkhut,
     mail: [
