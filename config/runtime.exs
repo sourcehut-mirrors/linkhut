@@ -63,7 +63,7 @@ if config_env() == :prod do
 
   # Mailer config:
   maybe_dkim_config =
-    if System.get_env("SMTP_DKIM_SELECTOR") = dkim_selector != nil do
+    if dkim_selector = System.get_env("SMTP_DKIM_SELECTOR") != nil do
       [
         dkim: [
           s: dkim_selector,
