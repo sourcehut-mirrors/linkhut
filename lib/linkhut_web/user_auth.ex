@@ -67,7 +67,7 @@ defmodule LinkhutWeb.UserAuth do
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
     user = user_token && Accounts.get_user_by_session_token(user_token)
-    assign(conn, :current_user, user || get_user(conn))
+    assign(conn, :current_user, user)
   end
 
   defp ensure_user_token(conn) do
@@ -135,24 +135,4 @@ defmodule LinkhutWeb.UserAuth do
   defp maybe_store_return_to(conn), do: conn
 
   defp signed_in_path(_conn), do: ~p"/"
-
-  ## Legacy Auth
-
-  def get_user(conn) do
-    case conn.assigns[:current_user] do
-      nil ->
-        fetch_user(conn)
-
-      user ->
-        user
-    end
-  end
-
-  defp fetch_user(conn) do
-    if user_id = get_session(conn, :user_id) do
-      Accounts.get_user(user_id)
-    else
-      nil
-    end
-  end
 end
