@@ -11,7 +11,7 @@ defmodule LinkhutWeb.LinkControllerTest do
 
     redirect_path =
       conn
-      |> assign(:current_user, user)
+      |> LinkhutWeb.ConnCase.log_in_user(user)
       |> post(Routes.link_path(conn, :insert), %{
         link: params_for(:link, tags: "test auto-generated", user_id: user.id)
       })

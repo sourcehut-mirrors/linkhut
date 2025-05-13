@@ -7,7 +7,7 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
 
       response =
         conn
-        |> assign(:current_user, user)
+        |> LinkhutWeb.ConnCase.log_in_user(user)
         |> get(Routes.profile_path(conn, :show))
         |> html_response(200)
 
