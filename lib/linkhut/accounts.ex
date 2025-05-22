@@ -8,7 +8,7 @@ defmodule Linkhut.Accounts do
   import Argon2, only: [verify_pass: 2, no_user_verify: 1]
   alias Linkhut.Repo
 
-  alias Linkhut.Accounts.{Credential, EmailToken, User, UserToken, UserNotifier}
+  alias Linkhut.Accounts.{Credential, User, UserToken, UserNotifier}
 
   @typedoc """
   A username.
@@ -117,24 +117,22 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
-  Updates a user.
+  Updates a user profile.
 
   ## Examples
 
-      iex> update_user(user, %{field: new_value})
+      iex> update_profile(user, %{field: new_value})
       {:ok, %User{}}
 
-      iex> update_user(user, %{field: bad_value})
+      iex> update_profile(user, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec update_user(User.t(), %{optional(any) => any}) ::
+  @spec update_profile(User.t(), %{optional(any) => any}) ::
           {:ok, User.t()} | {:error, changeset(User.t())}
-  def update_user(%User{} = user, attrs) do
+  def update_profile(%User{} = user, attrs) do
     user
-    |> Repo.preload(:credential)
     |> User.changeset(attrs)
-    |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.changeset/2)
     |> Repo.update()
   end
 
@@ -150,7 +148,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_user(changeset(User.t()), %{optional(any) => any}) ::
+  @spec delete_user(changeset(User.t()), %{any() => any()}) ::
           {:ok, User.t()} | {:error, changeset(User.t())}
   def delete_user(%User{} = user, attrs) do
     user
@@ -180,6 +178,9 @@ defmodule Linkhut.Accounts do
     user
     |> Repo.preload(:credential)
     |> User.changeset(attrs)
+    |> Ecto.Changeset.cast_assoc(:credential,
+      with: &Credential.email_changeset(&1, &2, validate_email: false)
+    )
   end
 
   @doc """
@@ -219,24 +220,6 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
-  Updates a credential.
-
-  ## Examples
-
-      iex> update_credential(credential, %{field: new_value})
-      {:ok, %Credential{}}
-
-      iex> update_credential(credential, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def update_credential(%Credential{} = credential, attrs) do
-    credential
-    |> Credential.changeset(attrs)
-    |> Repo.update()
-  end
-
-  @doc """
   Returns an `%Ecto.Changeset{}` for tracking credential changes.
 
   ## Examples
@@ -254,10 +237,10 @@ defmodule Linkhut.Accounts do
 
   ## Examples
 
-      iex> authenticate_by_username_password("user@example.com", "123456")
+      iex> authenticate_by_username_password("username", "123456")
       {:ok, %User{}}
 
-      iex> authenticate_by_username_password("user@example.com", "bad_password")
+      iex> authenticate_by_username_password("username", "bad_password")
       {:error, :unauthorized}
 
   """
@@ -282,18 +265,6 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
-  Finds a user by the `email_confirmation_token` column.
-  """
-  @spec get_by_confirmation_token(binary()) :: Context.user() | nil
-  def get_by_confirmation_token(token) do
-    User
-    |> join(:left, [u], c in Credential, on: u.id == c.user_id)
-    |> where([_, c], c.email_confirmation_token == ^token)
-    |> Repo.one()
-    |> Repo.preload(:credential)
-  end
-
-  @doc """
   Checks if the users current e-mail is unconfirmed.
   """
   @spec current_email_unconfirmed?(Context.user()) :: boolean()
@@ -311,81 +282,86 @@ defmodule Linkhut.Accounts do
       when is_nil(timestamp),
       do: true
 
-  def current_email_unconfirmed?(%{
-        credential: %{
-          unconfirmed_email: nil,
-          email_confirmation_token: token
-        }
-      })
-      when not is_nil(token),
-      do: true
-
   def current_email_unconfirmed?(_user),
     do: false
 
   @doc """
-  Checks if the user has a pending e-mail change.
+  Updates the user email using the given token.
+
+  If the token matches, the user email is updated and the token is deleted.
+  The confirmed_at date is also updated to the current time.
   """
-  @spec pending_email_change?(Context.user()) :: boolean()
-  def pending_email_change?(%{credential: %Ecto.Association.NotLoaded{}} = user) do
-    user
-    |> Repo.preload(:credential)
-    |> pending_email_change?()
-  end
-
-  def pending_email_change?(%{
-        credential: %{unconfirmed_email: email, email_confirmation_token: token}
-      })
-      when not is_nil(email) and not is_nil(token),
-      do: true
-
-  def pending_email_change?(_user), do: false
-
-  def deliver_email_confirmation_instructions(%User{} = user, confirmation_url_fun)
-      when is_function(confirmation_url_fun, 1) do
+  def update_email(user, token) do
     user = Repo.preload(user, :credential)
+    context = "change:#{user.credential.email}"
 
-    if current_email_unconfirmed?(user) != nil do
-      token = EmailToken.new(user.credential, "confirm")
-      UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(token))
+    with {:ok, query} <- UserToken.verify_change_email_token_query(token, context),
+         %UserToken{sent_to: email} <- Repo.one(query),
+         {:ok, _} <- Repo.transaction(email_multi(user, email, context)) do
+      :ok
     else
-      {:error, :already_confirmed}
-    end
-  end
-
-  def deliver_update_email_instructions(%User{} = user, confirmation_url_fun)
-      when is_function(confirmation_url_fun, 1) do
-    user = Repo.preload(user, :credential)
-
-    if pending_email_change?(user) != nil do
-      token = EmailToken.new(user.credential, "confirm")
-      UserNotifier.deliver_update_email_instructions(user, confirmation_url_fun.(token))
-    else
-      {:error, :already_confirmed}
-    end
-  end
-
-  def confirm_email(user, token) do
-    case EmailToken.verify(token, "confirm") do
-      {:ok, token} -> validate_email_confirmation(user, token)
       _ -> :error
     end
   end
 
-  defp validate_email_confirmation(user, token) do
-    case get_by_confirmation_token(token) do
-      %User{id: id, credential: _credential} = unverified_user when id == user.id ->
-        mark_as_verified(unverified_user)
+  defp email_multi(user, email, context) do
+    changeset =
+      user.credential
+      |> Credential.confirm_email_changeset(%{"email" => email})
 
-      _ ->
-        :error
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:credential, changeset)
+    |> Ecto.Multi.delete_all(:tokens, UserToken.by_user_and_contexts_query(user, [context]))
+  end
+
+  @doc ~S"""
+  Delivers the update email instructions to the given user.
+
+  ## Examples
+
+      iex> deliver_update_email_instructions(user, current_email, &url(~p"/_/confirm-email/#{&1}"))
+      {:ok, %{to: ..., body: ...}}
+
+  """
+  def deliver_update_email_instructions(%User{} = user, current_email, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+
+    if current_email != user.credential.email do
+      Repo.insert!(user_token)
+      UserNotifier.deliver_update_email_instructions(user, confirmation_url_fun.(encoded_token))
+    else
+      {:error, :already_confirmed}
     end
   end
 
-  defp mark_as_verified(%User{credential: _credential} = user) do
-    user
-    |> User.confirm_user(%{})
-    |> Repo.update()
+  @doc """
+  Emulates that the email will change without actually changing
+  it in the database.
+
+  ## Examples
+
+      iex> apply_email_change(user, %{"credential" => %{"email" => email}})
+      {:ok, %User{}, "current@example.com"}
+
+      iex> apply_email_change(user, %{"credential" => %{"email" => email}})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def apply_email_change(user, params) do
+    with %{"credential" => %{"email" => email}} <- params,
+         %User{credential: %Credential{} = c} = user <- Repo.preload(user, :credential),
+         true <- c.email != email do
+      case user
+           |> User.changeset(Map.take(params, ["credential"]))
+           |> Ecto.Changeset.cast_assoc(:credential, with: &Credential.email_changeset/2)
+           |> Ecto.Changeset.apply_action(:update) do
+        {:ok, user} -> {:ok, user, c.email}
+        {:error, changeset} -> {:error, changeset}
+      end
+    else
+      _ -> {:ok, user}
+    end
   end
 
   ## Session
@@ -427,6 +403,55 @@ defmodule Linkhut.Accounts do
   def delete_user_session_token(token) do
     Repo.delete_all(UserToken.by_token_and_context_query(token, "session"))
     :ok
+  end
+
+  ## Confirmation
+
+  @doc ~S"""
+  Delivers the confirmation email instructions to the given user.
+
+  ## Examples
+
+      iex> deliver_email_confirmation_instructions(user, &url(~p"/_/confirm/#{&1}"))
+      {:ok, %{to: ..., body: ...}}
+
+      iex> deliver_email_confirmation_instructions(confirmed_user, &url(~p"/_/confirm/#{&1}"))
+      {:error, :already_confirmed}
+
+  """
+  def deliver_email_confirmation_instructions(%User{} = user, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    user = Repo.preload(user, :credential)
+
+    if user.credential.email_confirmed_at do
+      {:error, :already_confirmed}
+    else
+      {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
+      Repo.insert!(user_token)
+      UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+    end
+  end
+
+  @doc """
+  Confirms a user by the given token.
+
+  If the token matches, the user account is marked as confirmed
+  and the token is deleted.
+  """
+  def confirm_user(%User{id: user_id} = _user, token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
+         %User{id: id} = user when id == user_id <- Repo.one(query) |> Repo.preload(:credential),
+         {:ok, %{user: user}} <- Repo.transaction(confirm_user_multi(user)) do
+      {:ok, user}
+    else
+      _ -> :error
+    end
+  end
+
+  defp confirm_user_multi(user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.confirm_user(user, %{}))
+    |> Ecto.Multi.delete_all(:tokens, UserToken.by_user_and_contexts_query(user, ["confirm"]))
   end
 
   ## Reset password

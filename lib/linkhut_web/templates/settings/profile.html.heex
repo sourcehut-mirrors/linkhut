@@ -1,25 +1,25 @@
 <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <div>
-  <%= if @current_email_unconfirmed? do %>
+  <%= if @current_user.type == :unconfirmed and Date.diff(Date.utc_today(), @current_user.inserted_at) >= 1 do %>
     <section class="settings warning">
       <h4>{gettext("Email Verification")}</h4>
       <p>
         {gettext("You haven't yet verified your e-mail. Doing so is required in order to be able to reset your password.")}
       </p>
-      <%= form_for :confirm, Routes.email_confirmation_path(@conn, :create), fn _ -> %>
+      <%= form_for :confirm, ~p"/_/confirm", fn _ -> %>
         {submit("Send verification email")}
       <% end %>
     </section>
   <% end %>
   <section class="settings">
     <h4>Profile Information</h4>
-    <%= form_for @changeset, Routes.profile_path(@conn, :update), fn f -> %>
+    <%= form_for @changeset, ~p"/_/profile", fn f -> %>
       <fieldset>
         {input(f, :username, disabled: true)}
         <%= inputs_for f, :credential, fn cf -> %>
           {input(cf, :email)}
         <% end %>
-        <%= unless @current_email_unconfirmed? do %>
+        <%= unless @current_user.type == :unconfirmed do %>
           <div class="inline-info">
             {gettext("Confirmed on:")}
             <span>{Timex.format!(@changeset.data.credential.email_confirmed_at, "{YYYY}-{0M}-{0D}")}</span>

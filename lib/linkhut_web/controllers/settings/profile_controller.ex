@@ -9,8 +9,7 @@ defmodule LinkhutWeb.Settings.ProfileController do
 
     render(conn, :profile,
       user: user,
-      changeset: changeset,
-      current_email_unconfirmed?: Accounts.current_email_unconfirmed?(user)
+      changeset: changeset
     )
   end
 
@@ -32,8 +31,8 @@ defmodule LinkhutWeb.Settings.ProfileController do
       {:ok, user} ->
         conn
         |> put_flash(:info, "Deleted account for #{user.username}")
-        |> redirect(to: "/")
         |> configure_session(drop: true)
+        |> redirect(to: "/")
 
       {:error, changeset} ->
         conn
@@ -42,15 +41,19 @@ defmodule LinkhutWeb.Settings.ProfileController do
   end
 
   defp update(conn, user, params) when not is_nil(user) do
-    case Accounts.update_user(user, params) do
-      {:ok, user} ->
-        if Accounts.pending_email_change?(user) != nil do
-          Accounts.deliver_update_email_instructions(
-            user,
-            &url(~p"/_/confirm?#{%{token: Base.url_encode64(&1)}}")
-          )
-        end
+    with {:ok, user} <- Accounts.update_profile(user, params),
+         {:ok, user, current_email} <- Accounts.apply_email_change(user, params) do
+      Accounts.deliver_update_email_instructions(
+        user,
+        current_email,
+        &url(~p"/_/confirm-email/#{&1}")
+      )
 
+      conn
+      |> put_flash(:info, "Profile updated")
+      |> redirect(to: Routes.profile_path(conn, :show))
+    else
+      {:ok, _user} ->
         conn
         |> put_flash(:info, "Profile updated")
         |> redirect(to: Routes.profile_path(conn, :show))
@@ -59,15 +62,8 @@ defmodule LinkhutWeb.Settings.ProfileController do
         conn
         |> render(:profile,
           user: user,
-          changeset: changeset,
-          current_email_unconfirmed?: Accounts.current_email_unconfirmed?(user)
+          changeset: changeset
         )
     end
-  end
-
-  defp update(conn, user, _params) when is_nil(user) do
-    conn
-    |> put_flash(:error, "No access")
-    |> redirect(to: Routes.link_path(conn, :show))
   end
 end

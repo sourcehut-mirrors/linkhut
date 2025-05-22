@@ -1,6 +1,6 @@
 defmodule Linkhut.Accounts.UserNotifier do
   defp signature() do
-    "-- \nlinkhut admin at #{LinkhutWeb.Endpoint.url}"
+    "-- \nlinkhut admin at #{LinkhutWeb.Endpoint.url()}"
   end
 
   # Delivers the email using the application mailer.
@@ -54,11 +54,11 @@ defmodule Linkhut.Accounts.UserNotifier do
   Deliver instructions to update a user email.
   """
   def deliver_update_email_instructions(user, url) do
-    deliver(user.credential.unconfirmed_email, "Confirm your linkhut email address change", """
+    deliver(user.credential.email, "Confirm your linkhut email address change", """
     Hello #{user.username},
 
     You (or someone pretending to be you) have changed the email on your
-    account to #{user.credential.unconfirmed_email}. To confirm the new email and apply the change,
+    account to #{user.credential.email}. To confirm the new email and apply the change,
     click the following link:
 
     #{url}
@@ -67,7 +67,7 @@ defmodule Linkhut.Accounts.UserNotifier do
 
     #{signature()}
 
-    You’re receiving this email because you updated your email on linkhut (#{LinkhutWeb.Endpoint.url}).
+    You’re receiving this email because you updated your email on linkhut (#{LinkhutWeb.Endpoint.url()}).
     If you didn’t do this, ignore this message or contact support.
     """)
   end

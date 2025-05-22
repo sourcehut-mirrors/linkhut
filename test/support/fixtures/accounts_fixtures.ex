@@ -4,9 +4,11 @@ defmodule Linkhut.AccountsFixtures do
   entities via the `Linkhut.Accounts` context.
   """
 
-  def unique_user_email(), do: "user#{System.unique_integer([:positive])}@example.com"
+  import Ecto.Query
 
-  def unique_username(), do: "user#{System.unique_integer([:positive])}"
+  alias Linkhut.Accounts
+
+  def unique_user_email(), do: "user#{System.unique_integer([:positive])}@example.com"
 
   def valid_user_password(), do: "hello world!"
 
@@ -15,6 +17,7 @@ defmodule Linkhut.AccountsFixtures do
 
     Enum.into(attrs, %{
       username: "user#{number}",
+      bio: "Hi, this is my bio!",
       credential: %{
         email: "user#{number}@example.com",
         password: valid_user_password()
@@ -35,5 +38,14 @@ defmodule Linkhut.AccountsFixtures do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.body, "[TOKEN]")
     token
+  end
+
+  def override_token_inserted_at(token, inserted_at) when is_binary(token) do
+    Linkhut.Repo.update_all(
+      from(t in Accounts.UserToken,
+        where: t.token == ^token
+      ),
+      set: [inserted_at: inserted_at]
+    )
   end
 end

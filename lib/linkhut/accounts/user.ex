@@ -20,7 +20,7 @@ defmodule Linkhut.Accounts.User do
       default: :unconfirmed
 
     field :roles, {:array, Ecto.Enum}, values: [:admin], default: []
-    has_one :credential, Credential
+    has_one :credential, Credential, on_replace: :update
 
     has_many :links, Link, references: :id, on_delete: :delete_all
 

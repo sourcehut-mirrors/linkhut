@@ -33,6 +33,21 @@ defmodule LinkhutWeb.Auth.ResetPasswordControllerTest do
       assert Repo.get_by!(Accounts.UserToken, user_id: user.id).context == "reset_password"
     end
 
+    test "sends a new reset password token - logged in", %{conn: conn, user: user} do
+      conn =
+        LinkhutWeb.ConnCase.log_in_user(conn, user)
+        |> post(~p"/_/reset-password", %{
+          "credential" => %{"email" => user.credential.email}
+        })
+
+      assert redirected_to(conn) == ~p"/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "Check your mailbox for instructions"
+
+      assert Repo.get_by!(Accounts.UserToken, user_id: user.id, context: "reset_password")
+    end
+
     test "does not send reset password token if email is invalid", %{conn: conn} do
       conn =
         post(conn, ~p"/_/reset-password", %{

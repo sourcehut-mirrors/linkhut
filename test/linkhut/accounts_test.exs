@@ -112,6 +112,82 @@ defmodule Linkhut.AccountsTest do
     end
   end
 
+  describe "sudo_mode?/2" do
+    test "validates the authenticated_at time" do
+      now = DateTime.utc_now()
+
+      assert Accounts.sudo_mode?(%User{authenticated_at: DateTime.utc_now()})
+      assert Accounts.sudo_mode?(%User{authenticated_at: DateTime.add(now, -19, :minute)})
+      refute Accounts.sudo_mode?(%User{authenticated_at: DateTime.add(now, -21, :minute)})
+
+      # minute override
+      refute Accounts.sudo_mode?(
+               %User{authenticated_at: DateTime.add(now, -11, :minute)},
+               -10
+             )
+
+      # not authenticated
+      refute Accounts.sudo_mode?(%User{})
+    end
+  end
+
+  describe "update_user_email/2" do
+    setup do
+      user = user_fixture()
+      email = unique_user_email()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_update_email_instructions(
+            Map.update(user, :credential, %{}, fn c -> %{c | email: email} end),
+            user.credential.email,
+            url
+          )
+        end)
+
+      %{user: user, token: token, email: email}
+    end
+
+    test "updates the email with a valid token", %{user: user, token: token, email: email} do
+      assert Accounts.update_email(user, token) == :ok
+      changed_user = Repo.get!(User, user.id) |> Repo.preload(:credential)
+      assert changed_user.credential.email != user.credential.email
+      assert changed_user.credential.email == email
+      refute Repo.get_by(UserToken, user_id: user.id)
+    end
+
+    test "does not update email with invalid token", %{user: user} do
+      assert Accounts.update_email(user, "%%%") == :error
+
+      assert (Repo.get!(User, user.id) |> Repo.preload(:credential)).credential.email ==
+               user.credential.email
+
+      assert Repo.get_by(UserToken, user_id: user.id)
+    end
+
+    test "does not update email if user email changed", %{user: user, token: token} do
+      assert Accounts.update_email(
+               Map.update(user, :credential, %{}, fn c -> %{c | email: "current@example.com"} end),
+               token
+             ) == :error
+
+      assert (Repo.get!(User, user.id) |> Repo.preload(:credential)).credential.email ==
+               user.credential.email
+
+      assert Repo.get_by(UserToken, user_id: user.id)
+    end
+
+    test "does not update email if token expired", %{user: user, token: token} do
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      assert Accounts.update_email(user, token) == :error
+
+      assert (Repo.get!(User, user.id) |> Repo.preload(:credential)).credential.email ==
+               user.credential.email
+
+      assert Repo.get_by(UserToken, user_id: user.id)
+    end
+  end
+
   describe "change_user/2" do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user(%User{})
@@ -119,16 +195,16 @@ defmodule Linkhut.AccountsTest do
     end
 
     test "allows fields to be set" do
-      username = unique_username()
+      email = unique_user_email()
 
       changeset =
         Accounts.change_user(
           %User{},
-          valid_user_attributes(%{username: username})
+          valid_user_attributes(%{credential: %{email: email}})
         )
 
       assert changeset.valid?
-      assert get_change(changeset, :username) == username
+      assert get_assoc(changeset, :credential) |> get_change(:email) == email
     end
   end
 

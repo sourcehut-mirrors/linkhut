@@ -9,6 +9,8 @@ defmodule Linkhut.Accounts.UserToken do
   # It is very important to keep the reset password token expiry short,
   # since someone with access to the email may take over the account.
   @reset_password_validity_in_days 1
+  @confirm_validity_in_days 7
+  @change_email_validity_in_days 7
   @session_validity_in_days 60
 
   schema "users_tokens" do
@@ -64,6 +66,36 @@ defmodule Linkhut.Accounts.UserToken do
   end
 
   @doc """
+  Builds a token and its hash to be delivered to the user's email.
+
+  The non-hashed token is sent to the user email while the
+  hashed part is stored in the database. The original token cannot be reconstructed,
+  which means anyone with read-only access to the database cannot directly use
+  the token in the application to gain access. Furthermore, if the user changes
+  their email in the system, the tokens sent to the previous email are no longer
+  valid.
+
+  Users can easily adapt the existing code to provide other types of delivery methods,
+  for example, by phone numbers.
+  """
+  def build_email_token(user, context) do
+    build_hashed_token(user, context, user.credential.email)
+  end
+
+  defp build_hashed_token(user, context, sent_to) do
+    token = :crypto.strong_rand_bytes(@rand_size)
+    hashed_token = :crypto.hash(@hash_algorithm, token)
+
+    {Base.url_encode64(token, padding: false),
+     %UserToken{
+       token: hashed_token,
+       context: context,
+       sent_to: sent_to,
+       user_id: user.id
+     }}
+  end
+
+  @doc """
   Checks if the token is valid and returns its underlying lookup query.
 
   The query returns the user found by the token, if any.
@@ -96,36 +128,37 @@ defmodule Linkhut.Accounts.UserToken do
     end
   end
 
+  defp days_for_context("confirm"), do: @confirm_validity_in_days
   defp days_for_context("reset_password"), do: @reset_password_validity_in_days
 
   @doc """
-  Builds a token and its hash to be delivered to the user's email.
+  Checks if the token is valid and returns its underlying lookup query.
 
-  The non-hashed token is sent to the user email while the
-  hashed part is stored in the database. The original token cannot be reconstructed,
-  which means anyone with read-only access to the database cannot directly use
-  the token in the application to gain access. Furthermore, if the user changes
-  their email in the system, the tokens sent to the previous email are no longer
-  valid.
+  The query returns the user_token found by the token, if any.
 
-  Users can easily adapt the existing code to provide other types of delivery methods,
-  for example, by phone numbers.
+  This is used to validate requests to change the user
+  email. It is different from `verify_email_token_query/2` precisely because
+  `verify_email_token_query/2` validates the email has not changed, which is
+  the starting point by this function.
+
+  The given token is valid if it matches its hashed counterpart in the
+  database and if it has not expired (after @change_email_validity_in_days).
+  The context must always start with "change:".
   """
-  def build_email_token(user, context) do
-    build_hashed_token(user, context, user.credential.email)
-  end
+  def verify_change_email_token_query(token, "change:" <> _ = context) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
-  defp build_hashed_token(user, context, sent_to) do
-    token = :crypto.strong_rand_bytes(@rand_size)
-    hashed_token = :crypto.hash(@hash_algorithm, token)
+        query =
+          from token in by_token_and_context_query(hashed_token, context),
+            where: token.inserted_at > ago(@change_email_validity_in_days, "day")
 
-    {Base.url_encode64(token, padding: false),
-     %UserToken{
-       token: hashed_token,
-       context: context,
-       sent_to: sent_to,
-       user_id: user.id
-     }}
+        {:ok, query}
+
+      :error ->
+        :error
+    end
   end
 
   @doc """
@@ -144,12 +177,5 @@ defmodule Linkhut.Accounts.UserToken do
 
   def by_user_and_contexts_query(user, [_ | _] = contexts) do
     from t in UserToken, where: t.user_id == ^user.id and t.context in ^contexts
-  end
-
-  @doc """
-  Deletes a list of tokens.
-  """
-  def delete_all_query(tokens) do
-    from t in UserToken, where: t.id in ^Enum.map(tokens, & &1.id)
   end
 end

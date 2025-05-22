@@ -6,15 +6,11 @@ defmodule Linkhut.Accounts.Credential do
   alias Ecto.Changeset
   alias Linkhut.Accounts.User
 
-  @email_format ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
-
   schema "credentials" do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :password_hash, :string
     field :email_confirmed_at, :utc_datetime
-    field :email_confirmation_token, :string
-    field :unconfirmed_email, :string
     belongs_to :user, User
 
     timestamps()
@@ -22,73 +18,67 @@ defmodule Linkhut.Accounts.Credential do
 
   @doc false
   def changeset(credential, attrs) do
-    credential
-    |> cast(attrs, [:email])
-    |> validate_required([:email])
-    |> unsafe_validate_unique(:email, Linkhut.Repo)
-    |> unique_constraint(:email)
-    |> validate_length(:email, max: 160)
-    |> validate_format(:email, @email_format)
-    |> email_confirmation(attrs)
+    email_changeset(credential, attrs, validate_email: false)
   end
 
   @doc false
   def registration_changeset(credential, attrs) do
     credential
-    |> changeset(attrs)
-    |> cast(attrs, [:password])
-    |> validate_length(:password, min: 6, max: 72)
-    |> validate_confirmation(:password, message: "does not match password")
-    |> put_password_hash
+    |> cast(attrs, [:email, :password])
+    |> validate_email(validate_email: true)
+    |> validate_password()
   end
 
   @doc """
-  Sets the e-mail as confirmed.
+  A credential changeset for changing the email.
 
-  This updates `:email_confirmed_at` and sets `:email_confirmation_token` to
-  nil.
-
-  If the struct has a `:unconfirmed_email` value, then the `:email` will be
-  changed to this value, and `:unconfirmed_email` will be set to nil.
+  It requires the email to change otherwise an error is added.
   """
-  @spec confirm_email_changeset(Ecto.Schema.t() | Changeset.t(), map()) :: Changeset.t()
-  def confirm_email_changeset(
-        %Changeset{data: %{unconfirmed_email: unconfirmed_email}} = changeset,
-        params
-      )
-      when not is_nil(unconfirmed_email) do
-    confirm_email(changeset, unconfirmed_email, params)
-  end
-
-  def confirm_email_changeset(
-        %Changeset{data: %{email_confirmed_at: nil, email: email}} = changeset,
-        params
-      ) do
-    confirm_email(changeset, email, params)
-  end
-
-  def confirm_email_changeset(%Changeset{} = changeset, _params), do: changeset
-
-  def confirm_email_changeset(%__MODULE__{} = credential, params) do
+  def email_changeset(credential, attrs, opts \\ []) do
     credential
-    |> Changeset.change()
-    |> confirm_email_changeset(params)
+    |> cast(attrs, [:email])
+    |> validate_email(opts)
   end
 
-  defp confirm_email(changeset, email, _params) do
-    confirmed_at = DateTime.utc_now(:second)
-
-    changes =
-      [
-        email_confirmed_at: confirmed_at,
-        email: email,
-        unconfirmed_email: nil,
-        email_confirmation_token: nil
-      ]
-
+  defp validate_email(changeset, opts) do
     changeset
-    |> Changeset.change(changes)
-    |> Changeset.unique_constraint(:email)
+    |> validate_required([:email])
+    |> validate_length(:email, max: 160)
+    |> validate_format(
+      :email,
+      ~r/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+    )
+    |> maybe_validate_unique_email(opts)
+  end
+
+  defp validate_password(changeset) do
+    changeset
+    |> validate_length(:password, min: 6, max: 72)
+    |> validate_confirmation(:password, message: "does not match password")
+    |> put_password_hash()
+  end
+
+  defp maybe_validate_unique_email(changeset, opts) do
+    if Keyword.get(opts, :validate_email, true) do
+      changeset
+      |> unsafe_validate_unique(:email, Linkhut.Repo)
+      |> unique_constraint(:email)
+    else
+      changeset
+    end
+  end
+
+  @doc """
+  Updates the e-mail and marks it as confirmed.
+
+  This updates `:email_confirmed_at`.
+  """
+  @spec confirm_email_changeset(Ecto.Schema.t(), map()) :: Changeset.t()
+  def confirm_email_changeset(credential, attrs) do
+    credential
+    |> cast(attrs, [:email])
+    |> validate_email(validate_email: true)
+    |> changeset_email_verification(%{"email_confirmed_at" => DateTime.utc_now(:second)})
   end
 
   @doc false
@@ -97,82 +87,18 @@ defmodule Linkhut.Accounts.Credential do
     |> cast(attrs, [:email_confirmed_at])
   end
 
-  @spec changeset(Changeset.t(), map()) :: Changeset.t()
-  defp email_confirmation(%{valid?: true} = changeset, attrs) do
-    cond do
-      built?(changeset) ->
-        put_email_confirmation_token(changeset)
+  defp put_password_hash(changeset) do
+    password = get_change(changeset, :password)
 
-      email_reverted?(changeset, attrs) ->
-        changeset
-        |> Changeset.put_change(:email_confirmation_token, nil)
-        |> Changeset.put_change(:unconfirmed_email, nil)
-
-      email_changed?(changeset) ->
-        current_email = changeset.data.email
-        changed_email = Changeset.get_field(changeset, :email)
-        changeset = set_unconfirmed_email(changeset, current_email, changed_email)
-
-        case unconfirmed_email_changed?(changeset) do
-          true -> put_email_confirmation_token(changeset)
-          false -> changeset
-        end
-
-      true ->
-        changeset
+    if password && changeset.valid? do
+      changeset
+      |> put_change(
+        :password_hash,
+        Argon2.hash_pwd_salt(password)
+      )
+      |> delete_change(:password)
+    else
+      changeset
     end
   end
-
-  defp email_confirmation(changeset, _attrs), do: changeset
-
-  defp built?(changeset), do: Ecto.get_meta(changeset.data, :state) == :built
-
-  defp email_reverted?(changeset, attrs) do
-    param = Map.get(attrs, :email) || Map.get(attrs, "email")
-    current = changeset.data.email
-
-    param == current
-  end
-
-  defp email_changed?(changeset) do
-    case Changeset.get_change(changeset, :email) do
-      nil -> false
-      _any -> true
-    end
-  end
-
-  def put_email_confirmation_token(changeset) do
-    changeset
-    |> Changeset.put_change(
-      :email_confirmation_token,
-      :crypto.strong_rand_bytes(16) |> :base64.encode()
-    )
-    |> Changeset.unique_constraint(:email_confirmation_token)
-  end
-
-  defp set_unconfirmed_email(changeset, current_email, new_email) do
-    changeset
-    |> Changeset.put_change(:email, current_email)
-    |> Changeset.put_change(:unconfirmed_email, new_email)
-  end
-
-  defp unconfirmed_email_changed?(changeset) do
-    case Changeset.get_change(changeset, :unconfirmed_email) do
-      nil -> false
-      _any -> true
-    end
-  end
-
-  defp put_password_hash(
-         %Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset
-       ) do
-    changeset
-    |> put_change(
-      :password_hash,
-      Argon2.hash_pwd_salt(password)
-    )
-    |> delete_change(:password)
-  end
-
-  defp put_password_hash(changeset), do: changeset
 end

@@ -11,7 +11,7 @@ defmodule LinkhutWeb.UserAuthTest do
       |> Map.replace!(:secret_key_base, LinkhutWeb.Endpoint.config(:secret_key_base))
       |> init_test_session(%{})
 
-    %{user: user_fixture(), conn: conn}
+    %{user: %{user_fixture() | authenticated_at: DateTime.utc_now()}, conn: conn}
   end
 
   describe "log_in_user/3" do
@@ -67,6 +67,34 @@ defmodule LinkhutWeb.UserAuthTest do
       conn = UserAuth.fetch_current_user(conn, [])
       refute get_session(conn, :user_token)
       refute conn.assigns.current_user
+    end
+  end
+
+  describe "require_sudo_mode/2" do
+    test "allows users that have authenticated in the last 10 minutes", %{conn: conn, user: user} do
+      conn =
+        conn
+        |> fetch_flash()
+        |> assign(:current_user, user)
+        |> UserAuth.require_sudo_mode([])
+
+      refute conn.halted
+      refute conn.status
+    end
+
+    test "redirects when authentication is too old", %{conn: conn, user: user} do
+      eleven_minutes_ago = DateTime.utc_now() |> DateTime.add(-11, :minute)
+
+      conn =
+        conn
+        |> fetch_flash()
+        |> assign(:current_user, %{user | authenticated_at: eleven_minutes_ago})
+        |> UserAuth.require_sudo_mode([])
+
+      assert redirected_to(conn) == ~p"/_/login"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "You must re-authenticate to access this page."
     end
   end
 

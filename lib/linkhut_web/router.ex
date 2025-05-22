@@ -15,10 +15,6 @@ defmodule LinkhutWeb.Router do
     plug LinkhutWeb.Plugs.GlobalAssigns
   end
 
-  pipeline :ensure_auth do
-    plug :require_authenticated_user
-  end
-
   pipeline :token_auth do
     plug LinkhutWeb.Plugs.VerifyTokenAuth
 
@@ -123,8 +119,6 @@ defmodule LinkhutWeb.Router do
     put "/profile/delete", ProfileController, :delete
 
     get "/security", SecurityController, :show
-
-    post "/confirm", EmailConfirmationController, :create
   end
 
   scope "/_", LinkhutWeb.Settings do
@@ -172,10 +166,12 @@ defmodule LinkhutWeb.Router do
     delete "/authorize", OauthController, :delete_authorization
   end
 
-  scope "/_/", LinkhutWeb.Settings do
+  scope "/_/", LinkhutWeb.Auth do
     pipe_through [:browser, :require_authenticated_user]
 
-    get "/confirm", EmailConfirmationController, :confirm
+    post "/confirm", ConfirmationController, :create
+    get "/confirm/:token", ConfirmationController, :update
+    get "/confirm-email/:token", ConfirmationController, :confirm_email
   end
 
   scope "/_/admin" do
