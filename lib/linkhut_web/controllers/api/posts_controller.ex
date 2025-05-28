@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.Api.PostsController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.Api.PostsView
-
   plug ExOauth2Provider.Plug.EnsureScopes,
        [scopes: ~w(posts:write)] when action in [:add, :delete]
 
@@ -22,7 +20,6 @@ defmodule LinkhutWeb.Api.PostsController do
 
   def add(conn, %{"url" => url, "description" => title, "replace" => "yes"} = params) do
     user = conn.assigns[:current_user]
-    link = Links.get!(url, user.id)
 
     link_params =
       Enum.into(
@@ -31,14 +28,11 @@ defmodule LinkhutWeb.Api.PostsController do
         &{&1, value(&1, params)}
       )
 
-    case Links.update_link(link, link_params) do
-      {:ok, link} ->
-        conn
-        |> render(:add, link: link)
-
-      {:error, changeset} ->
-        conn
-        |> render(:add, changeset: changeset)
+    with %Link{} = link <- Links.get(url, user.id),
+         {:ok, _} <- Links.update_link(link, link_params) do
+      render(conn, :done)
+    else
+      _ -> render(conn, :error)
     end
   end
 
@@ -53,42 +47,38 @@ defmodule LinkhutWeb.Api.PostsController do
       )
 
     case Links.create_link(user, link_params) do
-      {:ok, link} ->
-        conn
-        |> render(:add, link: link)
-
-      {:error, changeset} ->
-        conn
-        |> render(:add, changeset: changeset)
+      {:ok, _} -> render(conn, :done)
+      {:error, _} -> render(conn, :error)
     end
   end
 
   def delete(conn, %{"url" => url}) do
     user = conn.assigns[:current_user]
-    link = Links.get!(url, user.id)
 
-    case Links.delete_link(link) do
-      {:ok, link} ->
-        conn
-        |> render(:delete, link: link)
-
-      {:error, changeset} ->
-        conn
-        |> render(:delete, changeset: changeset)
+    with %Link{} = link <- Links.get(url, user.id),
+         {:ok, _} <- Links.delete_link(link) do
+      render(conn, :done)
+    else
+      _ -> render(conn, :error)
     end
   end
 
   def get(conn, %{"url" => url} = params) do
     user = conn.assigns[:current_user]
-    link = Links.get!(url, user.id)
 
-    conn
-    |> render(:get,
-      date: DateTime.to_date(link.inserted_at),
-      links: [link],
-      meta: value("meta", params),
-      tag: Map.get(params, "tag", "")
-    )
+    case Links.get(url, user.id) do
+      %Link{} = link ->
+        conn
+        |> render(:get,
+          date: DateTime.to_date(link.inserted_at),
+          links: [link],
+          meta: value("meta", params),
+          tag: Map.get(params, "tag", "")
+        )
+
+      _ ->
+        render(conn, :error)
+    end
   end
 
   def get(conn, %{"hashes" => hashes} = params) do
@@ -235,8 +225,7 @@ defmodule LinkhutWeb.Api.PostsController do
   defp value("inserted_at", params) do
     with dt <- Map.get(params, "dt", ""),
          {:ok, datetime, _} <- DateTime.from_iso8601(dt),
-         now <- DateTime.utc_now(),
-         look_ahead when look_ahead < 600 <- DateTime.diff(datetime, now) do
+         look_ahead when look_ahead < 600 <- DateTime.diff(datetime, DateTime.utc_now(:second)) do
       datetime
     else
       _ -> DateTime.utc_now()

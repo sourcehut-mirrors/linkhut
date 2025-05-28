@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.Api.TagsController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.Api.TagsView
-
   plug ExOauth2Provider.Plug.EnsureScopes,
        [scopes: ~w(tags:write)] when action in [:delete, :rename]
 
@@ -21,15 +19,13 @@ defmodule LinkhutWeb.Api.TagsController do
     user = conn.assigns[:current_user]
     Tags.delete(user, tag)
 
-    conn
-    |> render(:delete)
+    render(conn, :done)
   end
 
   def rename(conn, %{"old" => old, "new" => new}) when is_binary(old) and is_binary(new) do
     user = conn.assigns[:current_user]
     Tags.rename(user, old: old, new: new)
 
-    conn
-    |> render(:rename)
+    render(conn, :done)
   end
 end

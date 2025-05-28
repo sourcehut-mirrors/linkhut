@@ -17,6 +17,8 @@ defmodule LinkhutWeb.ConnCase do
 
   use ExUnit.CaseTemplate
 
+  import Linkhut.Factory
+
   using do
     quote do
       # Import conveniences for testing with connections
@@ -81,5 +83,30 @@ defmodule LinkhutWeb.ConnCase do
 
   defp maybe_set_token_inserted_at(token, inserted_at) do
     Linkhut.AccountsFixtures.override_token_inserted_at(token, inserted_at)
+  end
+
+  @doc """
+  Setup helper that registers and sets up a bearer token
+
+      setup :register_and_set_up_api_token
+
+  It stores an updated connection and a bearer token in the
+  test context.
+  """
+  def register_and_set_up_api_token(%{conn: conn} = context) do
+    user = Linkhut.AccountsFixtures.user_fixture()
+
+    token =
+      insert(:access_token,
+        resource_owner_id: user.id,
+        scopes: Map.get(context, :scopes, "posts:read tags:read")
+      )
+
+    conn =
+      conn
+      |> Plug.Conn.put_req_header("authorization", "Bearer #{token.token}")
+      |> Plug.Conn.put_req_header("accept", Map.get(context, :accept, "application/json"))
+
+    %{conn: conn, user: user}
   end
 end

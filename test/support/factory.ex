@@ -36,7 +36,8 @@ defmodule Linkhut.Factory do
       notes: "An awesome link description",
       tags: ["test", "auto-generated"],
       is_private: false,
-      language: "english"
+      language: "english",
+      inserted_at: DateTime.utc_now()
     }
   end
 end

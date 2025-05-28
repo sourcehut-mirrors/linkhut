@@ -64,6 +64,16 @@ defmodule LinkhutWeb do
     end
   end
 
+  def json do
+    quote do
+      use Phoenix.Component
+      use Gettext, backend: LinkhutWeb.Gettext
+
+      # Routes generation with the ~p sigil
+      unquote(verified_routes())
+    end
+  end
+
   def xml do
     quote do
       use Phoenix.Component

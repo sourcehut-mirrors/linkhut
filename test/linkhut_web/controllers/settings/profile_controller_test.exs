@@ -101,12 +101,10 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
   end
 
   describe "PUT /_/profile/delete" do
-    test "does not delete user when confirmation checkbox is not checked", %{conn: conn, user: user} do
+    test "does not delete user without confirmation check", %{conn: conn, user: user} do
       conn =
         put(conn, ~p"/_/profile/delete", %{
-        "delete_form" => %{
-
-        }
+          "delete_form" => %{}
         })
 
       assert html_response(conn, 200) =~ "Please confirm you want to delete your account"
@@ -114,10 +112,10 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
       assert Accounts.get_user(user.username)
     end
 
-    test "deletes user when confirmation checkbox is checked", %{conn: conn, user: user} do
+    test "deletes user when confirmation is checked", %{conn: conn, user: user} do
       conn =
         put(conn, ~p"/_/profile/delete", %{
-          "delete_form" => %{ "confirmed" => "true" }
+          "delete_form" => %{"confirmed" => "true"}
         })
 
       assert redirected_to(conn) == ~p"/"
