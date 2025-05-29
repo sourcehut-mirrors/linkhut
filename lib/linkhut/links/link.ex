@@ -38,11 +38,11 @@ defmodule Linkhut.Links.Link do
       [:url, :user_id, :title, :notes, :tags, :is_private, :inserted_at, :is_unread],
       opts
     )
-    |> validate_required([:url, :user_id, :title, :is_private])
-    |> validate_length(:url, max: 2048)
+    |> validate_url()
+    |> maybe_fetch_title()
+    |> validate_required([:user_id, :title, :is_private])
     |> validate_length(:title, max: 255)
     |> validate_length(:notes, max: 1024)
-    |> validate_url(:url)
     |> unique_constraint(:url, name: :links_url_user_id_index, message: "has already been saved")
     |> update_unread_status()
     |> update_tags()
@@ -107,13 +107,73 @@ defmodule Linkhut.Links.Link do
   defp add_unread_tag(tags), do: ["unread" | tags]
   defp remove_unread_tag(tags), do: Enum.reject(tags, &Tags.is_unread?/1)
 
-  defp validate_url(changeset, field) do
-    validate_change(changeset, field, fn _, value ->
+  defp validate_url(changeset) do
+    changeset
+    |> validate_required(:url)
+    |> validate_length(:url, max: 2048)
+    |> validate_change(:url, fn _, value ->
       case URI.parse(value) do
-        %URI{scheme: nil} -> [{field, "is missing a scheme"}]
-        %URI{host: nil} -> [{field, "is missing a host"}]
+        %URI{scheme: nil} -> [{:url, "is missing a scheme"}]
+        %URI{host: nil} -> [{:url, "is missing a host"}]
         _ -> []
       end
     end)
+  end
+
+  # Helpers to automagically populate the title
+
+  defp maybe_fetch_title(changeset) do
+    if !changeset.valid? || get_change(changeset, :title) || !get_change(changeset, :url) do
+      changeset
+    else
+      fetch_title(changeset)
+    end
+  end
+
+  defp fetch_title(changeset) do
+    url = get_change(changeset, :url)
+    uri = URI.parse(url)
+
+    with %URI{scheme: scheme, host: host} when scheme in ["http", "https"] <- uri,
+         false <- local_address?(host),
+         {:ok, resp} <- fetch_url(url),
+         ["text/html" <> _] <- Req.Response.get_header(resp, "content-type") do
+      put_change(changeset, :title, Linkhut.Html.Title.title(resp.body))
+    else
+      _ ->
+        %URI{host: host, path: path} = uri
+        doc_title = Path.basename(path || "")
+
+        if doc_title != "" do
+          put_change(changeset, :title, doc_title)
+        else
+          put_change(changeset, :title, host)
+        end
+    end
+  end
+
+  defp fetch_url(url) do
+    [url: url]
+    |> Keyword.merge(Application.get_env(:linkhut, :req_options, []))
+    |> Req.request(retry: false)
+  end
+
+  defp local_address?(host) when is_binary(host) do
+    local_address?(host, :inet) || local_address?(host, :inet6)
+  end
+
+  defp local_address?({127, _, _, _}), do: true
+  defp local_address?({10, _, _, _}), do: true
+  defp local_address?({192, 168, _, _}), do: true
+  defp local_address?({172, second, _, _}) when second >= 16 and second <= 31, do: true
+  defp local_address?({0xFC00, _, _, _, _, _, _, _}), do: true
+  defp local_address?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
+  defp local_address?(_), do: false
+
+  defp local_address?(host, family) when is_binary(host) do
+    case :inet.getaddr(to_charlist(host), family) do
+      {:ok, address} -> local_address?(address)
+      _ -> false
+    end
   end
 end

@@ -31,3 +31,9 @@ config :linkhut, Linkhut,
 
 # Oban configuration
 config :linkhut, Oban, testing: :manual
+
+# Req configuration
+config :linkhut,
+  req_options: [
+    plug: {Req.Test, Linkhut.Links.Link}
+  ]
