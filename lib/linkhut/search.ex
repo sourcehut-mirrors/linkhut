@@ -64,12 +64,14 @@ defmodule Linkhut.Search do
     query
     |> where(is_private: false)
     |> where(is_unread: false)
+    |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
   end
 
   defp visible_as(query, user) do
     query
     |> where([l, _, u], l.is_private == false or u.username == ^user)
     |> where([l, _, u], l.is_unread == false or u.username == ^user)
+    |> where([l, _, u], fragment("NOT 'via:ifttt' = ANY(?)", l.tags) or u.username == ^user)
   end
 
   defp matching(query, url) when is_nil(url), do: query
