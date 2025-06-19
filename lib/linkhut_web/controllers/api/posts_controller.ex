@@ -76,8 +76,13 @@ defmodule LinkhutWeb.Api.PostsController do
           tag: Map.get(params, "tag", "")
         )
 
-      _ ->
-        render(conn, :error)
+      nil ->
+        conn
+        |> render(:get,
+          links: [],
+          meta: value("meta", params),
+          tag: Map.get(params, "tag", "")
+        )
     end
   end
 

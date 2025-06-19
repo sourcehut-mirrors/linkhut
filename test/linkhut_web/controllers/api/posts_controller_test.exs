@@ -313,12 +313,21 @@ defmodule LinkhutWeb.Api.PostsControllerTest do
                "meta=\"#{:crypto.hash(:md5, link.updated_at |> DateTime.to_iso8601()) |> Base.encode16(case: :lower)}\""
     end
 
-    test "fails to get non-existing link by url [JSON]", %{conn: conn} do
+    @tag accept: "application/xml"
+    test "empty response when getting non-existing link by url [XML]", %{user: user, conn: conn} do
       conn =
         conn
         |> get("/_/v1/posts/get", %{"url" => "http://does-not-exist.example.com"})
 
-      assert json_response(conn, 200) == %{"result_code" => "something went wrong"}
+      assert response(conn, 200) =~ "<posts tag=\"\" user=\"#{user.username}\" dt=\"\"/>"
+    end
+
+    test "empty response when getting non-existing link by url [JSON]", %{conn: conn} do
+      conn =
+        conn
+        |> get("/_/v1/posts/get", %{"url" => "http://does-not-exist.example.com"})
+
+      assert json_response(conn, 200) == %{"posts" => []}
     end
 
     @tag scopes: "posts:read"
