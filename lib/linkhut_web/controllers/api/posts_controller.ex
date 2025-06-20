@@ -78,11 +78,8 @@ defmodule LinkhutWeb.Api.PostsController do
 
       nil ->
         conn
-        |> render(:get,
-          links: [],
-          meta: value("meta", params),
-          tag: Map.get(params, "tag", "")
-        )
+        |> put_status(404)
+        |> render(:error)
     end
   end
 

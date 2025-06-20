@@ -314,20 +314,20 @@ defmodule LinkhutWeb.Api.PostsControllerTest do
     end
 
     @tag accept: "application/xml"
-    test "empty response when getting non-existing link by url [XML]", %{user: user, conn: conn} do
+    test "404 response when getting non-existing link by url [XML]", %{conn: conn} do
       conn =
         conn
         |> get("/_/v1/posts/get", %{"url" => "http://does-not-exist.example.com"})
 
-      assert response(conn, 200) =~ "<posts tag=\"\" user=\"#{user.username}\" dt=\"\"/>"
+      assert response(conn, 404) =~ "<result code=\"something went wrong\"/>"
     end
 
-    test "empty response when getting non-existing link by url [JSON]", %{conn: conn} do
+    test "404 response when getting non-existing link by url [JSON]", %{conn: conn} do
       conn =
         conn
         |> get("/_/v1/posts/get", %{"url" => "http://does-not-exist.example.com"})
 
-      assert json_response(conn, 200) == %{"posts" => []}
+      assert json_response(conn, 404) == %{"result_code" => "something went wrong"}
     end
 
     @tag scopes: "posts:read"
