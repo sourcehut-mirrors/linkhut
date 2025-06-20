@@ -62,6 +62,7 @@ defmodule Linkhut.Search do
 
   defp visible_as(query, user) when is_nil(user) do
     query
+    |> where([_, _, u], u.is_banned == false)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
@@ -69,6 +70,7 @@ defmodule Linkhut.Search do
 
   defp visible_as(query, user) do
     query
+    |> where([_, _, u], u.is_banned == false or u.username == ^user)
     |> where([l, _, u], l.is_private == false or u.username == ^user)
     |> where([l, _, u], l.is_unread == false or u.username == ^user)
     |> where([l, _, u], fragment("NOT 'via:ifttt' = ANY(?)", l.tags) or u.username == ^user)

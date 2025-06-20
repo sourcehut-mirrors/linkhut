@@ -231,6 +231,7 @@ defmodule Linkhut.Links do
     datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
+    |> where([_, _, u], u.is_banned == false)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([_, s], s.user_daily_entry <= 2)
@@ -246,22 +247,13 @@ defmodule Linkhut.Links do
   """
   def popular(params, popularity \\ 3) do
     links()
+    |> where([_, _, u], u.is_banned == false)
     |> where([l, s, _], s.rank == 1.0)
     |> where(is_private: false)
     |> where(is_unread: false)
     |> where([_, s, _], s.saves >= ^popularity)
     |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
     |> where([_, _, u], u.type != ^:unconfirmed)
-    |> ordering(params)
-  end
-
-  @doc """
-  Returns the unread links for a user
-  """
-  def unread(user_id, params) do
-    links()
-    |> where(user_id: ^user_id)
-    |> where(is_unread: true)
     |> ordering(params)
   end
 
