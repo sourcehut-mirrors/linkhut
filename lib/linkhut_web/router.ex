@@ -177,6 +177,8 @@ defmodule LinkhutWeb.Router do
   scope "/_/admin" do
     pipe_through [:browser, :admin]
     get "/", LinkhutWeb.Settings.AdminController, :show
+    post "/ban", LinkhutWeb.Settings.AdminController, :ban
+    post "/unban", LinkhutWeb.Settings.AdminController, :unban
 
     live_dashboard "/dashboard",
       metrics: LinkhutWeb.Telemetry,

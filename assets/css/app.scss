@@ -263,8 +263,12 @@ fieldset {
     border-color: transparent;
     border-width: 0;
     border-style: solid;
-    margin: 0 0 $spacing-small;
+    margin: 0;
     padding: 0;
+
+    & > *:last-child {
+        margin-bottom: $spacing-small;
+    }
 
     & input, & textarea {
         border-color: $muted;
@@ -1475,7 +1479,7 @@ section.settings {
             border-top: 1px solid $gray;
             border-bottom: 1px solid $gray;
 
-            & > form.inline > button {
+            & form.inline button {
                 width: 100%;
             }
         }

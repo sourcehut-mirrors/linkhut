@@ -32,11 +32,11 @@ defmodule LinkhutWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div>
+      <fieldset>
         {render_slot(@inner_block, f)}
-        <div :for={action <- @actions}>
-          {render_slot(action, f)}
-        </div>
+      </fieldset>
+      <div :for={action <- @actions}>
+        {render_slot(action, f)}
       </div>
     </.form>
     """
