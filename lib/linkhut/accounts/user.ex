@@ -4,16 +4,16 @@ defmodule Linkhut.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
   alias Linkhut.Accounts.Credential
+  alias Linkhut.Moderation.Entry
   alias Linkhut.Links.Link
 
   @type t :: Ecto.Schema.t()
-
-  @username_format ~r/^[a-zA-Z\d]{3,}$/
 
   schema "users" do
     field :username, :string
     field :bio, :string
     field :unlisted, :boolean, default: false
+    field :is_banned, :boolean, default: false
 
     field :type, Ecto.Enum,
       values: [:unconfirmed, :active_free, :active_paying],
@@ -21,6 +21,7 @@ defmodule Linkhut.Accounts.User do
 
     field :roles, {:array, Ecto.Enum}, values: [:admin], default: []
     has_one :credential, Credential, on_replace: :update
+    has_many :moderation_entries, Entry, references: :id
 
     has_many :links, Link, references: :id, on_delete: :delete_all
 
@@ -72,5 +73,25 @@ defmodule Linkhut.Accounts.User do
       on_replace: :update
     )
     |> put_change(:type, :active_free)
+  end
+
+  def ban_user(user), do: change(user, %{is_banned: true})
+
+  def unban_user(user), do: change(user, %{is_banned: false})
+
+  # Helpers
+
+  defp validate_username(changeset) do
+    changeset
+    |> validate_required([:username])
+    |> unique_constraint(:username)
+    |> validate_format(:username, ~r/^[a-zA-Z\d]{3,}$/)
+    |> validate_change(:username, fn :username, username ->
+      if Linkhut.Reserved.valid_username?(username) do
+        []
+      else
+        [username: ~s('#{username}' is reserved)]
+      end
+    end)
   end
 end
