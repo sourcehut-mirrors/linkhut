@@ -4,6 +4,8 @@ defmodule Linkhut.Oauth.Application do
 
   alias ExOauth2Provider.Applications
 
+  @type t :: Ecto.Schema.t()
+
   schema "oauth_applications" do
     application_fields()
 

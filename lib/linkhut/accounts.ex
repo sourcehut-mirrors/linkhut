@@ -267,7 +267,7 @@ defmodule Linkhut.Accounts do
   @doc """
   Checks if the users current e-mail is unconfirmed.
   """
-  @spec current_email_unconfirmed?(Context.user()) :: boolean()
+  @spec current_email_unconfirmed?(User.t()) :: boolean()
   def current_email_unconfirmed?(%{credential: %Ecto.Association.NotLoaded{}} = user) do
     user
     |> Repo.preload(:credential)

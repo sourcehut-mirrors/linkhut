@@ -183,4 +183,117 @@ defmodule Linkhut.LinksTest do
       assert link.is_unread
     end
   end
+
+  describe "link queries" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      {:ok, link1} =
+        Links.create_link(user, %{
+          url: "https://example.com/1",
+          title: "Example 1",
+          tags: ["test"],
+          is_private: false,
+          is_unread: false
+        })
+
+      {:ok, link2} =
+        Links.create_link(user, %{
+          url: "https://example.com/2",
+          title: "Example 2",
+          tags: ["test"],
+          is_private: true,
+          is_unread: false
+        })
+
+      {:ok, link3} =
+        Links.create_link(user, %{
+          url: "https://example.com/3",
+          title: "Example 3",
+          tags: ["test"],
+          is_private: false,
+          is_unread: true
+        })
+
+      %{user: user, links: [link1, link2, link3]}
+    end
+
+    test "get/2 returns link by URL and user_id", %{user: user} do
+      assert %Link{} = link = Links.get("https://example.com/1", user.id)
+      assert link.title == "Example 1"
+    end
+
+    test "get!/2 returns link or raises error", %{user: user} do
+      assert %Link{} = Links.get!("https://example.com/1", user.id)
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Links.get!("nonexistent", user.id)
+      end
+    end
+
+    test "all/1 with user returns all user links", %{user: user} do
+      links = Links.all(user)
+      assert length(links) == 3
+    end
+
+    test "all/1 with visibility filter returns appropriate links", %{user: user} do
+      public_links = Links.all(visible_as: :public)
+      assert length(public_links) == 1
+
+      user_visible_links = Links.all(visible_as: user.id)
+      assert length(user_visible_links) == 3
+    end
+
+    test "unread_count/1 returns count of unread links", %{user: user} do
+      assert Links.unread_count(user.id) == 1
+    end
+
+    test "most_recent/1 returns most recently modified link", %{user: user} do
+      recent = Links.most_recent(user)
+      assert recent.url == "https://example.com/3"
+    end
+  end
+
+  describe "filtering and ordering" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      {:ok, _} =
+        Links.create_link(user, %{
+          url: "https://example.com/1",
+          title: "Example 1",
+          tags: ["elixir"],
+          inserted_at: DateTime.add(DateTime.utc_now(), -2, :day)
+        })
+
+      {:ok, _} =
+        Links.create_link(user, %{
+          url: "https://example.com/2",
+          title: "Example 2",
+          tags: ["elixir", "phoenix"]
+        })
+
+      %{user: user}
+    end
+
+    test "all/1 with tag filter returns matching links", %{user: user} do
+      phoenix_links = Links.all(user, tags: ["phoenix"])
+      assert length(phoenix_links) == 1
+
+      elixir_links = Links.all(user, tags: ["elixir"])
+      assert length(elixir_links) == 2
+    end
+
+    test "all/1 with date range filter returns matching links", %{user: user} do
+      from = DateTime.add(DateTime.utc_now(), -1, :day)
+      links = Links.all(user, from: from)
+      assert length(links) == 1
+    end
+
+    test "all/1 with search query returns matching links", %{user: user} do
+      links = Links.all(user, query: "Example 1")
+      assert length(links) == 1
+      assert hd(links).title == "Example 1"
+    end
+  end
 end
