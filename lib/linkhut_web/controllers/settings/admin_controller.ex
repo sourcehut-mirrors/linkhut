@@ -14,40 +14,32 @@ defmodule LinkhutWeb.Settings.AdminController do
   end
 
   def ban(conn, %{"ban" => %{"username" => username} = params}) do
-    with {:ok, _} <- Moderation.ban_user(username, Map.get(params, "ban_reason")) do
-      render(conn, :admin,
-        form: Phoenix.Component.to_form(%{}, as: "ban"),
-        banned_users: Moderation.list_banned_users()
-      )
-    else
-      {:error, %Ecto.Changeset{} = changeset} ->
+    case Moderation.ban_user(username, Map.get(params, "reason")) do
+      {:ok, _} ->
         render(conn, :admin,
-          form: Phoenix.Component.to_form(changeset, as: "ban"),
+          form: Phoenix.Component.to_form(%{}, as: "ban"),
           banned_users: Moderation.list_banned_users()
         )
 
-      _ ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, :admin,
-          form:
-            Phoenix.Component.to_form(params,
-              as: "ban",
-              errors: [username: {"No user matching this username was found", []}]
-            ),
+          form: Phoenix.Component.to_form(params, errors: changeset.errors, as: "ban"),
           banned_users: Moderation.list_banned_users()
         )
     end
   end
 
-  def unban(conn, %{"username" => username} = params) do
-    with {:ok, _} <- Moderation.unban_user(username) do
-      render(conn, :admin,
-        form: Phoenix.Component.to_form(%{}, as: "ban"),
-        banned_users: Moderation.list_banned_users()
-      )
-    else
+  def unban(conn, %{"username" => username}) do
+    case Moderation.unban_user(username) do
+      {:ok, _} ->
+        render(conn, :admin,
+          form: Phoenix.Component.to_form(%{}, as: "ban"),
+          banned_users: Moderation.list_banned_users()
+        )
+
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, :admin,
-          form: Phoenix.Component.to_form(changeset, as: "ban"),
+          form: Phoenix.Component.to_form(%{}, as: "ban"),
           banned_users: Moderation.list_banned_users()
         )
     end

@@ -24,23 +24,17 @@ defmodule Linkhut.Moderation do
 
   """
   def ban_user(username, reason \\ nil) do
-    with %User{} = user <- Accounts.get_user(username),
-         %Ecto.Changeset{} = ban <- Entry.ban_changeset(user, %{reason: reason}) do
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(:user, User.ban_user(user))
-      |> Ecto.Multi.insert(:ban, ban)
-      |> Repo.transaction()
-      |> case do
-        {:ok, %{user: user}} -> {:ok, user}
-        {:error, :ban, changeset, _} -> {:error, changeset}
-        {:error, :user, changeset, _} -> {:error, changeset}
-      end
-    else
-      %Ecto.Changeset{} = changeset ->
-        {:error, changeset}
+    user = Accounts.get_user(username)
 
-      nil ->
-        %Ecto.Changeset{} |> Ecto.Changeset.add_error(:username, "No user matching this username")
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.ban_user(user))
+    |> Ecto.Multi.insert(:ban, fn %{user: user} ->
+      Entry.ban_changeset(user, %{reason: reason})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, _, changeset, _} -> {:error, changeset}
     end
   end
 
@@ -49,28 +43,25 @@ defmodule Linkhut.Moderation do
 
   ## Examples
 
-      iex> unban_user(user)
+      iex> unban_user(username)
+      {:ok, %User{}}
+
+      iex> ban_user(username, "No longer spam posting")
       {:ok, %User{}}
 
   """
-  def unban_user(username) do
-    with %User{} = user <- Accounts.get_user(username),
-         %Ecto.Changeset{} = unban <- Entry.unban_changeset(user) do
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(:user, User.unban_user(user))
-      |> Ecto.Multi.insert(:unban, unban)
-      |> Repo.transaction()
-      |> case do
-        {:ok, %{user: user}} -> {:ok, user}
-        {:error, :unban, changeset, _} -> {:error, changeset}
-        {:error, :user, changeset, _} -> {:error, changeset}
-      end
-    else
-      %Ecto.Changeset{} = changeset ->
-        {:error, changeset}
+  def unban_user(username, reason \\ nil) do
+    user = Accounts.get_user(username)
 
-      nil ->
-        %Ecto.Changeset{} |> Ecto.Changeset.add_error(:username, "No user matching this username")
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, User.unban_user(user))
+    |> Ecto.Multi.insert(:ban, fn %{user: user} ->
+      Entry.unban_changeset(user, %{reason: reason})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, _, changeset, _} -> {:error, changeset}
     end
   end
 

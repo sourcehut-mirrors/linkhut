@@ -164,9 +164,31 @@ defmodule Linkhut.Accounts.User do
     |> put_change(:type, :active_free)
   end
 
-  def ban_user(user), do: change(user, %{is_banned: true})
+  def ban_user(user) do
+    case user do
+      nil ->
+        change(%__MODULE__{}) |> add_error(:username, "No user matching this username")
 
-  def unban_user(user), do: change(user, %{is_banned: false})
+      %{is_banned: true} ->
+        change(%__MODULE__{}) |> add_error(:username, "User is already banned")
+
+      user ->
+        change(user, %{is_banned: true})
+    end
+  end
+
+  def unban_user(user) do
+    case user do
+      nil ->
+        change(%__MODULE__{}) |> add_error(:username, "No user matching this username")
+
+      %{is_banned: false} ->
+        change(%__MODULE__{}) |> add_error(:username, "User is already unbanned")
+
+      user ->
+        change(user, %{is_banned: false})
+    end
+  end
 
   # Helpers
 
