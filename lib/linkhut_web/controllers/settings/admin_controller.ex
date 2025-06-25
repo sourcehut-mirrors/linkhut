@@ -37,7 +37,7 @@ defmodule LinkhutWeb.Settings.AdminController do
           banned_users: Moderation.list_banned_users()
         )
 
-      {:error, %Ecto.Changeset{} = changeset} ->
+      {:error, _} ->
         render(conn, :admin,
           form: Phoenix.Component.to_form(%{}, as: "ban"),
           banned_users: Moderation.list_banned_users()

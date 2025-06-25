@@ -96,7 +96,7 @@ defmodule Linkhut.Links do
       iex> get("http://example.com", 456)
       nil
   """
-  @spec get(String.t(), integer()) :: link()
+  @spec get(String.t(), integer()) :: link() | nil
   def get(url, user_id) do
     links()
     |> Repo.get_by(url: url, user_id: user_id)

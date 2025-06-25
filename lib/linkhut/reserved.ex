@@ -563,9 +563,7 @@ defmodule Linkhut.Reserved do
       iex> Reserved.valid_username?("logout")
       false
   """
-  @spec valid_username?(String.t() | nil) :: boolean()
-  def valid_username?(nil), do: false
-
+  @spec valid_username?(String.t()) :: boolean()
   def valid_username?(username) when is_binary(username) do
     @usernames
     |> MapSet.new()

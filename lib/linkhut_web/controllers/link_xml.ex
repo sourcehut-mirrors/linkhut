@@ -15,8 +15,8 @@ defmodule LinkhutWeb.LinkXML do
       }) do
     title = title(scope)
     uri = %URI{scheme: conn.scheme |> to_string, host: conn.host, port: conn.port}
-    feed_url = URI.merge(uri, feed_path(conn))
-    html_url = URI.merge(uri, html_path(conn))
+    feed_url = URI.merge(uri, feed_path(conn)) |> URI.to_string()
+    html_url = URI.merge(uri, html_path(conn)) |> URI.to_string()
 
     render_feed(title, feed_url, html_url, links)
   end
