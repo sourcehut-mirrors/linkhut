@@ -40,6 +40,7 @@ defmodule Linkhut.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
   alias Linkhut.Accounts.Credential
+  alias Linkhut.Accounts.Reserved
   alias Linkhut.Moderation.Entry
   alias Linkhut.Links.Link
 
@@ -198,7 +199,7 @@ defmodule Linkhut.Accounts.User do
     |> unique_constraint(:username)
     |> validate_format(:username, ~r/^[a-zA-Z\d]{3,}$/)
     |> validate_change(:username, fn :username, username ->
-      if Linkhut.Reserved.valid_username?(username) do
+      if Reserved.valid_username?(username) do
         []
       else
         [username: ~s('#{username}' is reserved)]

@@ -1,9 +1,9 @@
-defmodule Linkhut.Reserved do
+defmodule Linkhut.Accounts.Reserved do
   @moduledoc """
-  This module contains lists of banned items (such as usernames, domains, etc...)
+  This module contains lists of banned words that can't be used as usernames.
   """
 
-  # https://github.com/marteinn/The-Big-Username-Blacklist
+  # https://github.com/marteinn/The-Big-Username-Blocklist
   @usernames [
     ".htaccess",
     ".htpasswd",
