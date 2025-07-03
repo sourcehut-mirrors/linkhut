@@ -1090,7 +1090,7 @@ div.bookmark {
             color: $muted-dark;
         }
 
-        @media #{$not-small} {
+        @media #{$large} {
             display: none;
         }
     }
