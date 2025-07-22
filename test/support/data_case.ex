@@ -16,6 +16,7 @@ defmodule Linkhut.DataCase do
 
   using do
     quote do
+      use Oban.Testing, repo: Linkhut.Repo
       alias Linkhut.Repo
 
       import Ecto

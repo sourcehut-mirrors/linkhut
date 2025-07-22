@@ -48,4 +48,13 @@ defmodule Linkhut.AccountsFixtures do
       set: [inserted_at: inserted_at]
     )
   end
+
+  def override_user_inserted_at(user_id, days_old) do
+    past_date = DateTime.add(DateTime.utc_now(), -days_old, :day)
+
+    Linkhut.Repo.update_all(
+      from(u in Accounts.User, where: u.id == ^user_id),
+      set: [inserted_at: past_date, type: :active_free]
+    )
+  end
 end

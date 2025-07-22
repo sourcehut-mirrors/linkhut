@@ -121,6 +121,12 @@ defmodule Linkhut.Links do
     |> Repo.get_by!(url: url, user_id: user_id)
   end
 
+  @spec get(integer()) :: link()
+  def get(id) when is_integer(id) do
+    links()
+    |> Repo.get_by(id: id)
+  end
+
   def all(params) when is_list(params) do
     count = Keyword.get(params, :count)
     start = Keyword.get(params, :start)
@@ -228,7 +234,8 @@ defmodule Linkhut.Links do
   Returns most recent public links
   """
   def recent(params, days \\ 30) do
-    datetime = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
+    link_age_cutoff = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
+    account_age_cutoff = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
 
     links()
     |> where([_, _, u], u.is_banned == false)
@@ -236,9 +243,10 @@ defmodule Linkhut.Links do
     |> where(is_unread: false)
     |> where([_, s], s.user_daily_entry <= 2)
     |> where([_, s], s.rank == 0.0)
-    |> where([l], l.inserted_at >= ^datetime)
+    |> where([l], l.inserted_at >= ^link_age_cutoff)
     |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
     |> where([_, _, u], u.type != ^:unconfirmed)
+    |> where([_, _, u], u.inserted_at <= ^account_age_cutoff)
     |> ordering(params)
   end
 

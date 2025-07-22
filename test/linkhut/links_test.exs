@@ -197,6 +197,8 @@ defmodule Linkhut.LinksTest do
           is_unread: false
         })
 
+      :timer.sleep(1000)
+
       {:ok, link2} =
         Links.create_link(user, %{
           url: "https://example.com/2",
@@ -206,6 +208,8 @@ defmodule Linkhut.LinksTest do
           is_unread: false
         })
 
+      :timer.sleep(1000)
+
       {:ok, link3} =
         Links.create_link(user, %{
           url: "https://example.com/3",
@@ -214,6 +218,8 @@ defmodule Linkhut.LinksTest do
           is_private: false,
           is_unread: true
         })
+
+      assert %{failure: 0} = Oban.drain_queue(queue: :default)
 
       %{user: user, links: [link1, link2, link3]}
     end
@@ -294,6 +300,66 @@ defmodule Linkhut.LinksTest do
       links = Links.all(user, query: "Example 1")
       assert length(links) == 1
       assert hd(links).title == "Example 1"
+    end
+  end
+
+  describe "recent/2 with account age filter" do
+    setup do
+      # Create users with different account ages
+      # 60 days old (should be included)
+      old_user = AccountsFixtures.user_fixture()
+      AccountsFixtures.override_user_inserted_at(old_user.id, 60)
+      # Exactly 30 days old (should be included)
+      boundary_user = AccountsFixtures.user_fixture()
+      AccountsFixtures.override_user_inserted_at(boundary_user.id, 30)
+      # 10 days old (should be excluded)
+      new_user = AccountsFixtures.user_fixture()
+      AccountsFixtures.override_user_inserted_at(new_user.id, 10)
+
+      # Create recent links for each user
+      {:ok, old_user_link} =
+        Links.create_link(old_user, %{
+          url: "https://example.com/old",
+          title: "Old User Link",
+          tags: ["test"]
+        })
+
+      {:ok, boundary_user_link} =
+        Links.create_link(boundary_user, %{
+          url: "https://example.com/boundary",
+          title: "Boundary User Link",
+          tags: ["test"]
+        })
+
+      {:ok, new_user_link} =
+        Links.create_link(new_user, %{
+          url: "https://example.com/new",
+          title: "New User Link",
+          tags: ["test"]
+        })
+
+      assert %{failure: 0} = Oban.drain_queue(queue: :default)
+
+      %{
+        old_user_link: old_user_link,
+        boundary_user_link: boundary_user_link,
+        new_user_link: new_user_link
+      }
+    end
+
+    test "excludes links from users created within 30 days", %{
+      old_user_link: old,
+      boundary_user_link: boundary,
+      new_user_link: new
+    } do
+      recent_links = Links.recent([]) |> Linkhut.Repo.all()
+
+      # Should only include links from users 30+ days old
+      link_urls = Enum.map(recent_links, & &1.url)
+
+      assert old.url in link_urls
+      assert boundary.url in link_urls
+      refute new.url in link_urls
     end
   end
 end
