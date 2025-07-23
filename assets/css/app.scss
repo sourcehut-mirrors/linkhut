@@ -322,7 +322,12 @@ fieldset {
         vertical-align: middle;
     }
 
-    & > div > label {
+    & > div.options {
+        display: flex;
+        column-gap: $spacing-small;
+    }
+
+    & div > label {
         display: flex;
         flex-wrap: wrap;
         font-size: $font-small;
