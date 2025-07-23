@@ -8,7 +8,7 @@
   </section>
   <aside :if={@logged_in?}>
     <div class="actions">
-      <a class="button primary" href={Routes.link_path(@conn, :new)}><span><%= gettext("Add a bookmark") %></span></a>
+      <a class="button primary" href={Routes.link_path(@conn, :new)}><span>{gettext("Add a bookmark")}</span></a>
     </div>
   </aside>
 </div>

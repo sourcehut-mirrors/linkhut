@@ -1,7 +1,7 @@
 version: "3"
 services:
   postgres:
-    image: postgres:10-alpine
+    image: postgres:15-alpine
     network_mode: bridge
     environment:
       PGDATA: /linkhut

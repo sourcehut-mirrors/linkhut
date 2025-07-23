@@ -41,7 +41,7 @@ config :phoenix_copy,
   ]
 
 config :dart_sass,
-  version: "1.61.0",
+  version: "1.77.8",
   default: [
     args: ~w(css/app.scss ../priv/static/css/app.css),
     cd: Path.expand("../assets", __DIR__)

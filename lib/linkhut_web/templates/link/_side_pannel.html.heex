@@ -1,13 +1,13 @@
 <aside>
   <%= if Context.is_user?(@context) && @context.from.bio != nil do %>
     <section>
-      <h5><%= gettext("%{name}'s bio", name: @context.from.username) %></h5>
-      <%= sanitize(Earmark.as_html!(@context.from.bio)) %>
+      <h5>{gettext("%{name}'s bio", name: @context.from.username)}</h5>
+      {sanitize(Earmark.as_html!(@context.from.bio))}
     </section>
   <% end %>
   <%= if length(@tags) > 0 do %>
     <section>
-      <h5><%= gettext("Tags") %> <.tag_show_all scope={@scope} tag_options={Tags.parse_options(@conn.query_params)} tag_count={Enum.count(@tags)} /></h5>
+      <h5>{gettext("Tags")} <.tag_show_all scope={@scope} tag_options={Tags.parse_options(@conn.query_params)} tag_count={Enum.count(@tags)} /></h5>
       <.tag_sort_options scope={@scope} tag_options={Tags.parse_options(@conn.query_params)} />
       <ul class="tag-cloud">
         <.link_tag :for={%{tag: tag, count: count} <- @tags} path={html_path(@scope, tag: tag)} tag={tag} data-count={count} />
@@ -16,16 +16,16 @@
   <% end %>
   <section>
     <div class="explore">
-      <h5><%= gettext("Explore") %></h5>
+      <h5>{gettext("Explore")}</h5>
       <ul>
-        <li><a href={Routes.link_path(@conn, :show, v: "recent")}><%= gettext("Recent") %></a></li>
-        <li><a href={Routes.link_path(@conn, :show, v: "popular")}><%= gettext("Popular") %></a></li>
+        <li><a href={Routes.link_path(@conn, :show, v: "recent")}>{gettext("Recent")}</a></li>
+        <li><a href={Routes.link_path(@conn, :show, v: "popular")}>{gettext("Popular")}</a></li>
       </ul>
     </div>
   </section>
   <section>
     <h5>
-      <a class="feed-link" href={feed_path(@scope)}><%= gettext("RSS feed") %></a>
+      <a class="feed-link" href={feed_path(@scope)}>{gettext("RSS feed")}</a>
     </h5>
   </section>
 </aside>

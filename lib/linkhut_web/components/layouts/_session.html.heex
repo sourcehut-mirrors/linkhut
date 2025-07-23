@@ -1,0 +1,22 @@
+<ul>
+  <%= if @logged_in? do %>
+    <li>
+      <span>Logged in as {link(@current_user.username, to: Routes.user_path(@conn, :show, @current_user.username))}</span>
+      <%= if @unread_count > 0 do %>
+        <ul class="quicklinks">
+          <li>{link("Unread", to: Routes.unread_path(@conn, :unread), title: gettext("%{count} unread links", count: @unread_count), data: [count: @unread_count])}</li>
+        </ul>
+      <% end %>
+    </li>
+    <li>{link("Settings", to: Routes.profile_path(@conn, :show))}</li>
+    <li>
+      <%= form_for :nil, Routes.session_path(@conn, :delete), [method: :delete, itemprop: "signout"], fn _f -> %>
+        {submit("Log out")}
+      <% end %>
+    </li>
+  <% else %>
+    <li>{link("Log in", to: Routes.session_path(@conn, :new))}</li>
+    <li>{link("Register", to: Routes.registration_path(@conn, :new))}</li>
+  <% end %>
+</ul>
+<hr />

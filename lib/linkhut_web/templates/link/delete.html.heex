@@ -2,21 +2,21 @@
   <h3>Remove link</h3>
   <div class="bookmark">
     <div class="title">
-      <h4><a class="taggedlink" href={@link.url}><%= @link.title %></a></h4>
+      <h4><a class="taggedlink" href={@link.url}>{@link.title}</a></h4>
     </div>
     <div class="full-url">
-      <a rel="nofollow" href={@link.url}><%= @link.url %></a>
+      <a rel="nofollow" href={@link.url}>{@link.url}</a>
     </div>
     <div class="description">
-      <%= sanitize(@link.notes_html) %>
+      {sanitize(@link.notes_html)}
     </div>
   </div>
   <hr />
   <%= form_for @changeset, Routes.link_path(@conn, :delete), fn f -> %>
     <fieldset>
-      <%= hidden_input(f, :url) %>
-      <%= input(f, :are_you_sure?, type: :checkbox) %>
-      <%= submit("Delete") %>
+      {hidden_input(f, :url)}
+      {input(f, :are_you_sure?, type: :checkbox)}
+      {submit("Delete")}
     </fieldset>
   <% end %>
 </div>

@@ -22,7 +22,7 @@ defmodule LinkhutWeb.LinkHTML do
     ~H"""
     <div class="tags">
       <%= if @link.tags != [] do %>
-        <h5 class="label"><%= gettext("Tags:") %></h5>
+        <h5 class="label">{gettext("Tags:")}</h5>
         <ul class="tags" data-label={gettext("tags")}>
           <.link_tag :for={tag <- @link.tags} path={html_path(@scope, tag: tag)} tag={tag} />
         </ul>
@@ -37,7 +37,7 @@ defmodule LinkhutWeb.LinkHTML do
 
   def link_tag(assigns) do
     ~H"""
-    <li><a rel="tag" href={@path} {@rest}><%= @tag %></a></li>
+    <li><a rel="tag" href={@path} {@rest}>{@tag}</a></li>
     """
   end
 
@@ -70,7 +70,7 @@ defmodule LinkhutWeb.LinkHTML do
     ~H"""
     <div id="all-tags">
       <%= if @tag_count == 400 and Keyword.get(@tag_options, :limit) do %>
-        <a href={html_path(@scope, tag_opts: [limit: false])}><%= gettext("Show all tags") %></a>
+        <a href={html_path(@scope, tag_opts: [limit: false])}>{gettext("Show all tags")}</a>
       <% end %>
     </div>
     """
@@ -83,17 +83,17 @@ defmodule LinkhutWeb.LinkHTML do
     ~H"""
     <div class="sort-options">
       <div>
-        <%= gettext("Sort by:") %>
+        {gettext("Sort by:")}
         <ul>
-          <li><a href={html_path(@scope, tag_opts: [sort_by: :alpha])} class={if Keyword.get(@tag_options, :sort_by, :usage) == :alpha, do: "active"}><%= gettext("label") %></a></li>
-          <li><a href={html_path(@scope, tag_opts: [sort_by: :usage])} class={if Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: "active"}><%= gettext("usage") %></a></li>
+          <li><a href={html_path(@scope, tag_opts: [sort_by: :alpha])} class={if Keyword.get(@tag_options, :sort_by, :usage) == :alpha, do: "active"}>{gettext("label")}</a></li>
+          <li><a href={html_path(@scope, tag_opts: [sort_by: :usage])} class={if Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: "active"}>{gettext("usage")}</a></li>
         </ul>
       </div>
       <div>
-        <%= gettext("Order:") %>
+        {gettext("Order:")}
         <ul>
-          <li><a href={html_path(@scope, tag_opts: [order: :asc])} class={if Keyword.get(@tag_options, :order, if(Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: :desc, else: :asc)) == :asc, do: "active"}><%= gettext("ascending") %></a></li>
-          <li><a href={html_path(@scope, tag_opts: [order: :desc])} class={if Keyword.get(@tag_options, :order, if(Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: :desc, else: :asc)) == :desc, do: "active"}><%= gettext("descending") %></a></li>
+          <li><a href={html_path(@scope, tag_opts: [order: :asc])} class={if Keyword.get(@tag_options, :order, if(Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: :desc, else: :asc)) == :asc, do: "active"}>{gettext("ascending")}</a></li>
+          <li><a href={html_path(@scope, tag_opts: [order: :desc])} class={if Keyword.get(@tag_options, :order, if(Keyword.get(@tag_options, :sort_by, :usage) == :usage, do: :desc, else: :asc)) == :desc, do: "active"}>{gettext("descending")}</a></li>
         </ul>
       </div>
     </div>

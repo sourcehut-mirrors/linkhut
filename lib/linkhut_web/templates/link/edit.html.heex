@@ -2,14 +2,14 @@
   <h3>Edit link</h3>
   <%= form_for @changeset, Routes.link_path(@conn, :update), fn f -> %>
     <fieldset>
-      <%= hidden_input(f, :url) %>
-      <%= input(f, :url, disabled: true, id: "_url") %>
-      <%= input(f, :title) %>
-      <%= input(f, :notes, type: :textarea, maxlength: 1024) %>
-      <%= input(f, :tags) %>
-      <%= input(f, :is_private, type: :checkbox) %>
-      <%= input(f, :is_unread, type: :checkbox, label: "read later") %>
+      {hidden_input(f, :url)}
+      {input(f, :url, disabled: true, id: "_url")}
+      {input(f, :title)}
+      {input(f, :notes, type: :textarea, maxlength: 1024)}
+      {input(f, :tags)}
+      {input(f, :is_private, type: :checkbox)}
+      {input(f, :is_unread, type: :checkbox, label: "read later")}
     </fieldset>
-    <%= submit("Submit") %>
+    {submit("Submit")}
   <% end %>
 </div>

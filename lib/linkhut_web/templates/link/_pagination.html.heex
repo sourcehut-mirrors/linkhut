@@ -1,43 +1,43 @@
 <div class="pagination">
   <a :if={@page.has_prev} href={html_path(@scope, page: @page.prev_page)}>
     <span>❮</span>
-    <span class="no-css-label"><%= gettext("Previous") %></span>
+    <span class="no-css-label">{gettext("Previous")}</span>
   </a>
   <%= cond do %>
     <% @page.num_pages <= 1 -> %>
     <% @page.num_pages <= 7 -> %>
       <a :for={p <- 1..@page.num_pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
     <% @page.page < 3 or @page.page > @page.num_pages - 2 -> %>
       <a :for={p <- 1..3} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
       <span>
         <span>&hellip;</span>
       </span>
       <a :for={p <- (@page.num_pages - 2)..@page.num_pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
     <% @page.page == 3 -> %>
       <a :for={p <- 1..4} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
       <span>
         <span>&hellip;</span>
       </span>
       <a :for={p <- (@page.num_pages - 1)..@page.num_pages} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
     <% @page.page == @page.num_pages - 2 -> %>
       <a :for={p <- 1..2} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
       <span>
         <span>&hellip;</span>
       </span>
       <a :for={p <- (@page.num_pages - 3)..@page.num_pages} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
     <% true -> %>
       <a href={html_path(@scope, page: 1)}>
@@ -47,17 +47,17 @@
         <span>&hellip;</span>
       </span>
       <a :for={p <- (@page.page - 1)..(@page.page + 1)} class={if p == @page.page, do: "active"} href={html_path(@scope, page: p)}>
-        <span><%= p %></span>
+        <span>{p}</span>
       </a>
       <span>
         <span>&hellip;</span>
       </span>
       <a href={html_path(@scope, page: @page.num_pages)}>
-        <span><%= @page.num_pages %></span>
+        <span>{@page.num_pages}</span>
       </a>
   <% end %>
   <a :if={@page.has_next} href={html_path(@scope, page: @page.next_page)}>
-    <span class="no-css-label"><%= gettext("Next") %></span>
+    <span class="no-css-label">{gettext("Next")}</span>
     <span>❯</span>
   </a>
 </div>

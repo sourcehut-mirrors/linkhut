@@ -22,7 +22,6 @@ defmodule LinkhutWeb do
   def controller do
     quote do
       use Phoenix.Controller,
-        namespace: LinkhutWeb,
         formats: [:html, :json, :xml]
 
       use Gettext, backend: LinkhutWeb.Gettext

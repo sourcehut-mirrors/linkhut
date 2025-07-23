@@ -12,22 +12,22 @@
     <header>
       <nav>
         <div class="session">
-          <%= render("_session.html", assigns) %>
+          {_session(assigns)}
         </div>
         <div class="breadcrumbs">
           <a class="brand" href="/">linkhut</a>
-          <%= render("_context.html", assigns) %>
+          {_context(assigns)}
         </div>
       </nav>
-      <%= render("_alerts.html", conn: @conn) %>
+      {_alerts(assigns)}
     </header>
     <main>
-      <%= @inner_content %>
+      {@inner_content}
     </main>
     <hr />
     <footer>
       <div>
-        <p>linkhut is open source software. You can contribute and report issues on SourceHut at <a href="https://sr.ht/~mlb/linkhut">~mlb/linkhut</a> (v<%= version() %>)</p>
+        <p>linkhut is open source software. You can contribute and report issues on SourceHut at <a href="https://sr.ht/~mlb/linkhut">~mlb/linkhut</a> (v{version()})</p>
       </div>
     </footer>
   </body>
