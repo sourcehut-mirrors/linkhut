@@ -291,7 +291,7 @@ defmodule Linkhut.Links do
     Enum.reduce(
       params,
       %{
-        saves: dynamic([_, s], coalesce(s.saves, 1))
+        saves: dynamic([_, s], coalesce(s.saves, 1) |> selected_as(:saves))
       },
       &select_field/2
     )
@@ -317,7 +317,7 @@ defmodule Linkhut.Links do
     column =
       case sort_column do
         :recency -> dynamic([l], field(l, :inserted_at))
-        :popularity -> dynamic([_, s], field(s, :saves))
+        :popularity -> dynamic([_], selected_as(:saves))
         :relevancy -> dynamic([_], selected_as(:score))
       end
 
