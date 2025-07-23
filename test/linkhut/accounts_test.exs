@@ -60,6 +60,14 @@ defmodule Linkhut.AccountsTest do
              } = errors_on(changeset)
     end
 
+    test "fails if username is longer than 16 characters" do
+      {:error, changeset} = Accounts.create_user(%{username: String.duplicate("a", 17)})
+
+      assert %{
+               username: ["should be at most 16 character(s)"]
+             } = errors_on(changeset)
+    end
+
     test "validates email and password when given" do
       {:error, changeset} =
         Accounts.create_user(%{

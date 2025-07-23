@@ -198,6 +198,7 @@ defmodule Linkhut.Accounts.User do
     |> validate_required([:username])
     |> unique_constraint(:username)
     |> validate_format(:username, ~r/^[a-zA-Z\d]{3,}$/)
+    |> validate_length(:username, max: 16)
     |> validate_change(:username, fn :username, username ->
       if Reserved.valid_username?(username) do
         []
