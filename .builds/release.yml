@@ -13,7 +13,6 @@ repositories:
 secrets:
     - 9a147ee3-2828-4ec6-84b5-7f1cca42d9b1
     - 5b7a28c5-476f-4b14-b40c-8e5567b9f188
-    - cfa643b9-81b9-4cb8-940e-42296a37b0e8
 sources:
     - git+ssh://git@git.sr.ht/~mlb/linkhut
 tasks:
@@ -31,9 +30,6 @@ tasks:
     - prepare: |
         export PATH="${GOPATH:-$HOME/go/bin}:$PATH"
         export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
-        set +x -a
-        source ~/secrets.txt
-        set -x +a
         cd linkhut
         MIX_ENV=prod mix compile
         MIX_ENV=prod mix assets.deploy
