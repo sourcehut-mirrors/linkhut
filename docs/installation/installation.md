@@ -70,6 +70,7 @@ sudo -Hu linkhut mix deps.get
 cat << EOF > /var/lib/linkhut.env
 SECRET_KEY_BASE="<secret_key>"
 DATABASE_URL="ecto://<db_user>:<db_pass>@localhost/linkhut"
+LINKHUT_HOST="<service_host>"
 SMTP_HOST="<smtp_host>"
 SMTP_PORT="<smtp_port>"
 SMTP_USERNAME="<smtp_user>"

@@ -47,6 +47,7 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
+  host = System.get_env("LINKHUT_HOST") || "example.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   # Configure IP binding based on environment variable
@@ -59,6 +60,7 @@ if config_env() == :prod do
     end
 
   config :linkhut, LinkhutWeb.Endpoint,
+    url: [host: host, scheme: "https", port: 443],
     http: [
       ip: ip_address,
       port: port
@@ -67,7 +69,7 @@ if config_env() == :prod do
 
   # Mailer config:
   maybe_dkim_config =
-    if dkim_selector = System.get_env("SMTP_DKIM_SELECTOR") != nil do
+    if (dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")) != nil do
       [
         dkim: [
           s: dkim_selector,
@@ -109,5 +111,9 @@ if config_env() == :prod do
       user_id: String.to_integer(System.get_env("IFTTT_USER_ID") || "0"),
       application: System.get_env("IFTTT_APPLICATION") || "",
       service_key: System.get_env("IFTTT_SERVICE_KEY") || ""
+    ],
+    # Archiving
+    archiving: [
+      data_dir: System.get_env("ARCHIVING_DATA_DIR") || ""
     ]
 end
