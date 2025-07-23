@@ -515,10 +515,6 @@ nav {
             opacity: 1;
             transition: opacity .15s ease-in;
 
-            @media (prefers-color-scheme: dark) {
-                color: $foreground-dark;
-            }
-
             // {{{ hack for degrading to favicon on small screens
             font-size: 0;
 
@@ -535,10 +531,14 @@ nav {
                 content: " ";
 
                 @media #{$not-small} {
-                  display: none;
+                    display: none;
                 }
             }
             // }}}
+
+            @media (prefers-color-scheme: dark) {
+                color: $foreground-dark;
+            }
 
             &:hover, &:focus {
                 opacity: .5;
@@ -1422,6 +1422,11 @@ div.navigation {
 }
 
 section.settings {
+    background: $card-background;
+    margin-top: $spacing-small;
+    overflow-x: auto;
+    padding: $spacing-small;
+
     &:first-child {
         margin-top: 0;
     }
@@ -1450,6 +1455,9 @@ section.settings {
     }
 
     & dl {
+        margin-top: 0;
+        margin-bottom: $spacing-medium;
+
         & > dt {
             font-weight: bold;
         }
@@ -1457,8 +1465,6 @@ section.settings {
             margin-bottom: $spacing-small;
             margin-left: 0;
         }
-        margin-top: 0;
-        margin-bottom: $spacing-medium;
     }
 
     & table {
@@ -1468,13 +1474,13 @@ section.settings {
         border-collapse: collapse;
 
         & > thead > tr > th {
-            &.btn-column {
-                width: 6rem;
-            }
-
             text-align: inherit;
             padding: $spacing-tiny $spacing-tiny;
             border: none;
+
+            &.btn-column {
+                width: 6rem;
+            }
         }
 
         & > tbody > tr > td {
@@ -1502,11 +1508,6 @@ section.settings {
             background-color: $dark-gray;
         }
     }
-
-    background: $card-background;
-    margin-top: $spacing-small;
-    overflow-x: auto;
-    padding: $spacing-small;
 
     @media (prefers-color-scheme: dark) {
         background-color: $card-background-dark;
