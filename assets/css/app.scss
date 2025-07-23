@@ -1,5 +1,5 @@
-@import "variables";
-@import "svgs";
+@import 'variables';
+@import 'svgs';
 
 html, body {
     height: 100%;
@@ -39,6 +39,7 @@ input, select, button {
 
 input {
     font-size: 1rem;
+
     &[disabled] {
         color: $gray;
         background-color: $card-background;
@@ -72,7 +73,7 @@ main, footer {
 h1, h2, h3, h4, h5, h6 {
     font-weight: 500;
     line-height: 1.2;
-    margin-bottom: .5rem;
+    margin-bottom: 0.5rem;
     margin-top: 0;
 }
 
@@ -80,6 +81,7 @@ footer {
     color: $muted;
     font-size: $font-tiny;
     margin-top: auto;
+
     & a {
         color: $muted;
         text-decoration: underline;
@@ -192,7 +194,7 @@ footer {
             }
 
             &:not(:first-child)::before {
-                content: "\007C";
+                content: '\007C';
                 font-weight: normal;
             }
         }
@@ -233,7 +235,7 @@ div.error {
 a:not(.doc) {
     color: $foreground;
     text-decoration: none;
-    transition: color .15s ease-in;
+    transition: color 0.15s ease-in;
 
     @media (prefers-color-scheme: dark) {
         color: $foreground-dark;
@@ -241,20 +243,20 @@ a:not(.doc) {
 
     &:hover {
         text-decoration: underline;
-        transition: color .15s ease-in;
+        transition: color 0.15s ease-in;
     }
 
     &:link, &:visited {
-        transition: color .15s ease-in;
+        transition: color 0.15s ease-in;
     }
 
     &:active {
-        transition: color .15s ease-in;
+        transition: color 0.15s ease-in;
     }
 
     &:focus {
         text-decoration: underline;
-        transition: color .15s ease-in;
+        transition: color 0.15s ease-in;
         outline: 1px dotted currentColor;
     }
 }
@@ -298,10 +300,10 @@ fieldset {
         &:focus {
             outline: 0;
             border-color: $blue;
-            box-shadow: 0 0 0 .2rem $light-blue;
+            box-shadow: 0 0 0 0.2rem $light-blue;
             @media (prefers-color-scheme: dark) {
                 border-color: $dark-blue;
-                box-shadow: 0 0 0 .2rem $bright-blue;
+                box-shadow: 0 0 0 0.2rem $bright-blue;
             }
         }
     }
@@ -370,7 +372,7 @@ fieldset {
     }
 }
 
-form:not([itemprop="signout"]) {
+form:not([itemprop='signout']) {
     & button, a {
         background-color: $background;
         border-color: $muted;
@@ -439,7 +441,7 @@ nav {
             margin-left: $spacing-tiny;
 
             &::before {
-                content: "\007C";
+                content: '\007C';
                 margin-right: $spacing-tiny;
             }
 
@@ -455,6 +457,7 @@ nav {
                         content: unread($bright-blue);
                     }
                 }
+
                 &::after {
                     content: attr(data-count);
                     font-size: $font-tiny;
@@ -462,6 +465,7 @@ nav {
                     vertical-align: baseline;
                     margin-left: 0.5 * $spacing-tiny;
                 }
+
                 &:hover::after {
                     text-decoration: underline;
                 }
@@ -478,7 +482,7 @@ nav {
             }
 
             &:not(:first-child)::before {
-                content: "\007C";
+                content: '\007C';
                 margin-right: $spacing-tiny;
             }
 
@@ -513,7 +517,7 @@ nav {
             flex-shrink: 0;
             font-weight: bold;
             opacity: 1;
-            transition: opacity .15s ease-in;
+            transition: opacity 0.15s ease-in;
 
             // {{{ hack for degrading to favicon on small screens
             font-size: 0;
@@ -523,12 +527,12 @@ nav {
             }
 
             &::before {
-                background-image: url("/_/images/favicon.svg");
+                background-image: url('/_/images/favicon.svg');
                 background-size: contain;
                 display: inline-block;
                 height: 1rem;
                 width: 1rem;
-                content: " ";
+                content: ' ';
 
                 @media #{$not-small} {
                     display: none;
@@ -541,14 +545,14 @@ nav {
             }
 
             &:hover, &:focus {
-                opacity: .5;
+                opacity: 0.5;
                 text-decoration: none;
-                transition: opacity .15s ease-in;
+                transition: opacity 0.15s ease-in;
             }
 
             &:active {
-                opacity: .8;
-                transition: opacity .15s ease-out;
+                opacity: 0.8;
+                transition: opacity 0.15s ease-out;
             }
         }
 
@@ -568,7 +572,7 @@ nav {
 
                 &::before {
                     color: $dark-pink;
-                    content: "\203A";
+                    content: '\203A';
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
@@ -590,7 +594,7 @@ nav {
 
                 &::before {
                     color: $light-purple;
-                    content: "\002F";
+                    content: '\002F';
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
@@ -607,7 +611,7 @@ nav {
 
                 &::before {
                     color: $dark-red;
-                    content: "\002F";
+                    content: '\002F';
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
@@ -619,7 +623,7 @@ nav {
 
                 & > a::before {
                     color: $dark-blue;
-                    content: "\007E";
+                    content: '\007E';
 
                     @media (prefers-color-scheme: dark) {
                         color: $bright-blue;
@@ -636,14 +640,13 @@ nav {
                 flex-wrap: wrap;
 
                 & > li {
-
                     & > a {
                         font-size: $font-small;
                     }
 
                     &:first-child::before {
                         color: $dark-blue;
-                        content: "\002F";
+                        content: '\002F';
                         font-size: $font-normal;
                         margin-left: $spacing-tiny;
                         margin-right: $spacing-tiny;
@@ -654,7 +657,7 @@ nav {
                     }
 
                     &:not(:first-child)::before {
-                        content: "\002B";
+                        content: '\002B';
                         color: $dark-green;
 
                         @media (prefers-color-scheme: dark) {
@@ -700,6 +703,7 @@ div#content, div#controls {
             display: inline;
             font-size: $font-tiny;
             float: right;
+
             & a {
                 color: $muted;
                 vertical-align: sub;
@@ -734,7 +738,7 @@ div#content, div#controls {
                 }
 
                 &:not(:last-child)::after {
-                    content: ",\00a0";
+                    content: ',\00a0';
                 }
             }
         }
@@ -763,7 +767,7 @@ div#content, div#controls {
                     }
 
                     &:not(:first-child)::before {
-                        content: "\00B7";
+                        content: '\00B7';
                         margin-right: $spacing-tiny;
                     }
                 }
@@ -831,6 +835,7 @@ div.sort-options {
                 margin-left: 0;
             }
         }
+
         &:last-child {
             @media #{$large} {
                 margin-right: 0;
@@ -935,14 +940,14 @@ div.bookmark-card {
             margin-bottom: 2px;
             margin-top: 2px;
 
-            &[data-icon-type="private"] {
+            &[data-icon-type='private'] {
                 content: hidden($blue);
                 @media (prefers-color-scheme: dark) {
                     content: hidden($bright-blue);
                 }
             }
 
-            &[data-icon-type="unread"] {
+            &[data-icon-type='unread'] {
                 content: later($blue);
                 @media (prefers-color-scheme: dark) {
                     content: later($bright-blue);
@@ -958,7 +963,7 @@ div.bookmark-card {
 }
 
 div.bookmark {
-    flex-grow: 1.0;
+    flex-grow: 1;
     overflow: hidden;
     padding-bottom: 2px;
     position: relative;
@@ -982,9 +987,11 @@ div.bookmark {
 
         @media #{$large} {
             position: relative;
-            & a.savers[data-count="0"], & a.savers[data-count="1"]{
+
+            & a.savers[data-count='0'], & a.savers[data-count='1'] {
                 display: none;
             }
+
             & a.savers {
                 background-color: $blue;
                 color: $white;
@@ -1060,7 +1067,7 @@ div.bookmark {
         //width: 100%;
 
         & p {
-            margin: 0 0 0 0;
+            margin: 0;
         }
 
         & > pre {
@@ -1082,7 +1089,7 @@ div.bookmark {
         }
 
         & > span:not(:first-child)::before {
-            content: "\00B7";
+            content: '\00B7';
         }
     }
 
@@ -1170,12 +1177,12 @@ div.bookmark {
                     }
 
                     &:not(:last-child)::after {
-                        content: ",\00a0";
+                        content: ',\00a0';
                     }
 
                     @media #{$not-small} {
                         &:last-child {
-                           margin-right: $spacing-tiny;
+                            margin-right: $spacing-tiny;
                         }
                     }
                 }
@@ -1224,12 +1231,12 @@ a.button {
     &:hover, &:focus {
         cursor: pointer;
         text-decoration: none;
-        box-shadow: 0 0 0 .2rem $light-blue;
+        box-shadow: 0 0 0 0.2rem $light-blue;
         outline: 0;
 
         @media (prefers-color-scheme: dark) {
             border-color: $dark-blue;
-            box-shadow: 0 0 0 .2rem $bright-blue;
+            box-shadow: 0 0 0 0.2rem $bright-blue;
         }
     }
 
@@ -1239,7 +1246,7 @@ a.button {
         color: $white;
 
         &:hover, &:focus {
-            transition: box-shadow .15s ease-in-out;
+            transition: box-shadow 0.15s ease-in-out;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -1461,6 +1468,7 @@ section.settings {
         & > dt {
             font-weight: bold;
         }
+
         & > dd {
             margin-bottom: $spacing-small;
             margin-left: 0;
