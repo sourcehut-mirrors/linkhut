@@ -3,11 +3,11 @@ packages:
   - docker
   - docker-cli-compose
 secrets:
-  -  56d6a584-04fd-4aa1-9a0b-8ced9816e4f3 # docker registry credentials
+  -  dafdc7fa-451e-44cb-aa67-339ae7ca2e87 # docker registry credentials
 environment:
-  - DOCKER_REGISTRY=docker.io
-  - DOCKER_REPOSITORY=linkhut/linkhut
-  - DOCKER_TAG=edge
+  DOCKER_REGISTRY: docker.io
+  DOCKER_REPOSITORY: matiaslb/linkhut
+  DOCKER_TAG: edge
 sources:
   - https://git.sr.ht/~mlb/linkhut
 tasks:
@@ -23,9 +23,9 @@ tasks:
       # Load Docker registry secrets
       set +x -a
       source ~/docker-hub.env
-      set -x +a
       # Login to Docker registry using secrets
       echo $DOCKER_PASSWORD | docker login ${DOCKER_REGISTRY} -u $DOCKER_USERNAME --password-stdin
+      set -x +a
       # Push latest tag
       docker push ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG}
       # Push git commit tag
