@@ -33,7 +33,6 @@ tasks:
         cd linkhut
         MIX_ENV=prod mix compile
         MIX_ENV=prod mix assets.deploy
-        mix phx.gen.release
         MIX_ENV=prod mix release
     - upload: |
         rsync -r /home/build/linkhut/_build/prod/linkhut-*.tar.gz deploy@mlb.st:/var/www/linkhut

@@ -52,10 +52,11 @@ if config_env() == :prod do
   # Configure IP binding based on environment variable
   # BIND_IP=public binds to all interfaces: {0, 0, 0, 0, 0, 0, 0, 0}
   # BIND_IP=loopback (or unset) binds to loopback only: {0, 0, 0, 0, 0, 0, 0, 1}
-  ip_address = case System.get_env("BIND_IP") do
-    "public" -> {0, 0, 0, 0, 0, 0, 0, 0}
-    _ -> {0, 0, 0, 0, 0, 0, 0, 1}
-  end
+  ip_address =
+    case System.get_env("BIND_IP") do
+      "public" -> {0, 0, 0, 0, 0, 0, 0, 0}
+      _ -> {0, 0, 0, 0, 0, 0, 0, 1}
+    end
 
   config :linkhut, LinkhutWeb.Endpoint,
     http: [

@@ -1,0 +1,34 @@
+image: alpine/edge
+packages:
+  - docker
+  - docker-cli-compose
+secrets:
+  -  56d6a584-04fd-4aa1-9a0b-8ced9816e4f3 # docker registry credentials
+environment:
+  - DOCKER_REGISTRY=docker.io
+  - DOCKER_REPOSITORY=linkhut/linkhut
+  - DOCKER_TAG=edge
+sources:
+  - https://git.sr.ht/~mlb/linkhut
+tasks:
+  - setup: |
+      sudo rc-service docker start
+      sudo addgroup $USER docker
+  - build: |
+      cd linkhut
+      docker build -f contrib/docker/Dockerfile -t ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG} .
+      docker tag ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:$(git rev-parse --short HEAD)
+  - push: |
+      cd linkhut
+      # Load Docker registry secrets
+      set +x -a
+      source ~/docker-hub.env
+      set -x +a
+      # Login to Docker registry using secrets
+      echo $DOCKER_PASSWORD | docker login ${DOCKER_REGISTRY} -u $DOCKER_USERNAME --password-stdin
+      # Push latest tag
+      docker push ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG}
+      # Push git commit tag
+      docker push ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:$(git rev-parse --short HEAD)
+  - cleanup: |
+      docker system prune -f
