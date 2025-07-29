@@ -49,14 +49,17 @@ if config_env() == :prod do
 
   port = String.to_integer(System.get_env("PORT") || "4000")
 
+  # Configure IP binding based on environment variable
+  # BIND_IP=public binds to all interfaces: {0, 0, 0, 0, 0, 0, 0, 0}
+  # BIND_IP=loopback (or unset) binds to loopback only: {0, 0, 0, 0, 0, 0, 0, 1}
+  ip_address = case System.get_env("BIND_IP") do
+    "public" -> {0, 0, 0, 0, 0, 0, 0, 0}
+    _ -> {0, 0, 0, 0, 0, 0, 0, 1}
+  end
+
   config :linkhut, LinkhutWeb.Endpoint,
-    server: true,
     http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-      # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
-      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      ip: {0, 0, 0, 0, 0, 0, 0, 1},
+      ip: ip_address,
       port: port
     ],
     secret_key_base: secret_key_base
