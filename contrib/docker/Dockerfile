@@ -61,8 +61,22 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE} AS runner
 
+ARG BUILD_DATE
+ARG VCS_REF
+
+LABEL maintainer="ops@linkhut.org" \
+    org.opencontainers.image.title="linkhut" \
+    org.opencontainers.image.description="Linkhut for Docker" \
+    org.opencontainers.image.authors="ops@linkhut.org" \
+    org.opencontainers.image.vendor="linkhut" \
+    org.opencontainers.image.documentation="https://docs.linkhut.org" \
+    org.opencontainers.image.licenses="AGPL-3.0" \
+    org.opencontainers.image.url="https://linkhut.org" \
+    org.opencontainers.image.revision=$VCS_REF \
+    org.opencontainers.image.created=$BUILD_DATE
+
 RUN apt-get update -y && \
-  apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates \
+  apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates postgresql-client \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
@@ -81,6 +95,8 @@ ENV MIX_ENV="prod"
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/linkhut ./
 
+COPY --chown=nobody:root ./contrib/docker/entrypoint.sh ./bin
+
 USER nobody
 
-CMD ["/app/bin/server"]
+CMD ["/app/bin/entrypoint.sh"]

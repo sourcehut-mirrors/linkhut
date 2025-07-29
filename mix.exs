@@ -124,6 +124,7 @@ defmodule Linkhut.MixProject do
     [
       "docs/introduction/introduction.md",
       "docs/installation/installation.md",
+      "docs/installation/docker.md",
       "docs/api/overview.md",
       "docs/api/posts.md",
       "docs/api/tags.md"
