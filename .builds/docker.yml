@@ -6,7 +6,7 @@ secrets:
   -  dafdc7fa-451e-44cb-aa67-339ae7ca2e87 # docker registry credentials
 environment:
   DOCKER_REGISTRY: docker.io
-  DOCKER_REPOSITORY: matiaslb/linkhut
+  DOCKER_IMAGE: matiaslb/linkhut
   DOCKER_TAG: edge
 sources:
   - https://git.sr.ht/~mlb/linkhut
@@ -14,19 +14,14 @@ tasks:
   - setup: |
       sudo rc-service docker start
       sudo addgroup $USER docker
-  - build: |
-      cd linkhut
-      docker build -f contrib/docker/Dockerfile -t ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG} .
-      docker tag ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG} ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:$(git rev-parse --short HEAD)
-  - push: |
-      cd linkhut
+  - login: |
       # Load Docker registry secrets
       set +x -a
       source ~/docker-hub.env
       # Login to Docker registry using secrets
       echo $DOCKER_PASSWORD | docker login ${DOCKER_REGISTRY} -u $DOCKER_USERNAME --password-stdin
       set -x +a
-      # Push latest tag
-      docker push ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG}
-  - cleanup: |
-      docker system prune -f
+  - build: |
+      cd linkhut
+      docker buildx create --use
+      docker buildx build --push --platform linux/amd64,linux/arm64 -f contrib/docker/Dockerfile -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
