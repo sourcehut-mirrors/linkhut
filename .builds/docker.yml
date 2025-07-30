@@ -28,7 +28,5 @@ tasks:
       set -x +a
       # Push latest tag
       docker push ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:${DOCKER_TAG}
-      # Push git commit tag
-      docker push ${DOCKER_REGISTRY}/${DOCKER_REPOSITORY}:$(git rev-parse --short HEAD)
   - cleanup: |
       docker system prune -f
