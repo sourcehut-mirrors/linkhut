@@ -21,7 +21,7 @@ defmodule Linkhut.MixProject do
       # Release
       releases: [
         linkhut: [
-          steps: [:assemble, :tar]
+          steps: [:assemble, &install_single_file/1, :tar]
         ]
       ]
     ]
@@ -79,6 +79,7 @@ defmodule Linkhut.MixProject do
       {:prom_ex, "~> 1.11"},
       {:req, "~> 0.5"},
       {:swoosh, "~> 1.16"},
+      {:single_file, path: "apps/single_file"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tidewave, "~> 0.2", only: :dev},
@@ -135,5 +136,10 @@ defmodule Linkhut.MixProject do
       Installation: ~r/docs\/installation\/.?/,
       "External API": ~r/docs\/api\/.?/
     ]
+  end
+
+  defp install_single_file(release) do
+    Mix.Task.run("single_file.install")
+    release
   end
 end

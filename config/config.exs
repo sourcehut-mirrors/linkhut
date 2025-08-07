@@ -73,6 +73,13 @@ config :linkhut, Oban,
     {Oban.Plugins.Reindexer, schedule: "@weekly"}
   ]
 
+# Single File configuration
+config :single_file,
+  version: "2.0.75",
+  default: [
+    args: []
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
