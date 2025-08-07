@@ -43,7 +43,7 @@ defmodule Linkhut.Html.Title do
   @doc "Extracts the Open Graph `og:title` from meta tags."
   @spec og_title(html_tree) :: binary()
   def og_title(tree) do
-    with meta <- Floki.find(tree, "meta[property='og:title']") |> List.first(""),
+    with meta <- Floki.find(tree, "meta[property='og:title']") |> List.first([""]),
          [content] <- Floki.attribute(meta, "content") do
       String.trim(content)
     else
