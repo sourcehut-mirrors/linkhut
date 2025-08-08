@@ -61,10 +61,6 @@ config :linkhut, ExOauth2Provider,
   optional_scopes:
     ["ifttt"] ++ for(scope <- ~w(posts tags), access <- ~w(read write), do: "#{scope}:#{access}")
 
-config :linkhut, PhoenixOauth2Provider,
-  web_module: LinkhutWeb,
-  current_resource_owner: :current_user
-
 config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 
 # Oban configuration

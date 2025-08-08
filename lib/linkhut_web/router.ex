@@ -1,6 +1,5 @@
 defmodule LinkhutWeb.Router do
   use LinkhutWeb, :router
-  use PhoenixOauth2Provider.Router, otp_app: :linkhut
   import Phoenix.LiveDashboard.Router
 
   import LinkhutWeb.UserAuth
@@ -42,10 +41,11 @@ defmodule LinkhutWeb.Router do
     plug LinkhutWeb.Plugs.VerifyIFTTTHeader
   end
 
-  scope "/_/v1/" do
+  scope "/_/v1/oauth", LinkhutWeb.Api.OAuth, as: :oauth do
     pipe_through :api
 
-    oauth_api_routes()
+    post "/token", TokenController, :create
+    post "/revoke", TokenController, :revoke
   end
 
   scope "/_/v1/", LinkhutWeb.Api, as: :api do
