@@ -134,6 +134,7 @@ defmodule Linkhut.MixProject do
     [
       Introduction: ~r/docs\/introduction\/.?/,
       Installation: ~r/docs\/installation\/.?/,
+      Administration: ~r/docs\/administration\/.?/,
       "External API": ~r/docs\/api\/.?/
     ]
   end
