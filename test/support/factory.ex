@@ -14,7 +14,7 @@ defmodule Linkhut.Factory do
 
   def user_factory do
     %Linkhut.Accounts.User{
-      username: sequence("username-"),
+      username: sequence("username"),
       credential: build(:credential),
       bio: "An awesome biography"
     }

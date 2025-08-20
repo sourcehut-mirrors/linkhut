@@ -111,7 +111,7 @@ defmodule Mix.Tasks.Linkhut.User do
 
       url = url(~p"/_/reset-password/#{encoded_token}")
 
-      IO.puts("URL: #{url}")
+      shell_info("URL: #{url}")
     else
       _ ->
         shell_error("No user #{username}")
