@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+load_env(){
+    set -a
+    [ -f "linkhut.env" ] && . "linkhut.env"
+    set +a
+}
+
+load_env
+
+FULL_ARGS="$*"
+
+cd -P -- "$(dirname -- "$0")"
+exec ./linkhut eval 'Linkhut.Release.run("'"${FULL_ARGS}"'")'

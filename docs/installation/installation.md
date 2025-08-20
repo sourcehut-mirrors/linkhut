@@ -185,8 +185,8 @@ Environment="HOME=/var/lib/linkhut"
 EnvironmentFile=/var/lib/linkhut/linkhut.env
 # Path to the folder containing the linkhut installation.
 WorkingDirectory=/opt/linkhut
-# Path to the Mix binary.
-ExecStart=/usr/bin/mix phx.server
+# Path to the server command
+ExecStart=/var/lib/linkhut/bin/server
 
 # Some security directives.
 # Use private /tmp and /var/tmp folders inside a new file system namespace, which are discarded after the process stops.
@@ -211,3 +211,13 @@ EOF
 sudo systemctl enable --now linkhut.service
 ```
 
+# Finalize installation
+
+## Create your first user
+
+If your instance is up and running, you can create your first user with administrative rights with the following task:
+
+```shell
+$ cd /var/lib/linkhut
+$ sudo -Hu linkhut bin/linkhut_ctl user new <username> <your@emailaddress> --admin
+```
