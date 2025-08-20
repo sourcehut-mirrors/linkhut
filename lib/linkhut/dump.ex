@@ -9,7 +9,7 @@ defmodule Linkhut.Dump do
   @type success :: {:ok, Linkhut.Links.Link.t()}
   @type failure :: {:error, String.t() | %Ecto.Changeset{}}
 
-  @spec import(Linkhut.Accounts.User.t(), String.t(), Map.t()) :: [success | failure]
+  @spec import(Linkhut.Accounts.User.t(), String.t(), map()) :: [success | failure]
   def import(user, document, overrides) do
     {:ok, bookmarks} = HTMLParser.parse_document(document)
 
