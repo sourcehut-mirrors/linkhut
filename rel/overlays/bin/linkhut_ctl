@@ -3,7 +3,7 @@ set -eu
 
 load_env(){
     set -a
-    [ -f "linkhut.env" ] && . "linkhut.env"
+    [ -f "linkhut.env" ] && . ./"linkhut.env"
     set +a
 }
 
