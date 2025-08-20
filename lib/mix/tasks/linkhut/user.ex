@@ -14,7 +14,7 @@ defmodule Mix.Tasks.Linkhut.User do
   @moduledoc """
   Manages users in the Linkhut application.
 
-  This task provides various user management operations including creating new users
+  This task provides various user management operations, including creating new users
   with optional admin privileges.
 
   ## Usage
