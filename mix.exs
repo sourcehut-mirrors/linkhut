@@ -83,7 +83,7 @@ defmodule Linkhut.MixProject do
       {:single_file, path: "apps/single_file"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tidewave, "~> 0.2", only: :dev},
+      {:tidewave, "~> 0.5", only: :dev},
       {:timex, "~> 3.7"},
       {:xml_builder, "~> 2.2"}
     ]
