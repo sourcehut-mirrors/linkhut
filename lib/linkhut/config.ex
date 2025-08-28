@@ -68,4 +68,10 @@ defmodule Linkhut.Config do
     mail()
     |> Keyword.get(key, value)
   end
+
+  @spec archiving(atom(), any()) :: any()
+  def archiving(key, value \\ nil) do
+    get([Linkhut, :archiving])
+    |> Keyword.get(key, value)
+  end
 end

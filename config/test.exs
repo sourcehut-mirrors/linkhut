@@ -27,6 +27,11 @@ config :linkhut, Linkhut,
     user_id: 0,
     application: "a2ac2720c90e458752257e5acdc5cace7c1667e835fd833df3268f5d5bc3067b",
     service_key: "cccddd"
+  ],
+  archiving: [
+    data_dir: Path.join(System.tmp_dir!(), "linkhut_test_archives"),
+    serve_host: nil,
+    storage: Linkhut.Archiving.Storage.Local
   ]
 
 # Oban configuration

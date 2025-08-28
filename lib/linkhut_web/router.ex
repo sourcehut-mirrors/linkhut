@@ -41,6 +41,11 @@ defmodule LinkhutWeb.Router do
     plug LinkhutWeb.Plugs.VerifyIFTTTHeader
   end
 
+  pipeline :snapshot_serve do
+    plug :accepts, ["html"]
+    plug :put_secure_browser_headers
+  end
+
   scope "/_/v1/oauth", LinkhutWeb.Api.OAuth, as: :oauth do
     pipe_through :api
 
@@ -128,6 +133,12 @@ defmodule LinkhutWeb.Router do
     get "/profile/delete", ProfileController, :remove
   end
 
+  # Snapshot file serving (token-authenticated, no session required)
+  scope "/_", LinkhutWeb do
+    pipe_through [:snapshot_serve]
+    get "/snapshot/serve/:token", SnapshotController, :serve
+  end
+
   scope "/_", LinkhutWeb do
     pipe_through [:browser, :require_authenticated_user]
 
@@ -139,6 +150,10 @@ defmodule LinkhutWeb.Router do
 
     get "/delete", LinkController, :remove
     put "/delete", LinkController, :delete
+
+    # Snapshot routes
+    get "/snapshot/:id", SnapshotController, :show
+    get "/snapshots/:link_id", SnapshotController, :index
 
     delete "/logout", Auth.SessionController, :delete
   end

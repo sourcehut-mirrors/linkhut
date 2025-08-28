@@ -40,4 +40,17 @@ defmodule Linkhut.Factory do
       inserted_at: DateTime.utc_now()
     }
   end
+
+  def snapshot_factory do
+    %Linkhut.Archiving.Snapshot{
+      link_id: 1,
+      job_id: 1,
+      type: "singlefile",
+      state: :complete,
+      storage_key: "local:/tmp/test/archive",
+      file_size_bytes: 1024,
+      processing_time_ms: 500,
+      response_code: 200
+    }
+  end
 end

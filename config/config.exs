@@ -66,11 +66,15 @@ config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 # Oban configuration
 config :linkhut, Oban,
   engine: Oban.Engines.Basic,
-  queues: [default: 10, mailer: 5],
+  queues: [default: 10, mailer: 5, crawler: 5],
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Reindexer, schedule: "@weekly"}
+  ],
+  crontab: [
+    # Daily at 2 AM
+    {"0 2 * * *", Linkhut.Workers.ArchiveScheduler}
   ]
 
 # Single File configuration

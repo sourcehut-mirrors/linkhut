@@ -121,11 +121,12 @@ defmodule SingleFile do
   defp cmd(command_path, extra_args, opts \\ []) do
     case System.cmd(command_path, extra_args, opts) do
       {:error, reason} ->
-        Logger.error("SingleFile command failed", 
-          command: command_path, 
-          args: extra_args, 
+        Logger.error("SingleFile command failed",
+          command: command_path,
+          args: extra_args,
           reason: reason
         )
+
         {:error, reason}
 
       {output, exit_code} ->

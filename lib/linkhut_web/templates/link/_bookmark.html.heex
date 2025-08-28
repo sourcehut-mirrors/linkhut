@@ -57,6 +57,11 @@
                     <% end %>
                   </li>
                 <% end %>
+                <%= if @link.has_archive do %>
+                  <li>
+                    <a href={~p"/_/snapshots/#{@link.id}"}>{gettext("view snapshots")}</a>
+                  </li>
+                <% end %>
               <% else %>
                 <li>
                   <a href={Routes.link_path(@conn, :new, url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags)}>{gettext("copy to mine")}</a>

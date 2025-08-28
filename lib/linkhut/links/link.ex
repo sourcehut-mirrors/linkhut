@@ -11,7 +11,7 @@ defmodule Linkhut.Links.Link do
 
   @primary_key false
   schema "links" do
-    field :id, :id
+    field :id, :id, read_after_writes: true
     field :url, :string, primary_key: true
     field :user_id, :id, primary_key: true
     belongs_to :user, User, define_field: false
@@ -24,6 +24,7 @@ defmodule Linkhut.Links.Link do
     field :is_unread, :boolean, default: false
     field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
+    field :has_archive, :boolean, default: false, virtual: true
 
     embeds_one :metadata, LinkMetadata, on_replace: :update do
       field :scheme, :string
@@ -164,7 +165,7 @@ defmodule Linkhut.Links.Link do
     uri = URI.parse(url)
 
     with %URI{scheme: scheme, host: host} when scheme in ["http", "https"] <- uri,
-         false <- local_address?(host),
+         false <- Linkhut.Network.local_address?(host),
          {:ok, resp} <- fetch_url(url),
          ["text/html" <> _] <- Req.Response.get_header(resp, "content-type") do
       put_change(changeset, :title, Linkhut.Html.Title.title(resp.body))
@@ -187,22 +188,4 @@ defmodule Linkhut.Links.Link do
     |> Req.request(retry: false)
   end
 
-  defp local_address?(host) when is_binary(host) do
-    local_address?(host, :inet) || local_address?(host, :inet6)
-  end
-
-  defp local_address?({127, _, _, _}), do: true
-  defp local_address?({10, _, _, _}), do: true
-  defp local_address?({192, 168, _, _}), do: true
-  defp local_address?({172, second, _, _}) when second >= 16 and second <= 31, do: true
-  defp local_address?({0xFC00, _, _, _, _, _, _, _}), do: true
-  defp local_address?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
-  defp local_address?(_), do: false
-
-  defp local_address?(host, family) when is_binary(host) do
-    case :inet.getaddr(to_charlist(host), family) do
-      {:ok, address} -> local_address?(address)
-      _ -> false
-    end
-  end
 end

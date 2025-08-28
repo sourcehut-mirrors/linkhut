@@ -89,4 +89,9 @@ config :linkhut, Linkhut,
     user_id: 0,
     application: "aaabbb",
     service_key: "cccddd"
+  ],
+  archiving: [
+    data_dir: "/tmp",
+    serve_host: nil,
+    storage: Linkhut.Archiving.Storage.Local
   ]

@@ -1,0 +1,11 @@
+<div>
+<h3>{@link.title}</h3>
+<section class="settings">
+      <.table :if={@snapshots != []} id="snapshots" rows={@snapshots}>
+        <:col :let={snapshot} label="Saved On">{format_datetime(snapshot.created_at)}</:col>
+        <:col :let={snapshot} label="Type">{crawler_display_name(snapshot.type)}</:col>
+        <:col :let={snapshot} label="Size">{format_file_size(snapshot.file_size)}</:col>
+        <:col :let={snapshot} label="Link"><a href={~p"/_/snapshot/#{snapshot.id}"}>View</a></:col>
+      </.table>
+</section>
+</div>

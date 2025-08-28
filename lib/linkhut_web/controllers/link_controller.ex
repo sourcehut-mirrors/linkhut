@@ -132,7 +132,7 @@ defmodule LinkhutWeb.LinkController do
       Search.search(
         %{context(params) | from: user, visible_as: user.username},
         query,
-        Keyword.put(ordering(conn), :is_unread, true)
+        Keyword.put(query_opts(conn), :is_unread, true)
       )
 
     conn
@@ -146,7 +146,7 @@ defmodule LinkhutWeb.LinkController do
     )
   end
 
-  defp ordering(%Plug.Conn{query_params: query_params} = _conn) do
+  defp query_opts(%Plug.Conn{query_params: query_params} = conn) do
     order =
       case query_params do
         %{"order" => "asc"} -> :asc
@@ -163,11 +163,17 @@ defmodule LinkhutWeb.LinkController do
         _ -> nil
       end
 
-    case {sort_by, order} do
-      {nil, nil} -> []
-      {nil, order} -> [order: order]
-      {sort_by, nil} -> [sort_by: sort_by]
-      {sort_by, order} -> [sort_by: sort_by, order: order]
+    opts =
+      case {sort_by, order} do
+        {nil, nil} -> []
+        {nil, order} -> [order: order]
+        {sort_by, nil} -> [sort_by: sort_by]
+        {sort_by, order} -> [sort_by: sort_by, order: order]
+      end
+
+    case conn.assigns[:current_user] do
+      %{id: user_id} -> Keyword.put(opts, :current_user_id, user_id)
+      _ -> opts
     end
   end
 
@@ -180,8 +186,8 @@ defmodule LinkhutWeb.LinkController do
 
     links_query =
       case view do
-        :recent -> Links.recent(ordering(conn))
-        :popular -> Links.popular(ordering(conn))
+        :recent -> Links.recent(query_opts(conn))
+        :popular -> Links.popular(query_opts(conn))
       end
 
     conn
@@ -202,7 +208,7 @@ defmodule LinkhutWeb.LinkController do
         current_user -> %Context{context | visible_as: current_user.username}
       end
 
-    links_query = Search.search(context, query, ordering(conn))
+    links_query = Search.search(context, query, query_opts(conn))
 
     conn
     |> render(:index,
@@ -221,7 +227,7 @@ defmodule LinkhutWeb.LinkController do
         current_user -> %Context{context | visible_as: current_user.username}
       end
 
-    links_query = Search.search(context, "", ordering(conn))
+    links_query = Search.search(context, "", query_opts(conn))
 
     conn
     |> render(:index,

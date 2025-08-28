@@ -516,4 +516,15 @@ defmodule Linkhut.Accounts do
       {:error, :credential, changeset, _} -> {:error, changeset}
     end
   end
+
+  @doc """
+  Lists all active paying users for archive processing.
+  """
+  def list_active_paying_users do
+    User
+    |> where([u], u.type == :active_paying)
+    |> where([u], u.is_banned == false)
+    |> order_by([u], asc: u.id)
+    |> Repo.all()
+  end
 end
