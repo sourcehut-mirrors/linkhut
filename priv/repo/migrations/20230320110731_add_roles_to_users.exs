@@ -2,6 +2,20 @@ defmodule Linkhut.Repo.Migrations.AddRolesToUsers do
   use Ecto.Migration
   import Ecto.Query
 
+  defmodule Linkhut.Repo.Migrations.AddRolesToUsers.MigratingSchema do
+    use Ecto.Schema
+
+    # Copy of the schema at the time of migration
+    schema "users" do
+      field(:type, Ecto.Enum,
+        values: [:unconfirmed, :active_free, :active_paying],
+        default: :unconfirmed
+      )
+    end
+  end
+
+  alias Linkhut.Repo.Migrations.AddRolesToUsers.MigratingSchema
+
   def change do
     alter table(:users) do
       add :roles, {:array, :string}, default: []
@@ -15,9 +29,9 @@ defmodule Linkhut.Repo.Migrations.AddRolesToUsers do
   end
 
   defp execute_up do
-    from(l in Linkhut.Accounts.User,
+    from(u in MigratingSchema,
       update: [set: [type: :unconfirmed]]
     )
-    |> Linkhut.Repo.update_all([])
+    |> repo().update_all([])
   end
 end

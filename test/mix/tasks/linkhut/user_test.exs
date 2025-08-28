@@ -45,7 +45,8 @@ defmodule Mix.Tasks.Linkhut.UserTest do
 
       assert_shell_messages([
         {:info, "user1"},
-        {:info, "user2"}])
+        {:info, "user2"}
+      ])
     end
 
     test "shows error for invalid command" do
@@ -100,8 +101,12 @@ defmodule Mix.Tasks.Linkhut.UserTest do
 
     test "creates user with custom password" do
       Mix.Tasks.Linkhut.User.run([
-        "new", "customuser", "custom@example.com",
-        "--password", "custompass123", "--assume-yes"
+        "new",
+        "customuser",
+        "custom@example.com",
+        "--password",
+        "custompass123",
+        "--assume-yes"
       ])
 
       assert_shell_info_contains("password: custompass123")
@@ -222,7 +227,8 @@ defmodule Mix.Tasks.Linkhut.UserTest do
   defp assert_token_created(user, context) do
     assert Repo.exists?(
              from(t in UserToken,
-               where: t.user_id == ^user.id and t.context == ^context)
+               where: t.user_id == ^user.id and t.context == ^context
+             )
            )
   end
 

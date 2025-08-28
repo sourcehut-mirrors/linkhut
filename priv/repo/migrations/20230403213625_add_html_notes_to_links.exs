@@ -1,7 +1,21 @@
 defmodule Linkhut.Repo.Migrations.AddHtmlNotesToLinks do
   use Ecto.Migration
   import Ecto.Query
-  alias Linkhut.Links.Link
+
+  defmodule Linkhut.Repo.Migrations.AddHtmlNotesToLinks.MigratingSchema do
+    use Ecto.Schema
+
+    # Copy of the schema at the time of migration
+    schema "links" do
+      field(:url, :string, primary_key: true)
+      field(:user_id, :id, primary_key: true)
+
+      field(:notes, :string)
+      field(:html_notes, :string)
+    end
+  end
+
+  alias Linkhut.Repo.Migrations.AddHtmlNotesToLinks.MigratingSchema
 
   def change do
     alter table(:links) do
@@ -17,23 +31,34 @@ defmodule Linkhut.Repo.Migrations.AddHtmlNotesToLinks do
 
   defp execute_up do
     query =
-      from(l in Link,
-        where: not is_nil(l.notes) and l.notes != ""
+      from(l in MigratingSchema,
+        where: not is_nil(l.notes) and l.notes != "",
+        select: [l.url, l.user_id]
       )
 
-    stream = Linkhut.Repo.stream(query)
+    stream = repo().stream(query)
 
-    Linkhut.Repo.transaction(fn ->
+    repo().transaction(fn ->
       stream
-      |> Enum.map(fn link ->
-        link
-        |> Link.changeset(%{notes: link.notes}, force_changes: true)
-      end)
       |> Enum.with_index()
-      |> Enum.reduce(Ecto.Multi.new(), fn {changeset, idx}, multi ->
-        Ecto.Multi.update(multi, {:update, idx}, changeset)
+      |> Enum.reduce(Ecto.Multi.new(), fn {link, idx}, multi ->
+        Ecto.Multi.update_all(
+          multi,
+          {:update, idx},
+          from(l in MigratingSchema,
+            select: [l.url, l.user_id, l.notes],
+            where: l.url == ^link.url and l.user_id == ^link.user_id
+          ),
+          set: [
+            html_notes:
+              HtmlSanitizeEx.Scrubber.scrub(
+                Earmark.as_html!(link.notes, pure_links: false),
+                Linkhut.Html.Scrubber
+              )
+          ]
+        )
       end)
-      |> Linkhut.Repo.transaction()
+      |> repo().transaction()
     end)
   end
 end

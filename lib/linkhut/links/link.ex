@@ -11,6 +11,7 @@ defmodule Linkhut.Links.Link do
 
   @primary_key false
   schema "links" do
+    field :id, :id
     field :url, :string, primary_key: true
     field :user_id, :id, primary_key: true
     belongs_to :user, User, define_field: false
@@ -24,6 +25,15 @@ defmodule Linkhut.Links.Link do
     field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
 
+    embeds_one :metadata, LinkMetadata, on_replace: :update do
+      field :scheme, :string
+      field :host, :string
+      field :port, :integer
+      field :path, :string
+      field :query, :string
+      field :fragment, :string
+    end
+
     many_to_many :savers, User, join_through: __MODULE__, join_keys: [url: :url, user_id: :id]
     has_many :variants, __MODULE__, references: :url, foreign_key: :url
 
@@ -31,7 +41,7 @@ defmodule Linkhut.Links.Link do
   end
 
   @doc false
-  def changeset(link, attrs, opts \\ []) do
+  def changeset(link, attrs, opts \\ [fetch_title: true]) do
     link
     |> cast(
       attrs,
@@ -39,7 +49,8 @@ defmodule Linkhut.Links.Link do
       opts
     )
     |> validate_url()
-    |> maybe_fetch_title()
+    |> maybe_add_metadata()
+    |> maybe_fetch_title(opts)
     |> validate_required([:user_id, :title, :is_private])
     |> validate_length(:title, max: 255)
     |> validate_length(:notes, max: 1024)
@@ -48,6 +59,23 @@ defmodule Linkhut.Links.Link do
     |> update_tags()
     |> dedupe_tags()
     |> maybe_generate_html()
+  end
+
+  defp maybe_add_metadata(changeset) do
+    case get_change(changeset, :url) do
+      nil ->
+        changeset
+
+      url ->
+        %URI{scheme: scheme, host: host, port: port, path: path, query: query, fragment: fragment} =
+          URI.parse(url)
+
+        changeset
+        |> put_embed(
+          :metadata,
+          %{scheme: scheme, host: host, port: port, path: path, query: query, fragment: fragment}
+        )
+    end
   end
 
   defp maybe_generate_html(changeset) do
@@ -122,8 +150,9 @@ defmodule Linkhut.Links.Link do
 
   # Helpers to automagically populate the title
 
-  defp maybe_fetch_title(changeset) do
-    if !changeset.valid? || get_change(changeset, :title) || !get_change(changeset, :url) do
+  defp maybe_fetch_title(changeset, opts) do
+    if !Keyword.get(opts, :fetch_title, false) || !changeset.valid? ||
+         get_change(changeset, :title) || !get_change(changeset, :url) do
       changeset
     else
       fetch_title(changeset)
