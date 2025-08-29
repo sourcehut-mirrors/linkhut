@@ -1,6 +1,6 @@
 defmodule Linkhut.Search.QueryParser do
   @moduledoc """
-  Parser for search query modifiers like site: terms.
+  Parser for search query modifiers like site: and inurl: terms.
   """
 
   alias Linkhut.Search.QueryFilters
@@ -20,13 +20,17 @@ defmodule Linkhut.Search.QueryParser do
       iex> parse("site:foo.com site:bar.com test")
       {"test", %Linkhut.Search.QueryFilters{sites: ["foo.com", "bar.com"]}}
 
-      iex> parse("no sites here")
-      {"no sites here", %Linkhut.Search.QueryFilters{sites: []}}
+      iex> parse("inurl:admin inurl:dashboard phoenix")
+      {"phoenix", %Linkhut.Search.QueryFilters{url_parts: ["admin", "dashboard"]}}
+
+      iex> parse("no filters here")
+      {"no filters here", %Linkhut.Search.QueryFilters{sites: [], url_parts: []}}
   """
   @spec parse(String.t()) :: {String.t(), QueryFilters.t()}
   def parse(query) when is_binary(query) do
     {cleaned_query, sites} = parse_sites(query)
-    filters = QueryFilters.new(sites: sites)
+    {cleaned_query, url_parts} = parse_inurl(cleaned_query)
+    filters = QueryFilters.new(sites: sites, url_parts: url_parts)
     {cleaned_query, filters}
   end
 
@@ -47,5 +51,24 @@ defmodule Linkhut.Search.QueryParser do
       |> String.trim()
 
     {cleaned_query, sites}
+  end
+
+  defp parse_inurl(query) when is_binary(query) do
+    inurl_regex = ~r/inurl:([^\s]+)/i
+
+    url_parts =
+      inurl_regex
+      |> Regex.scan(query, capture: :all_but_first)
+      |> List.flatten()
+      |> Enum.map(&String.downcase/1)
+      |> Enum.uniq()
+
+    cleaned_query =
+      query
+      |> String.replace(inurl_regex, "")
+      |> String.replace(~r/\s+/, " ")
+      |> String.trim()
+
+    {cleaned_query, url_parts}
   end
 end

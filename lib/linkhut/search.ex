@@ -63,6 +63,7 @@ defmodule Linkhut.Search do
     |> visible_as(visible_as)
     |> matching(url)
     |> filtered_by_hosts(query_filters.sites)
+    |> filtered_by_url_terms(query_filters.url_parts)
   end
 
   defp from_user(query, user) when is_nil(user), do: query
@@ -114,5 +115,14 @@ defmodule Linkhut.Search do
   defp filtered_by_hosts(query, hosts) do
     query
     |> where([l, _, _], fragment("?->>'host' = ANY(?)", l.metadata, ^hosts))
+  end
+
+  defp filtered_by_url_terms(query, url_parts) when is_nil(url_parts) or url_parts == [],
+    do: query
+
+  defp filtered_by_url_terms(query, url_parts) do
+    Enum.reduce(url_parts, query, fn term, acc_query ->
+      where(acc_query, [l, _, _], ilike(l.url, ^"%#{term}%"))
+    end)
   end
 end

@@ -76,4 +76,80 @@ defmodule Linkhut.Search.QueryParserTest do
       assert Enum.sort(filters.sites) == ["example.com", "foo.bar", "test.org"]
     end
   end
+
+  describe "inurl filtering" do
+    test "extracts single inurl filter" do
+      {query, filters} = QueryParser.parse("hello world inurl:foobar")
+      assert query == "hello world"
+      assert filters.url_parts == ["foobar"]
+    end
+
+    test "extracts multiple inurl filters" do
+      {query, filters} = QueryParser.parse("inurl:foobar inurl:dashboard test search")
+      assert query == "test search"
+      assert Enum.sort(filters.url_parts) == ["dashboard", "foobar"]
+    end
+
+    test "handles inurl filters at different positions" do
+      {query, filters} = QueryParser.parse("search inurl:api more terms inurl:v1")
+      assert query == "search more terms"
+      assert Enum.sort(filters.url_parts) == ["api", "v1"]
+    end
+
+    test "handles query with only inurl filters" do
+      {query, filters} = QueryParser.parse("inurl:foobar inurl:login")
+      assert query == ""
+      assert Enum.sort(filters.url_parts) == ["foobar", "login"]
+    end
+
+    test "converts inurl terms to lowercase" do
+      {query, filters} = QueryParser.parse("inurl:FOOBAR inurl:DashBoard")
+      assert query == ""
+      assert Enum.sort(filters.url_parts) == ["dashboard", "foobar"]
+    end
+
+    test "deduplicates identical inurl filters" do
+      {query, filters} = QueryParser.parse("inurl:foobar test inurl:foobar")
+      assert query == "test"
+      assert filters.url_parts == ["foobar"]
+    end
+
+    test "deduplicates case-insensitive inurl filters" do
+      {query, filters} = QueryParser.parse("inurl:Foobar test inurl:foobar")
+      assert query == "test"
+      assert filters.url_parts == ["foobar"]
+    end
+
+    test "case insensitive inurl: prefix matching" do
+      {query, filters} = QueryParser.parse("INURL:foobar InUrl:dashboard iNuRl:api")
+      assert query == ""
+      assert Enum.sort(filters.url_parts) == ["api", "dashboard", "foobar"]
+    end
+  end
+
+  describe "combined filtering" do
+    test "handles both site and inurl filters" do
+      {query, filters} = QueryParser.parse("phoenix tutorial site:github.com inurl:foobar")
+      assert query == "phoenix tutorial"
+      assert filters.sites == ["github.com"]
+      assert filters.url_parts == ["foobar"]
+    end
+
+    test "processes both filter types from complex query" do
+      {query, filters} =
+        QueryParser.parse("site:example.com inurl:api inurl:v1 documentation site:test.org")
+
+      assert query == "documentation"
+      assert Enum.sort(filters.sites) == ["example.com", "test.org"]
+      assert Enum.sort(filters.url_parts) == ["api", "v1"]
+    end
+
+    test "query with only filters results in empty query string" do
+      {query, filters} = QueryParser.parse("site:example.com inurl:foobar inurl:dashboard")
+      assert query == ""
+      assert filters.sites == ["example.com"]
+      assert Enum.sort(filters.url_parts) == ["dashboard", "foobar"]
+      assert QueryFilters.has_filters?(filters)
+    end
+  end
 end

@@ -201,6 +201,110 @@ defmodule Linkhut.SearchTest do
     end
   end
 
+  describe "search with inurl filters" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      links =
+        create_links_for_user(user, [
+          %{url: "https://example.com/foobar", title: "FooBar Page", tags: ["foobar"]},
+          %{
+            url: "https://github.com/user/foobar-repo",
+            title: "FooBar Repository",
+            tags: ["code"]
+          },
+          %{url: "https://api.example.com/dashboard", title: "Dashboard API", tags: ["api"]},
+          %{
+            url: "https://docs.example.org/guide?search=foobar",
+            title: "Search Guide",
+            tags: ["docs"]
+          },
+          %{url: "https://example.com/login", title: "Login Page", tags: ["auth"]},
+          %{url: "https://example.com/public", title: "Public Page", tags: ["public"]}
+        ])
+
+      %{
+        links: links,
+        context: %Context{visible_as: user.username}
+      }
+    end
+
+    test "filters by single inurl term", %{context: context, links: links} do
+      results = search_urls(context, "inurl:foobar")
+      expected_urls = urls_containing_term(links, "foobar")
+      assert results == expected_urls
+    end
+
+    test "filters by multiple inurl terms with AND logic", %{context: context, links: links} do
+      results = search_urls(context, "inurl:foobar inurl:repo")
+      # Should match URLs containing BOTH "foobar" AND "repo"
+      expected_urls = urls_containing_all_terms(links, ["foobar", "repo"])
+      assert results == expected_urls
+    end
+
+    test "combines inurl filter with text search", %{context: context} do
+      results = run_search(context, "inurl:dashboard API")
+      # Should match documents containing "API" AND having "dashboard" in URL
+      assert length(results) == 1
+      assert hd(results).title == "Dashboard API"
+    end
+
+    test "combines inurl and site filters", %{context: context, links: links} do
+      results = search_urls(context, "site:example.com inurl:foobar")
+      # Should match URLs from example.com domain AND containing "foobar"
+      expected_urls =
+        links
+        |> Enum.filter(
+          &(host_matches?(&1.url, "example.com") and String.contains?(&1.url, "foobar"))
+        )
+        |> Enum.map(& &1.url)
+        |> Enum.sort()
+
+      assert results == expected_urls
+    end
+
+    test "returns empty results for non-matching inurl term", %{context: context} do
+      assert [] == run_search(context, "inurl:nonexistent")
+    end
+
+    test "works with only inurl filters (no text search)", %{context: context, links: links} do
+      results = run_search(context, "inurl:login")
+      expected_url = links |> find_link_by_title("Login Page") |> Map.fetch!(:url)
+      assert [%{url: ^expected_url}] = results
+    end
+
+    test "case insensitive inurl filtering", %{context: context, links: links} do
+      # Test that inurl:FOOBAR matches urls containing "foobar" (lowercase)
+      results = search_urls(context, "inurl:FOOBAR")
+      expected_urls = urls_containing_term(links, "foobar")
+      assert results == expected_urls
+    end
+
+    test "matches inurl terms in URL path", %{context: context, links: links} do
+      results = search_urls(context, "inurl:users")
+
+      expected_urls =
+        links
+        |> Enum.filter(&String.contains?(&1.url, "users"))
+        |> Enum.map(& &1.url)
+        |> Enum.sort()
+
+      assert results == expected_urls
+    end
+
+    test "matches inurl terms in URL query parameters", %{context: context, links: links} do
+      results = search_urls(context, "inurl:search")
+
+      expected_urls =
+        links
+        |> Enum.filter(&String.contains?(&1.url, "search"))
+        |> Enum.map(& &1.url)
+        |> Enum.sort()
+
+      assert results == expected_urls
+    end
+  end
+
   # Helpers
 
   defp create_links_for_user(user, specs) do
@@ -257,4 +361,21 @@ defmodule Linkhut.SearchTest do
     do: links |> find_link_by_title(title) |> Map.fetch!(:url)
 
   defp includes_url?(urls, url), do: Enum.any?(urls, &(&1 == url))
+
+  defp urls_containing_term(links, term) do
+    links
+    |> Enum.filter(&String.contains?(String.downcase(&1.url), String.downcase(term)))
+    |> Enum.map(& &1.url)
+    |> Enum.sort()
+  end
+
+  defp urls_containing_all_terms(links, terms) do
+    links
+    |> Enum.filter(fn link ->
+      url = String.downcase(link.url)
+      Enum.all?(terms, &String.contains?(url, String.downcase(&1)))
+    end)
+    |> Enum.map(& &1.url)
+    |> Enum.sort()
+  end
 end
