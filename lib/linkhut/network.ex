@@ -3,31 +3,103 @@ defmodule Linkhut.Network do
   Network utility functions.
   """
 
-  @doc """
-  Returns `true` if the given hostname resolves to a private/loopback address.
+  # Reserved/non-routable CIDR blocks with descriptive labels, parsed at compile time.
+  @reserved_ranges [
+                     # IPv4
+                     {"0.0.0.0/8", :unspecified},
+                     {"10.0.0.0/8", :private},
+                     {"100.64.0.0/10", :shared},
+                     {"127.0.0.0/8", :loopback},
+                     {"169.254.0.0/16", :link_local},
+                     {"172.16.0.0/12", :private},
+                     {"192.0.0.0/24", :ietf_protocol},
+                     {"192.0.2.0/24", :documentation},
+                     {"192.168.0.0/16", :private},
+                     {"198.18.0.0/15", :benchmarking},
+                     {"198.51.100.0/24", :documentation},
+                     {"203.0.113.0/24", :documentation},
+                     {"240.0.0.0/4", :reserved},
+                     # IPv6
+                     {"::1/128", :loopback},
+                     {"100::/64", :discard},
+                     {"2001:db8::/32", :documentation},
+                     {"fc00::/7", :private},
+                     {"fe80::/10", :link_local}
+                   ]
+                   |> Enum.map(fn {cidr, label} -> {InetCidr.parse_cidr!(cidr), label} end)
 
-  Checks both IPv4 and IPv6. Returns `true` on DNS resolution failure
-  (safe default — block requests to unresolvable hosts).
+  @doc """
+  Returns `true` if the given hostname resolves to a globally routable address.
+
+  Returns `false` for reserved/private/loopback addresses and when DNS
+  resolution fails (safe default — block requests to unresolvable hosts).
   """
-  @spec local_address?(String.t()) :: boolean()
-  def local_address?(host) when is_binary(host) do
+  @spec allowed_address?(String.t()) :: boolean()
+  def allowed_address?(host) when is_binary(host) do
+    case check_address(host) do
+      :ok -> true
+      {:error, _} -> false
+    end
+  end
+
+  @doc """
+  Checks whether the given hostname resolves to a globally routable address.
+
+  Returns `:ok` for allowed addresses, or `{:error, reason}` where reason
+  describes why the address was blocked:
+
+    - `{:dns_failed, host}` — hostname could not be resolved
+    - `{:reserved, label, host}` — resolved to a reserved range, where label
+      is one of: `:loopback`, `:private`, `:link_local`, `:shared`,
+      `:documentation`, `:unspecified`, `:reserved`, `:ietf_protocol`,
+      `:benchmarking`, `:discard`
+  """
+  @spec check_address(String.t()) :: :ok | {:error, term()}
+  def check_address(host) when is_binary(host) do
     case :inet.getaddr(to_charlist(host), :inet) do
       {:ok, address} ->
-        local_ip?(address)
+        check_resolved(address, host)
 
       {:error, _} ->
         case :inet.getaddr(to_charlist(host), :inet6) do
-          {:ok, address} -> local_ip?(address)
-          {:error, _} -> true
+          {:ok, address} -> check_resolved(address, host)
+          {:error, _} -> {:error, {:dns_failed, host}}
         end
     end
   end
 
-  defp local_ip?({127, _, _, _}), do: true
-  defp local_ip?({10, _, _, _}), do: true
-  defp local_ip?({192, 168, _, _}), do: true
-  defp local_ip?({172, second, _, _}) when second >= 16 and second <= 31, do: true
-  defp local_ip?({0, 0, 0, 0, 0, 0, 0, 1}), do: true
-  defp local_ip?({0xFC00, _, _, _, _, _, _, _}), do: true
-  defp local_ip?(_), do: false
+  defp check_resolved(address, host) do
+    case reserved_range(address) do
+      nil -> :ok
+      label -> {:error, {:reserved, label, host}}
+    end
+  end
+
+  # Unspecified IPv6 address
+  defp reserved_range({0, 0, 0, 0, 0, 0, 0, 0}), do: :unspecified
+
+  # ::ffff:0:0/96 — IPv4-mapped; extract embedded IPv4 and re-check
+  defp reserved_range({0, 0, 0, 0, 0, 0xFFFF, hi, lo}),
+    do: reserved_range({div(hi, 256), rem(hi, 256), div(lo, 256), rem(lo, 256)})
+
+  # 64:ff9b::/96 — NAT64 well-known prefix; embeds IPv4 in last 32 bits
+  defp reserved_range({0x0064, 0xFF9B, 0, 0, 0, 0, hi, lo}),
+    do: reserved_range({div(hi, 256), rem(hi, 256), div(lo, 256), rem(lo, 256)})
+
+  # 2001::/32 — Teredo; client IPv4 in last 32 bits, XOR'd with 0xFFFFFFFF
+  defp reserved_range({0x2001, 0x0000, _, _, _, _, hi, lo}),
+    do:
+      reserved_range(
+        {255 - div(hi, 256), 255 - rem(hi, 256), 255 - div(lo, 256), 255 - rem(lo, 256)}
+      )
+
+  # 2002::/16 — 6to4; embeds IPv4 in bits 16–47 (segments 2–3)
+  defp reserved_range({0x2002, hi, lo, _, _, _, _, _}),
+    do: reserved_range({div(hi, 256), rem(hi, 256), div(lo, 256), rem(lo, 256)})
+
+  defp reserved_range(address) do
+    Enum.find_value(@reserved_ranges, fn {cidr, label} ->
+      if InetCidr.contains?(cidr, address), do: label
+    end)
+  end
 end

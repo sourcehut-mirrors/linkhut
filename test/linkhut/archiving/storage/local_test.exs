@@ -1,5 +1,5 @@
 defmodule Linkhut.Archiving.Storage.LocalTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Linkhut.Archiving.Storage.Local
 
@@ -42,7 +42,9 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
 
   describe "store/4 with {:data, binary}" do
     test "stores binary data and returns a local: storage key" do
-      assert {:ok, "local:" <> dest} = Local.store({:data, "binary content"}, 1, 100, "singlefile")
+      assert {:ok, "local:" <> dest} =
+               Local.store({:data, "binary content"}, 1, 100, "singlefile")
+
       assert File.exists?(dest)
       assert File.read!(dest) == "binary content"
     end
@@ -80,7 +82,108 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
 
     test "rejects non-local: prefixed keys" do
-      assert {:error, :invalid_storage_key} = Local.resolve("s3:bucket/key")
+      assert {:error, :invalid_storage_key} = Local.resolve("cloud:bucket/key")
+    end
+  end
+
+  describe "delete/1" do
+    test "deletes an existing file and returns :ok" do
+      path = Path.join(@data_dir, "1/100/singlefile/12345/archive")
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "content")
+
+      assert :ok = Local.delete("local:" <> path)
+      refute File.exists?(path)
+    end
+
+    test "returns :ok for non-existent file (idempotent)" do
+      path = Path.join(@data_dir, "1/100/singlefile/12345/missing")
+      assert :ok = Local.delete("local:" <> path)
+    end
+
+    test "rejects path traversal" do
+      evil_path = Path.join(@data_dir, "../../../etc/passwd")
+      assert {:error, :invalid_storage_key} = Local.delete("local:" <> evil_path)
+    end
+  end
+
+  describe "storage_used/1" do
+    test "returns 0 for empty data dir" do
+      assert {:ok, 0} = Local.storage_used([])
+    end
+
+    test "returns total size of all files" do
+      File.mkdir_p!(Path.join(@data_dir, "1/100/singlefile/12345"))
+      File.write!(Path.join(@data_dir, "1/100/singlefile/12345/archive"), "hello")
+      File.mkdir_p!(Path.join(@data_dir, "2/200/singlefile/12345"))
+      File.write!(Path.join(@data_dir, "2/200/singlefile/12345/archive"), "world!!")
+
+      assert {:ok, size} = Local.storage_used([])
+      assert size == 12
+    end
+
+    test "with user_id returns size of that user's files only" do
+      File.mkdir_p!(Path.join(@data_dir, "1/100/singlefile/12345"))
+      File.write!(Path.join(@data_dir, "1/100/singlefile/12345/archive"), "hello")
+      File.mkdir_p!(Path.join(@data_dir, "2/200/singlefile/12345"))
+      File.write!(Path.join(@data_dir, "2/200/singlefile/12345/archive"), "world!!")
+
+      assert {:ok, 5} = Local.storage_used(user_id: 1)
+      assert {:ok, 7} = Local.storage_used(user_id: 2)
+    end
+
+    test "with non-existent user_id returns 0" do
+      assert {:ok, 0} = Local.storage_used(user_id: 999)
+    end
+  end
+
+  describe "legacy_data_dirs" do
+    @legacy_dir Path.join(System.tmp_dir!(), "linkhut_test_legacy_archives")
+
+    setup do
+      File.mkdir_p!(@legacy_dir)
+
+      archiving = Application.get_env(:linkhut, Linkhut)[:archiving]
+      updated = Keyword.put(archiving, :legacy_data_dirs, [@legacy_dir])
+
+      Application.put_env(
+        :linkhut,
+        Linkhut,
+        Keyword.put(Application.get_env(:linkhut, Linkhut), :archiving, updated)
+      )
+
+      on_exit(fn ->
+        File.rm_rf(@legacy_dir)
+
+        restored = Keyword.delete(archiving, :legacy_data_dirs)
+
+        Application.put_env(
+          :linkhut,
+          Linkhut,
+          Keyword.put(Application.get_env(:linkhut, Linkhut), :archiving, restored)
+        )
+      end)
+
+      :ok
+    end
+
+    test "resolve/1 accepts paths in a legacy data dir" do
+      path = Path.join(@legacy_dir, "1/100/singlefile/12345/archive")
+
+      assert {:ok, {:file, ^path}} = Local.resolve("local:" <> path)
+    end
+
+    test "delete/1 accepts paths in a legacy data dir" do
+      path = Path.join(@legacy_dir, "1/100/singlefile/12345/archive")
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, "old content")
+
+      assert :ok = Local.delete("local:" <> path)
+      refute File.exists?(path)
+    end
+
+    test "resolve/1 still rejects paths outside all allowed dirs" do
+      assert {:error, :invalid_storage_key} = Local.resolve("local:/etc/passwd")
     end
   end
 

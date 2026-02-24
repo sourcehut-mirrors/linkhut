@@ -57,9 +57,9 @@
                     <% end %>
                   </li>
                 <% end %>
-                <%= if @link.has_archive do %>
+                <%= if @archiving_enabled? && @link.has_archive? do %>
                   <li>
-                    <a href={~p"/_/snapshots/#{@link.id}"}>{gettext("view snapshots")}</a>
+                    <a href={~p"/_/archive/#{@link.id}"}>{gettext("view archive")}</a>
                   </li>
                 <% end %>
               <% else %>

@@ -6,7 +6,7 @@ defmodule LinkhutWeb.Plugs.GlobalAssigns do
   """
 
   import Plug.Conn
-  alias Linkhut.Links
+  alias Linkhut.{Archiving, Links}
 
   @doc false
   @impl true
@@ -19,9 +19,11 @@ defmodule LinkhutWeb.Plugs.GlobalAssigns do
       conn
       |> assign(:logged_in?, true)
       |> assign(:unread_count, Links.unread_count(user.id))
+      |> assign(:archiving_enabled?, Archiving.enabled_for_user?(user))
     else
       conn
       |> assign(:logged_in?, false)
+      |> assign(:archiving_enabled?, false)
     end
   end
 end

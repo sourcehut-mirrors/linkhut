@@ -1,0 +1,448 @@
+// Snapshot viewer (show page)
+
+div.snapshot-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+div.snapshot-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0;
+    border-bottom: 1px solid $gray;
+    background-color: $card-background;
+
+    @media (prefers-color-scheme: dark) {
+        border-bottom-color: $dark-gray;
+        background-color: $card-background-dark;
+    }
+
+    & > h2 {
+        margin: 0;
+    }
+
+    & > .snapshot-nav {
+        padding: $spacing-small;
+
+        & > a {
+            @media (prefers-color-scheme: dark) {
+                color: $muted-dark;
+            }
+
+            &:not(:first-child) {
+                margin-left: $spacing-small;
+            }
+        }
+    }
+}
+
+dl.snapshot-link {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 $spacing-tiny;
+    margin: 0;
+    padding: $spacing-small;
+
+    @media (prefers-color-scheme: dark) {
+        border-bottom-color: $dark-gray;
+    }
+
+    & > dt {
+        font-weight: bold;
+    }
+
+    & > dd {
+        margin-left: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    @media screen and (max-width: 48em) {
+        grid-template-columns: 1fr;
+    }
+}
+
+details.snapshot-details {
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid $gray;
+    background-color: $card-background;
+
+    @media (prefers-color-scheme: dark) {
+        border-bottom-color: $dark-gray;
+        background-color: $card-background-dark;
+    }
+
+    & > summary {
+        padding: $spacing-tiny $spacing-small;
+        cursor: pointer;
+        border-bottom: none;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    & > dl {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0;
+        padding: $spacing-tiny $spacing-small;
+        padding-top: 0;
+        font-size: $font-small;
+
+        & > div {
+            display: inline-flex;
+            flex: 1;
+            white-space: nowrap;
+            margin-right: $spacing-small;
+
+            & > dt {
+                font-weight: bold;
+                margin-right: $spacing-tiny;
+                border-top: none;
+            }
+
+            & > dd {
+                margin-left: 0;
+            }
+        }
+    }
+}
+
+div.snapshot-content {
+    background-color: $white;
+    flex-grow: 1;
+
+    & > iframe {
+        border: none;
+        height: 100%;
+        width: 100%;
+    }
+}
+
+// Snapshot listing (index page)
+
+div.snapshot-list {
+    & > h2 {
+        margin-bottom: 0;
+    }
+}
+
+table.snapshot-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    & > thead > tr > th {
+        text-align: left;
+        font-weight: bold;
+        color: $muted;
+        padding: $spacing-tiny $spacing-small;
+        border-bottom: 1px solid $light-gray;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+            border-bottom-color: $dark-gray;
+        }
+    }
+
+    & > tbody > tr > td {
+        padding: $spacing-tiny $spacing-small;
+        border-bottom: 1px solid $light-gray;
+        vertical-align: middle;
+
+        @media (prefers-color-scheme: dark) {
+            border-bottom-color: $dark-gray;
+        }
+    }
+
+    & > tbody > tr.final-url-row > td {
+        color: $muted;
+        padding-top: 0;
+        border-bottom: none;
+
+        & > a {
+            color: $dark-green;
+
+            @media (prefers-color-scheme: dark) {
+                color: $bright-green;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    // Responsive: stack cells on small screens
+    @media screen and (max-width: 48em) {
+        & > thead {
+            display: none;
+        }
+
+        & > tbody > tr {
+            display: block;
+            padding: $spacing-small 0;
+            border-bottom: 1px solid $light-gray;
+
+            @media (prefers-color-scheme: dark) {
+                border-bottom-color: $dark-gray;
+            }
+        }
+
+        & > tbody > tr > td {
+            display: block;
+            border-bottom: none;
+            padding: 1px $spacing-small;
+
+            &::before {
+                content: attr(data-label);
+                font-weight: bold;
+                color: $muted;
+                margin-right: $spacing-tiny;
+
+                @media (prefers-color-scheme: dark) {
+                    color: $muted-dark;
+                }
+            }
+        }
+
+        & > tbody > tr.final-url-row > td {
+            padding-top: 1px;
+        }
+    }
+
+}
+
+.snapshot-toggle {
+    font-size: $font-small;
+    padding: $spacing-tiny $spacing-small;
+}
+
+// State badges (shared between show and index)
+
+.state {
+    padding: 1px $spacing-tiny;
+
+    &.pending,
+    &.crawling {
+        color: $navy;
+        background-color: $light-blue;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $dark-blue;
+        }
+    }
+
+    &.failed {
+        color: $washed-red;
+        background-color: $red;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $dark-red;
+        }
+    }
+
+    &.complete {
+        color: $washed-green;
+        background-color: $green;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $dark-green;
+        }
+    }
+}
+
+// Archive groups (index page)
+
+.archive-group {
+    border: 1px solid $light-gray;
+    border-left-width: 3px;
+    margin-bottom: $spacing-small;
+    padding: 0;
+    background-color: $card-background;
+
+    @media (prefers-color-scheme: dark) {
+        border-color: $dark-gray;
+        background-color: $card-background-dark;
+    }
+
+    &.failed {
+        border-left-color: $red;
+
+        @media (prefers-color-scheme: dark) {
+            border-left-color: $dark-red;
+        }
+    }
+
+    &.active {
+        border-left-color: $dark-green;
+
+        @media (prefers-color-scheme: dark) {
+            border-left-color: $dark-green;
+        }
+    }
+}
+
+.archive-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-tiny $spacing-small;
+    border-bottom: 1px solid $light-gray;
+
+    @media (prefers-color-scheme: dark) {
+        border-bottom-color: $dark-gray;
+    }
+}
+
+.archive-error {
+    color: $red;
+    padding: $spacing-tiny $spacing-small;
+    font-size: $font-small;
+
+    @media (prefers-color-scheme: dark) {
+        color: $washed-red;
+    }
+}
+
+details.archive-details {
+    border: none;
+    border-radius: 0;
+    border-bottom: 1px solid $light-gray;
+
+    @media (prefers-color-scheme: dark) {
+        border-bottom-color: $dark-gray;
+    }
+
+    & > summary {
+        padding: $spacing-tiny $spacing-small;
+        cursor: pointer;
+        font-size: $font-small;
+        color: $muted;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+}
+
+.step-timeline {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    margin: 0;
+    padding: $spacing-tiny $spacing-small;
+    font-size: $font-small;
+    gap: 2px;
+}
+
+.step-timeline-item {
+    display: flex;
+    align-items: baseline;
+    gap: $spacing-tiny;
+
+    & > .step-time {
+        color: $muted;
+        font-family: monospace;
+        font-size: $font-small;
+        flex-shrink: 0;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    & > .step-prefix {
+        color: $muted;
+        font-size: $font-small;
+
+        &::after {
+            content: "/";
+            margin-left: 1px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    & > .step-name {
+        font-weight: bold;
+    }
+
+    & > .step-detail {
+        color: $muted;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    &.step-failed > .step-name {
+        color: $red;
+
+        @media (prefers-color-scheme: dark) {
+            color: $washed-red;
+        }
+    }
+
+    &.step-complete > .step-name {
+        color: $dark-green;
+
+        @media (prefers-color-scheme: dark) {
+            color: $bright-green;
+        }
+    }
+}
+
+// Details table (show page)
+
+table.details-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-small;
+
+    & > tbody > tr > th {
+        text-align: left;
+        font-weight: bold;
+        padding: 2px $spacing-small;
+        white-space: nowrap;
+        vertical-align: top;
+        width: 1%;
+        color: $muted;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+
+    & > tbody > tr > td {
+        padding: 2px $spacing-small;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+// Archive header retries badge
+
+.archive-header-right {
+    display: flex;
+    align-items: center;
+    gap: $spacing-tiny;
+}
+
+.archive-retries {
+    font-size: $font-small;
+    color: $muted;
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
+    }
+}

@@ -8,6 +8,7 @@ defmodule LinkhutWeb.LinkController do
   alias Linkhut.Search
   alias Linkhut.Search.Context
   alias Linkhut.Tags
+  alias LinkhutWeb.Breadcrumb
   alias LinkhutWeb.Controllers.Utils
 
   @links_per_page 20
@@ -128,9 +129,11 @@ defmodule LinkhutWeb.LinkController do
     page = page(params)
     query = Map.get(params, "query", "")
 
+    context = %{context(params) | from: user, visible_as: user.username}
+
     links_query =
       Search.search(
-        %{context(params) | from: user, visible_as: user.username},
+        context,
         query,
         Keyword.put(query_opts(conn), :is_unread, true)
       )
@@ -140,8 +143,8 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, Utils.Tags.parse_options(params)),
       query: query,
-      context: context(params),
-      title: :unread,
+      context: context,
+      breadcrumb: Breadcrumb.from_context(context, title: :unread),
       scope: Utils.scope(conn)
     )
   end
@@ -196,7 +199,7 @@ defmodule LinkhutWeb.LinkController do
       tags: Tags.for_query(links_query, tag_options),
       query: "",
       context: context,
-      title: view,
+      breadcrumb: Breadcrumb.from_context(context, title: view),
       scope: Utils.scope(conn)
     )
   end
@@ -216,6 +219,7 @@ defmodule LinkhutWeb.LinkController do
       tags: Tags.for_query(links_query, tag_options),
       query: query,
       context: context,
+      breadcrumb: Breadcrumb.from_context(context),
       scope: Utils.scope(conn)
     )
   end
@@ -235,6 +239,7 @@ defmodule LinkhutWeb.LinkController do
       tags: Tags.for_query(links_query, tag_options),
       query: "",
       context: context,
+      breadcrumb: Breadcrumb.from_context(context),
       scope: Utils.scope(conn)
     )
   end

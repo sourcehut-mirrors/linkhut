@@ -1,11 +1,27 @@
-<div>
-<h3>{@link.title}</h3>
-<section class="settings">
-      <.table :if={@snapshots != []} id="snapshots" rows={@snapshots}>
-        <:col :let={snapshot} label="Saved On">{format_datetime(snapshot.created_at)}</:col>
-        <:col :let={snapshot} label="Type">{crawler_display_name(snapshot.type)}</:col>
-        <:col :let={snapshot} label="Size">{format_file_size(snapshot.file_size)}</:col>
-        <:col :let={snapshot} label="Link"><a href={~p"/_/snapshot/#{snapshot.id}"}>View</a></:col>
-      </.table>
-</section>
+<.snapshot_tabs tabs={@tabs} link_id={@link.id} all_count={@all_count} request_path={@conn.request_path} />
+<div class="snapshot-list">
+  <div>
+    <dl class="snapshot-link">
+      <dt>Title</dt>
+      <dd><a rel="nofollow" href={@link.url}>{@link.title}</a></dd>
+      <dt>URL</dt>
+      <dd><a rel="nofollow" href={@link.url}>{@link.url}</a></dd>
+    </dl>
+  </div>
+  <div :if={@archives == []}><span>No archives yet.</span></div>
+  <.archive_group :for={archive <- @archives} archive={archive} link={@link} show_all={@show_all} />
+  <div class="snapshot-actions">
+    <form method="post" action={~p"/_/archive/#{@link.id}/recrawl"}>
+      <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+      <button type="submit" class="btn btn-small">Re-crawl</button>
+    </form>
+  </div>
+  <div :if={@other_count > 0} class="snapshot-toggle">
+    <a :if={!@show_all} href={~p"/_/archive/#{@link.id}/all?all=true"}>
+      show {ngettext("1 failed/pending", "%{count} failed/pending", @other_count)}
+    </a>
+    <a :if={@show_all} href={~p"/_/archive/#{@link.id}/all"}>
+      hide failed/pending
+    </a>
+  </div>
 </div>

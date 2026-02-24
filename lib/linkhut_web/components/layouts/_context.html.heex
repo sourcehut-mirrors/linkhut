@@ -1,6 +1,6 @@
-<%= if assigns[:context] do %>
+<%= if assigns[:breadcrumb] do %>
   <div class="context">
-    <%= case assigns[:title] do %>
+    <%= case @breadcrumb.title do %>
       <% :recent -> %>
         <span class="title"><span>{gettext("Recent Bookmarks")}</span></span>
       <% :popular -> %>
@@ -8,27 +8,24 @@
       <% :unread -> %>
         <span class="title"><span>{gettext("Your Unread Bookmarks")}</span></span>
       <% _ -> %>
-        <%= case {@context, @query} do %>
-          <% {%{from: from, tagged_with: tagged_with, url: url}, query} when not is_nil(from) or (is_list(tagged_with) and tagged_with != []) or (not is_nil(url)) or (is_binary("query") and query != "") -> %>
-            <h5 class="no-css-label">Bookmarks</h5>
-            <%= if from do %>
-              <h5 class="no-css-label">{gettext("from user: ")}</h5>
-              <span class="user"><a href={Routes.user_path(@conn, :show, @context.from.username)}>{@context.from.username}</a></span>
-            <% end %>
-            <%= if url do %>
-              <h5 class="no-css-label">{gettext("matching: ")}</h5>
-              <span class="url"><a href={Routes.bookmark_path(@conn, :show, url)}>{url}</a></span>
-            <% end %>
-            <%= if tagged_with != [] do %>
-              <h5 class="no-css-label">{gettext("tagged with: ")}</h5>
-              <ul class="tags">
-                <%= for tag <- @context.tagged_with do %>
-                  <li><a href={Routes.tags_path(@conn, :show, [tag])}>{tag}</a></li>
-                <% end %>
-              </ul>
-            <% end %>
-          <% _ -> %>
-            <!-- ¯\_(ツ)_/¯ -->
+        <%= if @breadcrumb.user || @breadcrumb.url || @breadcrumb.tags != [] do %>
+          <h5 class="no-css-label">Bookmarks</h5>
+          <%= if @breadcrumb.user do %>
+            <h5 class="no-css-label">{gettext("from user: ")}</h5>
+            <span class="user"><a href={Routes.user_path(@conn, :show, @breadcrumb.user.username)}>{@breadcrumb.user.username}</a></span>
+          <% end %>
+          <%= if @breadcrumb.url do %>
+            <h5 class="no-css-label">{gettext("matching: ")}</h5>
+            <span class="url"><a href={Routes.bookmark_path(@conn, :show, @breadcrumb.url)}>{@breadcrumb.url}</a></span>
+          <% end %>
+          <%= if @breadcrumb.tags != [] do %>
+            <h5 class="no-css-label">{gettext("tagged with: ")}</h5>
+            <ul class="tags">
+              <%= for tag <- @breadcrumb.tags do %>
+                <li><a href={Routes.tags_path(@conn, :show, [tag])}>{tag}</a></li>
+              <% end %>
+            </ul>
+          <% end %>
         <% end %>
     <% end %>
   </div>

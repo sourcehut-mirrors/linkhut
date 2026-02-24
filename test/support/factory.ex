@@ -41,10 +41,13 @@ defmodule Linkhut.Factory do
     }
   end
 
-  def snapshot_factory do
-    %Linkhut.Archiving.Snapshot{
-      link_id: 1,
-      job_id: 1,
+  def snapshot_factory(attrs) do
+    {user_id, attrs} = Map.pop_lazy(attrs, :user_id, fn -> insert(:user, credential: build(:credential)).id end)
+    {link_id, attrs} = Map.pop_lazy(attrs, :link_id, fn -> insert(:link, user_id: user_id).id end)
+
+    snapshot = %Linkhut.Archiving.Snapshot{
+      user_id: user_id,
+      link_id: link_id,
       type: "singlefile",
       state: :complete,
       storage_key: "local:/tmp/test/archive",
@@ -52,5 +55,22 @@ defmodule Linkhut.Factory do
       processing_time_ms: 500,
       response_code: 200
     }
+
+    merge_attributes(snapshot, attrs)
+  end
+
+  def archive_factory(attrs) do
+    {user_id, attrs} = Map.pop_lazy(attrs, :user_id, fn -> insert(:user, credential: build(:credential)).id end)
+    {link_id, attrs} = Map.pop_lazy(attrs, :link_id, fn -> insert(:link, user_id: user_id).id end)
+
+    archive = %Linkhut.Archiving.Archive{
+      user_id: user_id,
+      link_id: link_id,
+      url: sequence(:url, &"http://archive-#{&1}.example.net"),
+      state: :active,
+      steps: []
+    }
+
+    merge_attributes(archive, attrs)
   end
 end

@@ -29,9 +29,11 @@ config :linkhut, Linkhut,
     service_key: "cccddd"
   ],
   archiving: [
+    mode: :limited,
     data_dir: Path.join(System.tmp_dir!(), "linkhut_test_archives"),
     serve_host: nil,
-    storage: Linkhut.Archiving.Storage.Local
+    storage: Linkhut.Archiving.Storage.Local,
+    crawlers: [Linkhut.Archiving.Crawler.SingleFile]
   ]
 
 # Oban configuration

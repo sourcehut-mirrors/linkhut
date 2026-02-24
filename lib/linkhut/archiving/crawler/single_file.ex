@@ -3,9 +3,23 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
   @behaviour Linkhut.Archiving.Crawler
 
+  alias Linkhut.Archiving.Crawler.Context
+
   @impl true
-  def fetch(_user_id, link_id, url) when is_integer(link_id) and is_binary(url) do
-    staging_dir = Path.join(System.tmp_dir!(), "linkhut_crawl_#{:erlang.unique_integer([:positive])}")
+  def type, do: "singlefile"
+
+  @impl true
+  def can_handle?(_url, %{content_type: "text/html"}) do
+    true
+  end
+
+  def can_handle?(_url, _preflight_meta), do: false
+
+  @impl true
+  def fetch(%Context{link_id: link_id, url: url}) do
+    staging_dir =
+      Path.join(System.tmp_dir!(), "linkhut_crawl_#{:erlang.unique_integer([:positive])}")
+
     File.mkdir_p!(staging_dir)
 
     args = [
@@ -25,6 +39,7 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
            code: code,
            cmd: "single-file",
            args: args,
+           version: SingleFile.configured_version(),
            output: IO.iodata_to_binary(output)
          }}
 

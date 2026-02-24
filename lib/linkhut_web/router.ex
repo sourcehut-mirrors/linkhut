@@ -136,7 +136,7 @@ defmodule LinkhutWeb.Router do
   # Snapshot file serving (token-authenticated, no session required)
   scope "/_", LinkhutWeb do
     pipe_through [:snapshot_serve]
-    get "/snapshot/serve/:token", SnapshotController, :serve
+    get "/snapshot/:token/serve", SnapshotController, :serve
   end
 
   scope "/_", LinkhutWeb do
@@ -151,9 +151,13 @@ defmodule LinkhutWeb.Router do
     get "/delete", LinkController, :remove
     put "/delete", LinkController, :delete
 
-    # Snapshot routes
-    get "/snapshot/:id", SnapshotController, :show
-    get "/snapshots/:link_id", SnapshotController, :index
+    # Archive routes (link-scoped, type-based)
+    get "/archive/:link_id", SnapshotController, :show
+    get "/archive/:link_id/type/:type", SnapshotController, :show, as: :archive_type
+    get "/archive/:link_id/type/:type/full", SnapshotController, :full
+    get "/archive/:link_id/type/:type/download", SnapshotController, :download
+    get "/archive/:link_id/all", SnapshotController, :index
+    post "/archive/:link_id/recrawl", SnapshotController, :recrawl
 
     delete "/logout", Auth.SessionController, :delete
   end

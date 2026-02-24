@@ -56,10 +56,21 @@ defmodule Linkhut.Archiving.Storage.Local do
   end
 
   @impl true
-  def resolve("local:" <> path) do
-    data_dir = Linkhut.Config.archiving(:data_dir)
+  def delete("local:" <> path) do
+    if valid_path?(path) do
+      case File.rm(path) do
+        :ok -> :ok
+        {:error, :enoent} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:error, :invalid_storage_key}
+    end
+  end
 
-    if String.starts_with?(Path.expand(path), Path.expand(data_dir)) do
+  @impl true
+  def resolve("local:" <> path) do
+    if valid_path?(path) do
       {:ok, {:file, path}}
     else
       {:error, :invalid_storage_key}
@@ -67,6 +78,47 @@ defmodule Linkhut.Archiving.Storage.Local do
   end
 
   def resolve(_), do: {:error, :invalid_storage_key}
+
+  @impl true
+  def storage_used(opts \\ []) do
+    root =
+      case Keyword.get(opts, :user_id) do
+        nil -> Linkhut.Config.archiving(:data_dir)
+        user_id -> Path.join(Linkhut.Config.archiving(:data_dir), "#{user_id}")
+      end
+
+    case File.stat(root) do
+      {:ok, %{type: :directory}} -> {:ok, dir_size(root)}
+      _ -> {:ok, 0}
+    end
+  end
+
+  defp dir_size(path) do
+    path
+    |> File.ls!()
+    |> Enum.reduce(0, fn entry, acc ->
+      full = Path.join(path, entry)
+
+      case File.lstat(full) do
+        {:ok, %{type: :regular, size: size}} -> acc + size
+        {:ok, %{type: :directory}} -> acc + dir_size(full)
+        _ -> acc
+      end
+    end)
+  end
+
+  defp valid_path?(path) do
+    expanded = Path.expand(path)
+
+    allowed_dirs = [
+      Linkhut.Config.archiving(:data_dir)
+      | Linkhut.Config.archiving(:legacy_data_dirs, [])
+    ]
+
+    Enum.any?(allowed_dirs, fn dir ->
+      String.starts_with?(expanded, Path.expand(dir) <> "/")
+    end)
+  end
 
   defp build_dest_path(user_id, link_id, type, filename) do
     timestamp = :os.system_time(:second)

@@ -1530,19 +1530,4 @@ form.inline {
     display: inline;
 }
 
-.snapshot-viewer {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-.snapshot-content {
-    background-color: $white;
-    flex-grow: 1;
-
-    iframe {
-        border: none;
-        height: 100%;
-        width: 100%;
-    }
-}
+@import 'snapshots';

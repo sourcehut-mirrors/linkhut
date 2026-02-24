@@ -91,7 +91,9 @@ config :linkhut, Linkhut,
     service_key: "cccddd"
   ],
   archiving: [
+    mode: :enabled,
     data_dir: "/tmp",
     serve_host: nil,
-    storage: Linkhut.Archiving.Storage.Local
+    storage: Linkhut.Archiving.Storage.Local,
+    crawlers: [Linkhut.Archiving.Crawler.SingleFile]
   ]

@@ -65,6 +65,24 @@ defmodule LinkhutWeb.ConnCase do
   end
 
   @doc """
+  Setup helper that registers, activates, and logs in a paying user.
+
+      setup :register_and_log_in_paying_user
+  """
+  def register_and_log_in_paying_user(%{conn: conn} = context) do
+    user =
+      Linkhut.AccountsFixtures.user_fixture()
+      |> Linkhut.AccountsFixtures.activate_user(:active_paying)
+
+    opts =
+      context
+      |> Map.take([:token_inserted_at])
+      |> Enum.into([])
+
+    %{conn: log_in_user(conn, user, opts), user: user}
+  end
+
+  @doc """
   Logs the given `user` into the `conn`.
 
   It returns an updated `conn`.

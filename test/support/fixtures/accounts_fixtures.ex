@@ -34,6 +34,16 @@ defmodule Linkhut.AccountsFixtures do
     user
   end
 
+  def activate_user(%Accounts.User{id: id} = user, type \\ :active_paying) do
+    {1, _} =
+      Linkhut.Repo.update_all(
+        from(u in Accounts.User, where: u.id == ^id),
+        set: [type: type]
+      )
+
+    %{user | type: type}
+  end
+
   def extract_user_token(fun) do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
     [_, token | _] = String.split(captured_email.body, "[TOKEN]")

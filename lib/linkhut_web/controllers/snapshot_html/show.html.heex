@@ -1,34 +1,6 @@
+<.snapshot_tabs tabs={@tabs} link_id={@link.id} all_count={@all_count} request_path={@conn.request_path} />
 <div class="snapshot-viewer">
-  <div class="snapshot-header">
-    <h2>Snapshot: {@link.title}</h2>
-    <div class="snapshot-metadata">
-      <span class="metadata-item">
-        <strong>Captured:</strong> {format_datetime(@snapshot.inserted_at)}
-      </span>
-      <span class="metadata-item">
-        <strong>Size:</strong> {format_file_size(@snapshot.file_size_bytes)}
-      </span>
-      <span class="metadata-item">
-        <strong>Type:</strong> {crawler_display_name(@snapshot.type)}
-      </span>
-      <span :if={@snapshot.processing_time_ms} class="metadata-item">
-        <strong>Processing Time:</strong> {format_processing_time(@snapshot.processing_time_ms)}
-      </span>
-    </div>
-    <div class="snapshot-actions">
-      <a href={@serve_url}>View in full page</a>
-      <a href={@link.url} target="_blank" class="original-link">View original</a>
-    </div>
-  </div>
-
-  <div class="snapshot-content">
-    <iframe
-      src={@serve_url}
-      class="snapshot-iframe"
-      sandbox="allow-scripts allow-forms"
-      title="Snapshot content"
-    >
-      <p>Your browser does not support iframes. <a href={@serve_url}>View the snapshot directly</a>.</p>
-    </iframe>
-  </div>
+  <.toolbar link={@link} snapshot={@snapshot} />
+  <.details snapshot={@snapshot} link={@link} />
+  <.content_iframe serve_url={@serve_url} title={@link.title} />
 </div>

@@ -24,7 +24,7 @@ defmodule Linkhut.Links.Link do
     field :is_unread, :boolean, default: false
     field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
-    field :has_archive, :boolean, default: false, virtual: true
+    field :has_archive?, :boolean, virtual: true, default: false
 
     embeds_one :metadata, LinkMetadata, on_replace: :update do
       field :scheme, :string
@@ -165,7 +165,7 @@ defmodule Linkhut.Links.Link do
     uri = URI.parse(url)
 
     with %URI{scheme: scheme, host: host} when scheme in ["http", "https"] <- uri,
-         false <- Linkhut.Network.local_address?(host),
+         true <- Linkhut.Network.allowed_address?(host),
          {:ok, resp} <- fetch_url(url),
          ["text/html" <> _] <- Req.Response.get_header(resp, "content-type") do
       put_change(changeset, :title, Linkhut.Html.Title.title(resp.body))
@@ -187,5 +187,4 @@ defmodule Linkhut.Links.Link do
     |> Keyword.merge(Application.get_env(:linkhut, :req_options, []))
     |> Req.request(retry: false)
   end
-
 end

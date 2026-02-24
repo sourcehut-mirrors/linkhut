@@ -1,5 +1,8 @@
 defmodule Linkhut.LinksTest do
   use Linkhut.DataCase
+
+  import Linkhut.Factory
+
   alias Linkhut.Links
   alias Linkhut.Links.Link
   alias Linkhut.AccountsFixtures
@@ -360,6 +363,161 @@ defmodule Linkhut.LinksTest do
       assert old.url in link_urls
       assert boundary.url in link_urls
       refute new.url in link_urls
+    end
+  end
+
+  describe "delete_link/1" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      {:ok, link} =
+        Links.create_link(user, %{
+          url: "https://example.com/delete-test",
+          title: "Delete Test",
+          tags: ["test"],
+          is_private: true
+        })
+
+      %{user: user, link: link}
+    end
+
+    test "marks snapshots as pending_deletion and enqueues cleanup job", %{link: link} do
+      snapshot = insert(:snapshot, link_id: link.id, state: :complete)
+
+      assert {:ok, _} = Links.delete_link(link)
+
+      updated = Repo.get(Linkhut.Archiving.Snapshot, snapshot.id)
+      assert updated.state == :pending_deletion
+      assert updated.link_id == nil
+
+      assert_enqueued(worker: Linkhut.Archiving.Workers.StorageCleaner)
+    end
+
+    test "succeeds when link has no snapshots", %{link: link} do
+      assert {:ok, _} = Links.delete_link(link)
+    end
+  end
+
+  describe "has_archive?" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      {:ok, link} =
+        Links.create_link(user, %{
+          url: "https://example.com/snapshot-test",
+          title: "Snapshot Test",
+          tags: ["test"],
+          is_private: false
+        })
+
+      assert %{failure: 0} = Oban.drain_queue(queue: :default)
+
+      %{user: user, link: link}
+    end
+
+    defp fetch_link_with_archive(link, opts \\ []) do
+      opts
+      |> Links.links()
+      |> where(url: ^link.url)
+      |> Repo.one!()
+    end
+
+    test "returns true when link has an active archive with no snapshots", %{
+      user: user,
+      link: link
+    } do
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :active
+      )
+
+      result = fetch_link_with_archive(link, current_user_id: user.id)
+      assert result.has_archive? == true
+    end
+
+    test "returns true when link has a failed archive", %{user: user, link: link} do
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :failed,
+        error: "HEAD preflight failed"
+      )
+
+      result = fetch_link_with_archive(link, current_user_id: user.id)
+      assert result.has_archive? == true
+    end
+
+    test "returns false when link has only pending_deletion archives", %{user: user, link: link} do
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :pending_deletion
+      )
+
+      result = fetch_link_with_archive(link, current_user_id: user.id)
+      assert result.has_archive? == false
+    end
+
+    test "returns false when link has no archives", %{user: user, link: link} do
+      result = fetch_link_with_archive(link, current_user_id: user.id)
+      assert result.has_archive? == false
+    end
+
+    test "returns false for another user's link", %{link: link} do
+      other_user = AccountsFixtures.user_fixture()
+
+      insert(:archive,
+        link_id: link.id,
+        user_id: link.user_id,
+        url: link.url,
+        state: :active
+      )
+
+      result = fetch_link_with_archive(link, current_user_id: other_user.id)
+      assert result.has_archive? == false
+    end
+
+    test "returns false when no current_user_id is provided", %{link: link} do
+      insert(:archive,
+        link_id: link.id,
+        user_id: link.user_id,
+        url: link.url,
+        state: :active
+      )
+
+      result = fetch_link_with_archive(link)
+      assert result.has_archive? == false
+    end
+
+    test "populates has_archive? per-link independently", %{user: user, link: link} do
+      {:ok, other_link} =
+        Links.create_link(user, %{
+          url: "https://example.com/other",
+          title: "Other",
+          tags: ["test"]
+        })
+
+      assert %{failure: 0} = Oban.drain_queue(queue: :default)
+
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :active
+      )
+
+      results =
+        Links.links(current_user_id: user.id)
+        |> where([l], l.url in ^[link.url, other_link.url])
+        |> Repo.all()
+        |> Map.new(&{&1.url, &1.has_archive?})
+
+      assert results[link.url] == true
+      assert results[other_link.url] == false
     end
   end
 end

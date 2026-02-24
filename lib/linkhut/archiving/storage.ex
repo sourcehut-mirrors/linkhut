@@ -38,6 +38,12 @@ defmodule Linkhut.Archiving.Storage do
   @callback resolve(storage_key :: String.t()) ::
               {:ok, serve_instruction()} | {:error, term()}
 
+  @doc "Deletes the content identified by the given storage key."
+  @callback delete(storage_key :: String.t()) :: :ok | {:error, term()}
+
+  @doc "Returns the total bytes stored on the backend, optionally scoped to a user."
+  @callback storage_used(opts :: keyword()) :: {:ok, non_neg_integer()} | {:error, term()}
+
   def store(source, user_id, link_id, type) do
     storage_module().store(source, user_id, link_id, type)
   end
@@ -50,6 +56,13 @@ defmodule Linkhut.Archiving.Storage do
   """
   def resolve("local:" <> _ = key), do: Linkhut.Archiving.Storage.Local.resolve(key)
   def resolve(_), do: {:error, :invalid_storage_key}
+
+  def delete("local:" <> _ = key), do: Linkhut.Archiving.Storage.Local.delete(key)
+  def delete(_), do: {:error, :invalid_storage_key}
+
+  def storage_used(opts \\ []) do
+    storage_module().storage_used(opts)
+  end
 
   defp storage_module do
     Linkhut.Config.archiving(:storage, Linkhut.Archiving.Storage.Local)

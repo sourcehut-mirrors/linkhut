@@ -6,7 +6,7 @@ defmodule Linkhut.Links do
   import Ecto.Query
 
   alias Linkhut.Accounts.User
-  alias Linkhut.Archiving.Snapshot
+  alias Linkhut.Archiving
   alias Linkhut.Links.Link
   alias Linkhut.Links.PublicLink
   alias Linkhut.Repo
@@ -68,8 +68,22 @@ defmodule Linkhut.Links do
 
   """
   def delete_link(%Link{} = link) do
-    Repo.delete(link)
-    |> maybe_refresh_views()
+    result =
+      Repo.transaction(fn ->
+        Archiving.mark_snapshots_for_deletion(link.id)
+
+        case Repo.delete(link) do
+          {:ok, deleted} -> deleted
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+      |> maybe_refresh_views()
+
+    with {:ok, _} <- result do
+      Linkhut.Archiving.Workers.StorageCleaner.new(%{}) |> Oban.insert!()
+    end
+
+    result
   end
 
   @doc """
@@ -311,14 +325,16 @@ defmodule Linkhut.Links do
   end
 
   defp select_field({:current_user_id, user_id}, fields) do
-    Map.put(fields, :has_archive,
+    Map.put(
+      fields,
+      :has_archive?,
       dynamic(
         [l],
         fragment(
           """
           CASE WHEN ? = ? THEN
-            EXISTS (SELECT 1 FROM snapshots WHERE link_id = ? AND state = 'complete')
-          ELSE false END
+            EXISTS(SELECT 1 FROM archives WHERE link_id = ? AND state != 'pending_deletion')
+          ELSE FALSE END
           """,
           l.user_id,
           ^user_id,
@@ -351,37 +367,6 @@ defmodule Linkhut.Links do
   end
 
   @doc """
-  Lists unarchived links for a user (links without completed snapshots).
-  """
-  def list_unarchived_links_for_user(%User{} = user, limit \\ 50) do
-    from(l in Link,
-      left_join: s in Snapshot,
-      on: l.id == s.link_id and s.state == :complete,
-      where: l.user_id == ^user.id and is_nil(s.id),
-      order_by: [asc: l.inserted_at],
-      limit: ^limit
-    )
-    |> Repo.all()
-  end
-
-  @doc """
-  Gets archive status for a specific link.
-  """
-  def get_link_archive_status(link_id) do
-    from(s in Snapshot,
-      where: s.link_id == ^link_id and s.state == :complete,
-      select: %{
-        id: s.id,
-        type: s.type,
-        created_at: s.inserted_at,
-        file_size: s.file_size_bytes,
-        processing_time: s.processing_time_ms
-      }
-    )
-    |> Repo.all()
-  end
-
-  @doc """
   Gets a link belonging to a specific user.
   """
   def get_user_link(link_id, user_id) do
@@ -398,11 +383,14 @@ defmodule Linkhut.Links do
 
   defp maybe_refresh_views(result), do: result
 
-  defp maybe_schedule_archive({:ok, %Link{} = link} = result, %User{type: :active_paying}) do
-    # Schedule with small random delay to avoid thundering herd
-    # 0-5 minutes
-    delay = :rand.uniform(300)
-    Linkhut.Workers.Archiver.enqueue(link, schedule_in: delay)
+  defp maybe_schedule_archive({:ok, %Link{} = link} = result, %User{} = user) do
+    if Archiving.enabled_for_user?(user) do
+      # Schedule with small random delay to avoid thundering herd
+      # 0-5 minutes
+      delay = :rand.uniform(300)
+      Linkhut.Archiving.Workers.Archiver.enqueue(link, schedule_in: delay)
+    end
+
     result
   end
 

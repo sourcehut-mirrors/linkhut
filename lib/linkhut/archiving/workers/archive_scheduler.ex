@@ -1,4 +1,4 @@
-defmodule Linkhut.Workers.ArchiveScheduler do
+defmodule Linkhut.Archiving.Workers.ArchiveScheduler do
   @moduledoc """
   Periodic worker that schedules archive jobs for active paying users.
   Runs daily via Oban cron to find unarchived links and queue them for processing.
@@ -10,7 +10,13 @@ defmodule Linkhut.Workers.ArchiveScheduler do
 
   @impl Oban.Worker
   def perform(_job) do
-    jobs = Scheduler.schedule_pending_archives()
-    {:ok, %{scheduled_jobs: length(jobs), timestamp: DateTime.utc_now()}}
+    case Linkhut.Archiving.mode() do
+      :disabled ->
+        :ok
+
+      _ ->
+        jobs = Scheduler.schedule_pending_archives()
+        {:ok, %{scheduled_jobs: length(jobs), timestamp: DateTime.utc_now()}}
+    end
   end
 end

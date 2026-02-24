@@ -74,7 +74,15 @@ config :linkhut, Oban,
   ],
   crontab: [
     # Daily at 2 AM
-    {"0 2 * * *", Linkhut.Workers.ArchiveScheduler}
+    {"0 2 * * *", Linkhut.Archiving.Workers.ArchiveScheduler},
+    # Hourly — clean up orphaned pending_deletion snapshots
+    {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner}
+  ]
+
+config :linkhut, Linkhut,
+  archiving: [
+    mode: :disabled,
+    crawlers: [Linkhut.Archiving.Crawler.SingleFile]
   ]
 
 # Single File configuration

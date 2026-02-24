@@ -5,15 +5,26 @@ defmodule Linkhut.Archiving.SchedulerTest do
 
   alias Linkhut.Archiving.Scheduler
 
-  defp insert_oban_job do
-    {:ok, job} =
-      Linkhut.Workers.Archiver.new(%{"user_id" => 1, "link_id" => 1, "url" => "https://example.com"})
-      |> Oban.insert()
+  defp set_archiving_mode(mode) do
+    config = Application.get_env(:linkhut, Linkhut)
+    archiving = Keyword.put(config[:archiving], :mode, mode)
+    Application.put_env(:linkhut, Linkhut, Keyword.put(config, :archiving, archiving))
 
-    job
+    on_exit(fn ->
+      Application.put_env(:linkhut, Linkhut, config)
+    end)
   end
 
   describe "schedule_pending_archives/0" do
+    test "returns empty list when archiving is disabled" do
+      set_archiving_mode(:disabled)
+
+      user = insert(:user, credential: build(:credential), type: :active_paying)
+      insert(:link, user_id: user.id)
+
+      assert [] = Scheduler.schedule_pending_archives()
+    end
+
     test "returns empty list when no paying users exist" do
       assert [] = Scheduler.schedule_pending_archives()
     end
@@ -29,9 +40,18 @@ defmodule Linkhut.Archiving.SchedulerTest do
     test "does not schedule jobs for links that already have snapshots" do
       user = insert(:user, credential: build(:credential), type: :active_paying)
       link = insert(:link, user_id: user.id)
-      job = insert_oban_job()
 
-      insert(:snapshot, link_id: link.id, job_id: job.id, state: :complete)
+      insert(:snapshot, link_id: link.id, user_id: user.id, state: :complete)
+
+      results = Scheduler.schedule_pending_archives()
+      assert results == []
+    end
+
+    test "does not schedule jobs for links with active archives" do
+      user = insert(:user, credential: build(:credential), type: :active_paying)
+      link = insert(:link, user_id: user.id)
+
+      insert(:archive, link_id: link.id, user_id: user.id, url: link.url, state: :active)
 
       results = Scheduler.schedule_pending_archives()
       assert results == []

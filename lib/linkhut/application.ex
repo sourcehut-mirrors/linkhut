@@ -6,6 +6,8 @@ defmodule Linkhut.Application do
   use Application
 
   def start(_type, _args) do
+    validate_crawlers!()
+
     # List all child processes to be supervised
     children = [
       # Start the PromEx module
@@ -29,6 +31,18 @@ defmodule Linkhut.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Linkhut.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp validate_crawlers! do
+    for module <- Linkhut.Config.archiving(:crawlers, []) do
+      Code.ensure_loaded!(module)
+
+      unless function_exported?(module, :type, 0) and
+               function_exported?(module, :can_handle?, 2) and
+               function_exported?(module, :fetch, 1) do
+        raise "#{inspect(module)} does not implement Linkhut.Archiving.Crawler behaviour"
+      end
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration

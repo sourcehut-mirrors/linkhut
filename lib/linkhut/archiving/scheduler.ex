@@ -1,14 +1,18 @@
 defmodule Linkhut.Archiving.Scheduler do
   @moduledoc "Manages fair distribution of archive jobs across users and domains"
 
-  alias Linkhut.{Accounts, Links}
+  alias Linkhut.{Accounts, Archiving}
 
   @doc """
-  Schedules pending archives for all active paying users.
-  Returns a list of scheduled job results.
+  Schedules pending archives for eligible users based on the archiving mode.
+  Returns a list of scheduled job results, or an empty list when disabled.
   """
   def schedule_pending_archives do
-    Accounts.list_active_paying_users()
+    case Archiving.mode() do
+      :disabled -> []
+      :limited -> Accounts.list_active_paying_users()
+      :enabled -> Accounts.list_active_users()
+    end
     |> distribute_archive_jobs()
   end
 
@@ -26,7 +30,7 @@ defmodule Linkhut.Archiving.Scheduler do
 
   defp schedule_user_archives(user, delay_seconds) do
     # Limit per user per run
-    Links.list_unarchived_links_for_user(user, 10)
+    Archiving.list_unarchived_links_for_user(user, 10)
     |> group_by_domain()
     |> Enum.flat_map(fn {_domain, links} ->
       # Space out same-domain requests by 60 seconds
@@ -46,6 +50,6 @@ defmodule Linkhut.Archiving.Scheduler do
   end
 
   defp schedule_archive_job(link, delay_seconds) do
-    Linkhut.Workers.Archiver.enqueue(link, schedule_in: delay_seconds)
+    Linkhut.Archiving.Workers.Archiver.enqueue(link, schedule_in: delay_seconds)
   end
 end

@@ -31,7 +31,7 @@ defmodule Linkhut.Archiving.StorageTest do
     end
 
     test "returns error for unknown key prefixes" do
-      assert {:error, :invalid_storage_key} = Storage.resolve("s3:bucket/key")
+      assert {:error, :invalid_storage_key} = Storage.resolve("cloud:bucket/key")
     end
 
     test "returns error for empty key" do
