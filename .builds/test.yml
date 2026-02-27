@@ -2,7 +2,7 @@ submitter:
   git.sr.ht:
     enabled: true
     allow-refs:
-      - "refs/tags/*"
+      - refs/heads/master
   hub.sr.ht:
     enabled: false
 image: ubuntu/24.04
@@ -38,8 +38,6 @@ tasks:
         export PATH="${GOPATH:-$HOME/go/bin}:$PATH"
         export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
         cd linkhut
-        MIX_ENV=prod mix compile
-        MIX_ENV=prod mix assets.deploy
-        MIX_ENV=prod mix release
-    - upload: |
-        rsync -r /home/build/linkhut/_build/prod/linkhut-*.tar.gz deploy@mlb.st:/var/www/linkhut
+        MIX_ENV=test mix compile
+        MIX_ENV=test mix test
+        MIX_ENV=test mix excoveralls

@@ -1,3 +1,10 @@
+submitter:
+  git.sr.ht:
+    enabled: true
+    allow-refs:
+      - "refs/tags/*"
+  hub.sr.ht:
+    enabled: false
 image: ubuntu/24.04
 packages:
     - rsync
