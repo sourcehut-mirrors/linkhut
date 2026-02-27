@@ -30,10 +30,11 @@ config :linkhut, Linkhut,
   ],
   archiving: [
     mode: :limited,
+    max_file_size: 70_000_000,
     data_dir: Path.join(System.tmp_dir!(), "linkhut_test_archives"),
     serve_host: nil,
     storage: Linkhut.Archiving.Storage.Local,
-    crawlers: [Linkhut.Archiving.Crawler.SingleFile]
+    crawlers: [Linkhut.Archiving.Crawler.SingleFile, Linkhut.Archiving.Crawler.HttpFetch]
   ]
 
 # Oban configuration

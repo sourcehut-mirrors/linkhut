@@ -3,10 +3,14 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
   @behaviour Linkhut.Archiving.Crawler
 
+  alias Linkhut.Archiving.Crawler
   alias Linkhut.Archiving.Crawler.Context
 
   @impl true
   def type, do: "singlefile"
+
+  @impl true
+  def meta, do: %{tool_name: "SingleFile", version: SingleFile.configured_version()}
 
   @impl true
   def can_handle?(_url, %{content_type: "text/html"}) do
@@ -23,6 +27,8 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
     File.mkdir_p!(staging_dir)
 
     args = [
+      "--user-agent",
+      Crawler.user_agent(),
       url,
       "--filename-template",
       "#{link_id}",
@@ -39,7 +45,7 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
            code: code,
            cmd: "single-file",
            args: args,
-           version: SingleFile.configured_version(),
+           content_type: "text/html",
            output: IO.iodata_to_binary(output)
          }}
 

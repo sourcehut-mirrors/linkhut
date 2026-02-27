@@ -30,7 +30,7 @@ defmodule Linkhut.Archiving.Scheduler do
 
   defp schedule_user_archives(user, delay_seconds) do
     # Limit per user per run
-    Archiving.list_unarchived_links_for_user(user, 10)
+    Archiving.list_unarchived_links_for_user(user, 5)
     |> group_by_domain()
     |> Enum.flat_map(fn {_domain, links} ->
       # Space out same-domain requests by 60 seconds

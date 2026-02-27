@@ -38,11 +38,7 @@ defmodule Mix.Tasks.SingleFile.Install do
         if opts[:if_missing] && latest_version?() do
           :ok
         else
-          if function_exported?(Mix, :ensure_application!, 1) do
-            Mix.ensure_application!(:inets)
-            Mix.ensure_application!(:ssl)
-          end
-
+          ensure_applications()
           SingleFile.install()
         end
 
@@ -54,6 +50,13 @@ defmodule Mix.Tasks.SingleFile.Install do
             mix singlefile.install --runtime-config
             mix singlefile.install --if-missing
         """)
+    end
+  end
+
+  defp ensure_applications do
+    if function_exported?(Mix, :ensure_application!, 1) do
+      Mix.ensure_application!(:inets)
+      Mix.ensure_application!(:ssl)
     end
   end
 

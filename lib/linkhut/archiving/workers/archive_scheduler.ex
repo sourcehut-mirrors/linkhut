@@ -4,7 +4,7 @@ defmodule Linkhut.Archiving.Workers.ArchiveScheduler do
   Runs daily via Oban cron to find unarchived links and queue them for processing.
   """
 
-  use Oban.Worker, queue: :default
+  use Oban.Worker, queue: :default, unique: [period: {15, :minute}]
 
   alias Linkhut.Archiving.Scheduler
 

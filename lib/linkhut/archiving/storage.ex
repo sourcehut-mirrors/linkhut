@@ -2,10 +2,12 @@ defmodule Linkhut.Archiving.Storage do
   @moduledoc """
   Behaviour and abstraction layer for archive storage backends.
 
-  Crawlers produce content in various forms. `store/4` persists it to the
+  Crawlers produce content in various forms. `store/2` persists it to the
   configured backend (local filesystem, S3, etc.) and returns a `storage_key`
   that identifies the stored content.
   """
+
+  alias Linkhut.Archiving.Snapshot
 
   @typedoc """
   The source of archive content to store.
@@ -21,7 +23,7 @@ defmodule Linkhut.Archiving.Storage do
 
   Returns a `storage_key` that can later be used to retrieve the content.
   """
-  @callback store(source(), user_id :: integer, link_id :: integer, type :: String.t()) ::
+  @callback store(source(), snapshot :: Snapshot.t()) ::
               {:ok, storage_key :: String.t()} | {:error, term()}
 
   @typedoc """
@@ -44,8 +46,8 @@ defmodule Linkhut.Archiving.Storage do
   @doc "Returns the total bytes stored on the backend, optionally scoped to a user."
   @callback storage_used(opts :: keyword()) :: {:ok, non_neg_integer()} | {:error, term()}
 
-  def store(source, user_id, link_id, type) do
-    storage_module().store(source, user_id, link_id, type)
+  def store(source, %Snapshot{} = snapshot) do
+    storage_module().store(source, snapshot)
   end
 
   @doc """

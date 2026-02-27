@@ -5,4 +5,17 @@
     <a class="button" href={~p"/_/admin/dashboard/"} target="_blank">{gettext("Live Dashboard")}</a>
   </p>
 </section>
+<section :if={@archiving_mode != :disabled} class="settings">
+  <h4>Archiving</h4>
+  <dl>
+    <dt>Mode</dt>
+    <dd>{@archiving_mode}</dd>
+    <dt>Storage (DB total)</dt>
+    <dd>{Linkhut.Formatting.format_bytes(@db_storage_used)}</dd>
+  </dl>
+  <form method="post" action={~p"/_/admin/recompute_storage"}>
+    <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+    <button type="submit" class="button">Recompute storage</button>
+  </form>
+</section>
 <.moderation_dashboard form={@form} banned_users={@banned_users} />

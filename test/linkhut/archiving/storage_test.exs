@@ -1,7 +1,7 @@
 defmodule Linkhut.Archiving.StorageTest do
   use ExUnit.Case, async: true
 
-  alias Linkhut.Archiving.Storage
+  alias Linkhut.Archiving.{Snapshot, Storage}
 
   @data_dir Linkhut.Config.archiving(:data_dir)
 
@@ -14,11 +14,14 @@ defmodule Linkhut.Archiving.StorageTest do
     :ok
   end
 
-  describe "store/4" do
+  describe "store/2" do
     test "delegates to the configured storage backend" do
       source = create_temp_file("test content")
 
-      assert {:ok, "local:" <> _} = Storage.store({:file, source}, 1, 100, "singlefile")
+      snapshot =
+        build_snapshot(id: 1, user_id: 1, link_id: 100, archive_id: 10, type: "singlefile")
+
+      assert {:ok, "local:" <> _} = Storage.store({:file, source}, snapshot)
     end
   end
 
@@ -37,6 +40,10 @@ defmodule Linkhut.Archiving.StorageTest do
     test "returns error for empty key" do
       assert {:error, :invalid_storage_key} = Storage.resolve("")
     end
+  end
+
+  defp build_snapshot(attrs) do
+    struct!(Snapshot, Enum.into(attrs, %{}))
   end
 
   defp create_temp_file(content) do

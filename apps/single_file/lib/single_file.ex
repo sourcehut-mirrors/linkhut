@@ -121,10 +121,8 @@ defmodule SingleFile do
   defp cmd(command_path, extra_args, opts \\ []) do
     case System.cmd(command_path, extra_args, opts) do
       {:error, reason} ->
-        Logger.error("SingleFile command failed",
-          command: command_path,
-          args: extra_args,
-          reason: reason
+        Logger.error(
+          "SingleFile command failed: command=#{command_path} args=#{inspect(extra_args)} reason=#{inspect(reason)}"
         )
 
         {:error, reason}
@@ -222,7 +220,7 @@ defmodule SingleFile do
     arch_str = :erlang.system_info(:system_architecture)
     [arch | _] = arch_str |> List.to_string() |> String.split("-")
 
-    # TODO: remove "arm" when we require OTP 24
+    # Note: remove "arm" when we require OTP 24
     case arch do
       "aarch64" -> "aarch64-#{platform}"
       "x86_64" -> "x86_64-#{platform}"
@@ -237,16 +235,20 @@ defmodule SingleFile do
     {:ok, _} = Application.ensure_all_started(:inets)
     {:ok, _} = Application.ensure_all_started(:ssl)
 
-    if proxy = System.get_env("HTTP_PROXY") || System.get_env("http_proxy") do
-      Logger.debug("Using HTTP_PROXY: #{proxy}")
-      %{host: host, port: port} = URI.parse(proxy)
-      :httpc.set_options([{:proxy, {{String.to_charlist(host), port}, []}}])
+    case System.get_env("HTTP_PROXY") || System.get_env("http_proxy") do
+      nil -> :ok
+      proxy ->
+        Logger.debug("Using HTTP_PROXY: #{proxy}")
+        %{host: host, port: port} = URI.parse(proxy)
+        :httpc.set_options([{:proxy, {{String.to_charlist(host), port}, []}}])
     end
 
-    if proxy = System.get_env("HTTPS_PROXY") || System.get_env("https_proxy") do
-      Logger.debug("Using HTTPS_PROXY: #{proxy}")
-      %{host: host, port: port} = URI.parse(proxy)
-      :httpc.set_options([{:https_proxy, {{String.to_charlist(host), port}, []}}])
+    case System.get_env("HTTPS_PROXY") || System.get_env("https_proxy") do
+      nil -> :ok
+      proxy ->
+        Logger.debug("Using HTTPS_PROXY: #{proxy}")
+        %{host: host, port: port} = URI.parse(proxy)
+        :httpc.set_options([{:https_proxy, {{String.to_charlist(host), port}, []}}])
     end
 
     # https://erlef.github.io/security-wg/secure_coding_and_deployment_hardening/inets

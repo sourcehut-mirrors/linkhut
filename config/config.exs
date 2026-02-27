@@ -66,15 +66,15 @@ config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 # Oban configuration
 config :linkhut, Oban,
   engine: Oban.Engines.Basic,
-  queues: [default: 10, mailer: 5, crawler: 5],
+  queues: [default: 10, mailer: 5, archiver: 5, crawler: 5],
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Reindexer, schedule: "@weekly"}
   ],
   crontab: [
-    # Daily at 2 AM
-    {"0 2 * * *", Linkhut.Archiving.Workers.ArchiveScheduler},
+    # Every 30 minutes
+    {"*/30 * * * *", Linkhut.Archiving.Workers.ArchiveScheduler},
     # Hourly — clean up orphaned pending_deletion snapshots
     {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner}
   ]
@@ -82,7 +82,18 @@ config :linkhut, Oban,
 config :linkhut, Linkhut,
   archiving: [
     mode: :disabled,
-    crawlers: [Linkhut.Archiving.Crawler.SingleFile]
+    max_file_size: 70_000_000,
+    # serve_host: Dedicated hostname for serving archived content (e.g. "archive.example.com").
+    # STRONGLY RECOMMENDED for self-hosters: without this, archived HTML is served
+    # from the same origin as the main application, requiring a restrictive CSP
+    # that may break archived page rendering. Set this to a separate subdomain.
+    crawlers: [Linkhut.Archiving.Crawler.SingleFile, Linkhut.Archiving.Crawler.HttpFetch],
+    direct_file: [
+      allowed_types: ["application/pdf", "text/plain", "application/json"]
+    ],
+    # Appended to crawler User-Agent. Recommended: a URL where site owners
+    # can report issues or request opt-out, e.g. "+https://your-instance.com"
+    user_agent_suffix: nil
   ]
 
 # Single File configuration

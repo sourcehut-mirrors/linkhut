@@ -422,7 +422,7 @@ defmodule Linkhut.LinksTest do
       |> Repo.one!()
     end
 
-    test "returns true when link has an active archive with no snapshots", %{
+    test "returns true when link has a processing archive with no snapshots", %{
       user: user,
       link: link
     } do
@@ -430,7 +430,7 @@ defmodule Linkhut.LinksTest do
         link_id: link.id,
         user_id: user.id,
         url: link.url,
-        state: :active
+        state: :processing
       )
 
       result = fetch_link_with_archive(link, current_user_id: user.id)
@@ -474,7 +474,7 @@ defmodule Linkhut.LinksTest do
         link_id: link.id,
         user_id: link.user_id,
         url: link.url,
-        state: :active
+        state: :processing
       )
 
       result = fetch_link_with_archive(link, current_user_id: other_user.id)
@@ -486,7 +486,7 @@ defmodule Linkhut.LinksTest do
         link_id: link.id,
         user_id: link.user_id,
         url: link.url,
-        state: :active
+        state: :processing
       )
 
       result = fetch_link_with_archive(link)
@@ -507,7 +507,7 @@ defmodule Linkhut.LinksTest do
         link_id: link.id,
         user_id: user.id,
         url: link.url,
-        state: :active
+        state: :processing
       )
 
       results =

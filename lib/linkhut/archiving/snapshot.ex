@@ -17,7 +17,7 @@ defmodule Linkhut.Archiving.Snapshot do
     field :type, :string
 
     field :state, Ecto.Enum,
-      values: [:pending, :crawling, :complete, :failed, :pending_deletion],
+      values: [:pending, :crawling, :retryable, :complete, :failed, :pending_deletion],
       default: :pending
 
     field :crawl_info, :map
@@ -28,6 +28,7 @@ defmodule Linkhut.Archiving.Snapshot do
     field :failed_at, :utc_datetime
     field :storage_key, :string
     field :archive_metadata, :map
+    field :crawler_meta, :map, default: %{}
 
     belongs_to :link, Link, define_field: false
     belongs_to :user, User, define_field: false
@@ -38,7 +39,6 @@ defmodule Linkhut.Archiving.Snapshot do
 
   @updatable_fields [
     :job_id,
-    :archive_id,
     :type,
     :state,
     :crawl_info,
@@ -54,9 +54,9 @@ defmodule Linkhut.Archiving.Snapshot do
   @doc false
   def create_changeset(snapshot, attrs) do
     snapshot
-    |> cast(attrs, [:link_id, :user_id] ++ @updatable_fields)
-    |> validate_required([:link_id, :user_id])
-    |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawl_info])
+    |> cast(attrs, [:link_id, :user_id, :archive_id, :crawler_meta] ++ @updatable_fields)
+    |> validate_required([:link_id, :user_id, :archive_id])
+    |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawl_info, :crawler_meta])
   end
 
   @doc false

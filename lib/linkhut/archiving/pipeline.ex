@@ -6,9 +6,9 @@ defmodule Linkhut.Archiving.Pipeline do
   """
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.{Archive, Steps}
+  alias Linkhut.Archiving.{Archive, Crawler, Steps}
   alias Linkhut.Repo
-  alias Linkhut.Archiving.Workers.Crawler
+  alias Linkhut.Archiving.Workers.Crawler, as: CrawlerWorker
 
   require Logger
 
@@ -29,26 +29,27 @@ defmodule Linkhut.Archiving.Pipeline do
     attempt = Keyword.get(opts, :attempt, 1)
     max_attempts = Keyword.get(opts, :max_attempts, 1)
 
-    step =
-      if attempt > 1,
-        do: {"retry", %{"msg" => "retry", "attempt" => attempt}},
-        else: {"created", %{"msg" => "created"}}
-
-    step_opts = if attempt == 1, do: [at: archive.inserted_at], else: []
-
     archive =
-      case Archiving.update_archive(archive, %{
-             steps: Steps.append_step(archive.steps, elem(step, 0), elem(step, 1), step_opts)
-           }) do
-        {:ok, archive} ->
-          archive
+      if attempt > 1 do
+        case Archiving.update_archive(archive, %{
+               steps:
+                 Steps.append_step(archive.steps, "retry", %{
+                   "msg" => "retry",
+                   "attempt" => attempt
+                 })
+             }) do
+          {:ok, archive} ->
+            archive
 
-        {:error, changeset} ->
-          Logger.warning(
-            "Failed to record #{elem(step, 0)} step for archive #{archive.id}: #{inspect(changeset.errors)}"
-          )
+          {:error, changeset} ->
+            Logger.warning(
+              "Failed to record retry step for archive #{archive.id}: #{inspect(changeset.errors)}"
+            )
 
-          archive
+            archive
+        end
+      else
+        archive
       end
 
     with {:ok, archive} <- validate_url(archive),
@@ -59,10 +60,9 @@ defmodule Linkhut.Archiving.Pipeline do
       {:ok, result}
     else
       {:error, reason, archive} ->
-        msg =
-          if attempt < max_attempts,
-            do: "failed_will_retry",
-            else: "failed_final"
+        final_attempt? = attempt >= max_attempts
+
+        msg = if final_attempt?, do: "failed_final", else: "failed_will_retry"
 
         failed_detail = %{
           "msg" => msg,
@@ -71,11 +71,15 @@ defmodule Linkhut.Archiving.Pipeline do
           "max_attempts" => max_attempts
         }
 
-        Archiving.update_archive(archive, %{
-          state: :failed,
-          error: inspect(reason),
-          steps: Steps.append_step(archive.steps, "failed", failed_detail)
-        })
+        state_update =
+          if final_attempt?,
+            do: %{state: :failed, error: inspect(reason)},
+            else: %{error: inspect(reason)}
+
+        Archiving.update_archive(
+          archive,
+          Map.put(state_update, :steps, Steps.append_step(archive.steps, "failed", failed_detail))
+        )
 
         {:error, reason}
 
@@ -116,7 +120,13 @@ defmodule Linkhut.Archiving.Pipeline do
 
   defp http_preflight(archive, url) do
     req_opts =
-      [url: url, method: :head, redirect: true, max_redirects: 5]
+      [
+        url: url,
+        method: :head,
+        redirect: true,
+        max_redirects: 5,
+        headers: [user_agent: Crawler.user_agent()]
+      ]
       |> Keyword.merge(Application.get_env(:linkhut, :req_options, []))
 
     req =
@@ -143,7 +153,14 @@ defmodule Linkhut.Archiving.Pipeline do
         }
 
         preflight_detail =
-          build_http_preflight_detail(scheme, content_type, status, content_length, final_url, url)
+          build_http_preflight_detail(
+            scheme,
+            content_type,
+            status,
+            content_length,
+            final_url,
+            url
+          )
 
         case Archiving.update_archive(archive, %{
                preflight_meta: preflight_meta,
@@ -151,7 +168,13 @@ defmodule Linkhut.Archiving.Pipeline do
                steps: Steps.append_step(archive.steps, "preflight", preflight_detail)
              }) do
           {:ok, archive} ->
-            {:ok, preflight_meta, archive}
+            max_file_size = Linkhut.Config.archiving(:max_file_size)
+
+            if is_integer(content_length) and content_length > max_file_size do
+              {:error, {:file_too_large, content_length}, archive}
+            else
+              {:ok, preflight_meta, archive}
+            end
 
           {:error, changeset} ->
             Logger.error(
@@ -218,6 +241,7 @@ defmodule Linkhut.Archiving.Pipeline do
 
   def dispatch_crawlers(%Archive{} = archive, crawlers, opts) when is_list(crawlers) do
     indexed_crawlers = Enum.with_index(crawlers)
+    preflight_meta = archive.preflight_meta
 
     multi =
       Enum.reduce(indexed_crawlers, Ecto.Multi.new(), fn {crawler_module, idx}, multi ->
@@ -225,23 +249,25 @@ defmodule Linkhut.Archiving.Pipeline do
 
         multi
         |> Ecto.Multi.run({:snapshot, idx}, fn _repo, _changes ->
-          Archiving.create_snapshot(archive.link_id, archive.user_id, nil, %{
+          Archiving.create_snapshot(archive.link_id, archive.user_id, %{
             archive_id: archive.id,
             type: type,
-            state: :pending
+            state: :pending,
+            crawler_meta: crawler_module.meta()
           })
         end)
         |> Oban.insert({:job, idx}, fn changes ->
           snapshot = changes[{:snapshot, idx}]
 
-          Crawler.new(%{
+          CrawlerWorker.new(%{
             "snapshot_id" => snapshot.id,
             "user_id" => archive.user_id,
             "link_id" => archive.link_id,
             "url" => archive.final_url || archive.url,
             "type" => type,
             "recrawl" => Keyword.get(opts, :recrawl, false),
-            "archive_id" => archive.id
+            "archive_id" => archive.id,
+            "preflight_meta" => encode_preflight_meta(preflight_meta)
           })
         end)
         |> Ecto.Multi.run({:link_snapshot_job, idx}, fn _repo, changes ->
@@ -275,11 +301,18 @@ defmodule Linkhut.Archiving.Pipeline do
          }}
 
       {:error, _step, reason, _changes} ->
-        {:error, reason}
+        {:error, reason, archive}
     end
   end
 
-  defp build_http_preflight_detail(scheme, content_type, status, content_length, final_url, original_url) do
+  defp build_http_preflight_detail(
+         scheme,
+         content_type,
+         status,
+         content_length,
+         final_url,
+         original_url
+       ) do
     detail = %{
       "msg" => "preflight_http",
       "scheme" => scheme,
@@ -292,7 +325,7 @@ defmodule Linkhut.Archiving.Pipeline do
         do: Map.put(detail, "size", Linkhut.Formatting.format_bytes(content_length)),
         else: detail
 
-    if final_url && final_url != original_url,
+    if final_url != original_url,
       do: Map.put(detail, "final_url", final_url),
       else: detail
   end
@@ -333,5 +366,11 @@ defmodule Linkhut.Archiving.Pipeline do
           :error -> nil
         end
     end
+  end
+
+  defp encode_preflight_meta(nil), do: nil
+
+  defp encode_preflight_meta(meta) when is_map(meta) do
+    Map.new(meta, fn {k, v} -> {to_string(k), v} end)
   end
 end

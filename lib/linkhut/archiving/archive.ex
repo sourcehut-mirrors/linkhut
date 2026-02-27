@@ -3,7 +3,7 @@ defmodule Linkhut.Archiving.Archive do
 
   use Ecto.Schema
   import Ecto.Changeset
-  alias Linkhut.Archiving.{SchemaHelpers, Snapshot}
+  alias Linkhut.Archiving.{SchemaHelpers, Snapshot, Steps}
 
   @type t :: Ecto.Schema.t()
 
@@ -12,17 +12,22 @@ defmodule Linkhut.Archiving.Archive do
     # so we don't want Ecto association constraints here.
     field :link_id, :id
     field :user_id, :id
-    field :job_id, :id
     field :url, :string
     field :final_url, :string
 
     field :state, Ecto.Enum,
-      values: [:active, :failed, :pending_deletion],
-      default: :active
+      values: [:pending, :processing, :complete, :failed, :pending_deletion],
+      default: :pending
 
     field :preflight_meta, :map
     field :steps, {:array, :map}, default: []
     field :error, :string
+
+    # Managed by Archiving.recompute_archive_size*/1 — not in @castable_fields.
+    field :total_size_bytes, :integer, default: 0
+
+    # Managed by optimistic_lock/1 — not in @castable_fields.
+    field :lock_version, :integer, default: 0
 
     has_many :snapshots, Snapshot
 
@@ -32,7 +37,6 @@ defmodule Linkhut.Archiving.Archive do
   @castable_fields [
     :link_id,
     :user_id,
-    :job_id,
     :url,
     :final_url,
     :state,
@@ -46,6 +50,20 @@ defmodule Linkhut.Archiving.Archive do
     archive
     |> cast(attrs, @castable_fields)
     |> validate_required([:url, :link_id, :user_id])
+    |> optimistic_lock(:lock_version)
+    |> maybe_seed_created_step()
     |> SchemaHelpers.normalize_json_fields([:preflight_meta, :steps])
   end
+
+  defp maybe_seed_created_step(%{data: %{id: nil}} = changeset) do
+    steps = get_field(changeset, :steps) || []
+
+    if steps == [] do
+      put_change(changeset, :steps, Steps.append_step([], "created", %{"msg" => "created"}))
+    else
+      changeset
+    end
+  end
+
+  defp maybe_seed_created_step(changeset), do: changeset
 end

@@ -92,8 +92,9 @@ config :linkhut, Linkhut,
   ],
   archiving: [
     mode: :enabled,
-    data_dir: "/tmp",
+    max_file_size: 70_000_000,
+    data_dir: "/tmp/store",
     serve_host: nil,
     storage: Linkhut.Archiving.Storage.Local,
-    crawlers: [Linkhut.Archiving.Crawler.SingleFile]
+    crawlers: [Linkhut.Archiving.Crawler.SingleFile, Linkhut.Archiving.Crawler.HttpFetch]
   ]

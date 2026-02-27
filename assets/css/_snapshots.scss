@@ -1,9 +1,17 @@
 // Snapshot viewer (show page)
 
+// When the snapshot viewer is present, main must be a flex column
+// so the viewer can grow to fill remaining viewport height.
+main:has(.snapshot-viewer) {
+    display: flex;
+    flex-direction: column;
+}
+
 div.snapshot-viewer {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex-grow: 1;
+    min-height: 0;
 }
 
 div.snapshot-toolbar {
@@ -116,6 +124,7 @@ details.snapshot-details {
 div.snapshot-content {
     background-color: $white;
     flex-grow: 1;
+    min-height: 0;
 
     & > iframe {
         border: none;
@@ -217,11 +226,6 @@ table.snapshot-table {
 
 }
 
-.snapshot-toggle {
-    font-size: $font-small;
-    padding: $spacing-tiny $spacing-small;
-}
-
 // State badges (shared between show and index)
 
 .state {
@@ -229,12 +233,23 @@ table.snapshot-table {
 
     &.pending,
     &.crawling {
-        color: $navy;
-        background-color: $light-blue;
+        color: $light-blue;
+        background-color: $blue;
 
         @media (prefers-color-scheme: dark) {
             color: $foreground-dark;
             background-color: $dark-blue;
+        }
+    }
+
+    &.retryable,
+    &.processing {
+        color: $light-yellow;
+        background-color: $yellow;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $gold;
         }
     }
 
@@ -273,6 +288,14 @@ table.snapshot-table {
         background-color: $card-background-dark;
     }
 
+    &.pending {
+        border-left-color: $blue;
+
+        @media (prefers-color-scheme: dark) {
+            border-left-color: $dark-blue;
+        }
+    }
+
     &.failed {
         border-left-color: $red;
 
@@ -281,7 +304,15 @@ table.snapshot-table {
         }
     }
 
-    &.active {
+    &.processing {
+        border-left-color: $yellow;
+
+        @media (prefers-color-scheme: dark) {
+            border-left-color: $gold;
+        }
+    }
+
+    &.complete {
         border-left-color: $dark-green;
 
         @media (prefers-color-scheme: dark) {
@@ -324,12 +355,25 @@ details.archive-details {
     & > summary {
         padding: $spacing-tiny $spacing-small;
         cursor: pointer;
-        font-size: $font-small;
         color: $muted;
+        border-bottom: none;
 
         @media (prefers-color-scheme: dark) {
             color: $muted-dark;
         }
+    }
+}
+
+.step-timeline-header {
+    margin: 0;
+    padding: $spacing-tiny $spacing-small;
+    padding-bottom: 0;
+    font-size: $font-small;
+    font-weight: bold;
+    color: $muted;
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
     }
 }
 
@@ -436,6 +480,14 @@ table.details-table {
     display: flex;
     align-items: center;
     gap: $spacing-tiny;
+}
+
+.archive-size {
+    color: $muted;
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
+    }
 }
 
 .archive-retries {

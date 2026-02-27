@@ -199,6 +199,7 @@ defmodule LinkhutWeb.Router do
     get "/", LinkhutWeb.Settings.AdminController, :show
     post "/ban", LinkhutWeb.Settings.AdminController, :ban
     post "/unban", LinkhutWeb.Settings.AdminController, :unban
+    post "/recompute_storage", LinkhutWeb.Settings.AdminController, :recompute_storage
 
     live_dashboard "/dashboard",
       metrics: LinkhutWeb.Telemetry,

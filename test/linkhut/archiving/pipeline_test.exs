@@ -5,23 +5,20 @@ defmodule Linkhut.Archiving.PipelineTest do
 
   alias Linkhut.Archiving
   alias Linkhut.Archiving.{Archive, Pipeline, Snapshot}
-  alias Linkhut.Archiving.Workers.Archiver
 
   defp create_archive do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id, url: "https://example.com/page")
-    {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-    {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
-    {user, link, archive}
-  end
 
-  defp insert_oban_job(user_id, link_id, url) do
-    Archiver.new(%{
-      "user_id" => user_id,
-      "link_id" => link_id,
-      "url" => url
-    })
-    |> Oban.insert()
+    {:ok, archive} =
+      Archiving.create_archive(%{
+        user_id: user.id,
+        link_id: link.id,
+        url: link.url,
+        state: :processing
+      })
+
+    {user, link, archive}
   end
 
   defp stub_preflight(status \\ 200, content_type \\ "text/html; charset=utf-8") do
@@ -46,8 +43,9 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "fails for reserved address" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       assert {:error, {:reserved_address, {:reserved, :loopback, "localhost"}}} =
                Pipeline.run(archive)
@@ -63,8 +61,9 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "fails for invalid URL" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "not-a-url")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       assert {:error, :invalid_url} = Pipeline.run(archive)
 
@@ -75,8 +74,9 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "fails for unsupported URL scheme" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "ftp://example.com/file.txt")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       assert {:error, {:unsupported_scheme, "ftp"}} = Pipeline.run(archive)
 
@@ -101,9 +101,17 @@ defmodule Linkhut.Archiving.PipelineTest do
       assert {:error, :no_eligible_crawlers} = Pipeline.run(archive)
     end
 
-    test "fails when no eligible crawlers for non-HTML content" do
+    test "dispatches httpfetch crawler for PDF content" do
       {_user, _link, archive} = create_archive()
       stub_preflight(200, "application/pdf")
+
+      assert {:ok, result} = Pipeline.run(archive)
+      assert %{crawlers: [%{name: "httpfetch"}]} = result
+    end
+
+    test "fails when no eligible crawlers for unsupported content type" do
+      {_user, _link, archive} = create_archive()
+      stub_preflight(200, "image/png")
 
       assert {:error, :no_eligible_crawlers} = Pipeline.run(archive)
 
@@ -114,8 +122,9 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "adds retry step on attempt > 1" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       Pipeline.run(archive, attempt: 2, max_attempts: 4)
 
@@ -142,12 +151,14 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "includes will retry in failed step when retries remain" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       Pipeline.run(archive, attempt: 1, max_attempts: 4)
 
       updated = Repo.get(Archive, archive.id)
+      assert updated.state == :processing
       failed_step = Enum.find(updated.steps, &(&1["step"] == "failed"))
       assert failed_step["detail"]["msg"] == "failed_will_retry"
       assert failed_step["detail"]["attempt"] == 1
@@ -157,16 +168,61 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "does not include will retry in failed step on final attempt" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       Pipeline.run(archive, attempt: 4, max_attempts: 4)
 
       updated = Repo.get(Archive, archive.id)
+      assert updated.state == :failed
       failed_step = Enum.find(updated.steps, &(&1["step"] == "failed"))
       assert failed_step["detail"]["msg"] == "failed_final"
       assert failed_step["detail"]["attempt"] == 4
       assert failed_step["detail"]["max_attempts"] == 4
+    end
+
+    test "fails when preflight Content-Length exceeds max_file_size" do
+      {_user, _link, archive} = create_archive()
+
+      Req.Test.stub(Linkhut.Links.Link, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/pdf")
+        |> Plug.Conn.put_resp_header("content-length", "100000000")
+        |> Plug.Conn.send_resp(200, "")
+      end)
+
+      assert {:error, {:file_too_large, 100_000_000}} = Pipeline.run(archive)
+
+      updated = Repo.get(Archive, archive.id)
+      assert updated.state == :failed
+    end
+
+    test "allows preflight Content-Length at exactly max_file_size" do
+      {_user, _link, archive} = create_archive()
+
+      Req.Test.stub(Linkhut.Links.Link, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/pdf")
+        |> Plug.Conn.put_resp_header("content-length", "70000000")
+        |> Plug.Conn.send_resp(200, "")
+      end)
+
+      assert {:ok, _result} = Pipeline.run(archive)
+    end
+
+    test "keeps archive in processing state on non-final failure" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id, url: "http://localhost/page")
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+
+      Pipeline.run(archive, attempt: 2, max_attempts: 4)
+
+      updated = Repo.get(Archive, archive.id)
+      assert updated.state == :processing
+      assert updated.error != nil
     end
 
     test "updates archive steps through the pipeline" do
@@ -291,7 +347,7 @@ defmodule Linkhut.Archiving.PipelineTest do
 
       assert {:ok, preflight_meta, _archive} = Pipeline.preflight(archive)
       assert preflight_meta.content_type == "application/pdf"
-      assert preflight_meta.content_length == 12345
+      assert preflight_meta.content_length == 12_345
     end
 
     test "handles nil content type" do
@@ -328,8 +384,9 @@ defmodule Linkhut.Archiving.PipelineTest do
     test "returns error for unsupported scheme" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "ftp://example.com/file.txt")
-      {:ok, job} = insert_oban_job(user.id, link.id, link.url)
-      {:ok, archive} = Archiving.get_or_create_archive(job.id, link.id, user.id, link.url)
+
+      archive =
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       assert {:error, {:unsupported_scheme, "ftp"}, _archive} = Pipeline.preflight(archive)
     end
@@ -344,9 +401,16 @@ defmodule Linkhut.Archiving.PipelineTest do
       assert hd(crawlers) == Linkhut.Archiving.Crawler.SingleFile
     end
 
-    test "returns empty list for non-HTML content" do
+    test "returns HttpFetch for PDF content" do
       crawlers =
         Pipeline.select_crawlers("https://example.com/doc.pdf", %{content_type: "application/pdf"})
+
+      assert crawlers == [Linkhut.Archiving.Crawler.HttpFetch]
+    end
+
+    test "returns empty list for unsupported content type" do
+      crawlers =
+        Pipeline.select_crawlers("https://example.com/image.png", %{content_type: "image/png"})
 
       assert crawlers == []
     end
@@ -367,7 +431,7 @@ defmodule Linkhut.Archiving.PipelineTest do
                Pipeline.dispatch_crawlers(archive, [], [])
 
       updated = Repo.get(Archive, archive.id)
-      assert updated.state == :active
+      assert updated.state == :processing
     end
 
     test "creates snapshots and enqueues jobs atomically" do
@@ -388,6 +452,18 @@ defmodule Linkhut.Archiving.PipelineTest do
       assert snapshot.job_id != nil
     end
 
+    test "populates crawler_meta on dispatched snapshots" do
+      {_user, _link, archive} = create_archive()
+      crawlers = [Linkhut.Archiving.Crawler.SingleFile]
+
+      assert {:ok, _result} = Pipeline.dispatch_crawlers(archive, crawlers, [])
+
+      snapshots = Repo.all(from s in Snapshot, where: s.archive_id == ^archive.id)
+      snapshot = hd(snapshots)
+      assert snapshot.crawler_meta["tool_name"] == "SingleFile"
+      assert is_binary(snapshot.crawler_meta["version"])
+    end
+
     test "passes recrawl flag to job args" do
       {_user, _link, archive} = create_archive()
       crawlers = [Linkhut.Archiving.Crawler.SingleFile]
@@ -398,6 +474,23 @@ defmodule Linkhut.Archiving.PipelineTest do
         worker: Linkhut.Archiving.Workers.Crawler,
         args: %{"recrawl" => true, "archive_id" => archive.id}
       )
+    end
+
+    test "passes preflight_meta to job args" do
+      {_user, _link, archive} = create_archive()
+      stub_preflight(200, "text/html; charset=utf-8")
+
+      {:ok, preflight_meta, archive} = Pipeline.preflight(archive)
+      crawlers = [Linkhut.Archiving.Crawler.SingleFile]
+
+      assert {:ok, _} = Pipeline.dispatch_crawlers(archive, crawlers, [])
+
+      [job] = all_enqueued(worker: Linkhut.Archiving.Workers.Crawler)
+      job_meta = job.args["preflight_meta"]
+
+      assert job_meta["content_type"] == preflight_meta.content_type
+      assert job_meta["status"] == preflight_meta.status
+      assert job_meta["scheme"] == preflight_meta.scheme
     end
   end
 end

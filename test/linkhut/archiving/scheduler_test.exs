@@ -34,7 +34,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
       insert(:link, user_id: user.id)
 
       results = Scheduler.schedule_pending_archives()
-      assert length(results) > 0
+      assert results != []
     end
 
     test "does not schedule jobs for links that already have snapshots" do
@@ -47,11 +47,11 @@ defmodule Linkhut.Archiving.SchedulerTest do
       assert results == []
     end
 
-    test "does not schedule jobs for links with active archives" do
+    test "does not schedule jobs for links with processing archives" do
       user = insert(:user, credential: build(:credential), type: :active_paying)
       link = insert(:link, user_id: user.id)
 
-      insert(:archive, link_id: link.id, user_id: user.id, url: link.url, state: :active)
+      insert(:archive, link_id: link.id, user_id: user.id, url: link.url, state: :processing)
 
       results = Scheduler.schedule_pending_archives()
       assert results == []

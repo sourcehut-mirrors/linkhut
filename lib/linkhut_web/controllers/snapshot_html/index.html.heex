@@ -1,4 +1,4 @@
-<.snapshot_tabs tabs={@tabs} link_id={@link.id} all_count={@all_count} request_path={@conn.request_path} />
+<.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
 <div class="snapshot-list">
   <div>
     <dl class="snapshot-link">
@@ -8,20 +8,11 @@
       <dd><a rel="nofollow" href={@link.url}>{@link.url}</a></dd>
     </dl>
   </div>
-  <div :if={@archives == []}><span>No archives yet.</span></div>
-  <.archive_group :for={archive <- @archives} archive={archive} link={@link} show_all={@show_all} />
-  <div class="snapshot-actions">
+  <.archive_group :for={archive <- @archives} archive={archive} link={@link} />
+  <div :if={!any_processing?(@archives)} class="snapshot-actions">
     <form method="post" action={~p"/_/archive/#{@link.id}/recrawl"}>
       <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
       <button type="submit" class="btn btn-small">Re-crawl</button>
     </form>
-  </div>
-  <div :if={@other_count > 0} class="snapshot-toggle">
-    <a :if={!@show_all} href={~p"/_/archive/#{@link.id}/all?all=true"}>
-      show {ngettext("1 failed/pending", "%{count} failed/pending", @other_count)}
-    </a>
-    <a :if={@show_all} href={~p"/_/archive/#{@link.id}/all"}>
-      hide failed/pending
-    </a>
   </div>
 </div>

@@ -13,7 +13,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         link_id: link.id,
         user_id: user.id,
         url: link.url,
-        state: :active
+        state: :complete
       )
 
     data_dir = Linkhut.Config.archiving(:data_dir)
@@ -21,14 +21,19 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     storage_key = "local:" <> file_path
 
     {:ok, snapshot} =
-      Archiving.create_snapshot(link.id, user.id, nil, %{
+      Archiving.create_snapshot(link.id, user.id, %{
         type: "singlefile",
         state: :complete,
         storage_key: storage_key,
         file_size_bytes: 1024,
         processing_time_ms: 500,
         response_code: 200,
-        archive_id: archive.id
+        archive_id: archive.id,
+        archive_metadata: %{
+          content_type: "text/html",
+          tool_name: "SingleFile",
+          crawler_version: "2.0.75"
+        }
       })
 
     # Create the backing file
@@ -43,9 +48,9 @@ defmodule LinkhutWeb.SnapshotControllerTest do
   describe "GET /archive/:link_id (show - default tab)" do
     setup :create_link_and_snapshot
 
-    test "renders snapshot viewer for owned link", %{conn: conn, link: link} do
+    test "redirects to first available type", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}")
-      assert html_response(conn, 200) =~ "snapshot"
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/singlefile"
     end
 
     test "redirects when link not found", %{conn: conn, user: user} do
@@ -53,14 +58,26 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert redirected_to(conn) == ~p"/~#{user.username}"
     end
 
-    test "redirects to all when no complete snapshots", %{conn: conn, user: user} do
+    test "redirects to user page when no archives exist yet", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, nil, %{
-          type: "singlefile",
-          state: :pending
-        })
+      conn = get(conn, ~p"/_/archive/#{link.id}")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
+    end
+
+    test "redirects to all when archives exist but no complete snapshots", %{
+      conn: conn,
+      user: user
+    } do
+      link = insert(:link, user_id: user.id)
+
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :processing
+      )
 
       conn = get(conn, ~p"/_/archive/#{link.id}")
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
@@ -75,9 +92,9 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert html_response(conn, 200) =~ "snapshot"
     end
 
-    test "falls back to first available type for unknown type", %{conn: conn, link: link} do
+    test "redirects to first available type for unknown type", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}/type/nonexistent")
-      assert html_response(conn, 200) =~ "snapshot"
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/singlefile"
     end
   end
 
@@ -97,7 +114,10 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert get_resp_header(conn, "x-frame-options") == ["SAMEORIGIN"]
     end
 
-    test "sets restrictive CSP header", %{conn: conn, snapshot: snapshot} do
+    test "sets restrictive CSP header without script-src when serve_host not configured", %{
+      conn: conn,
+      snapshot: snapshot
+    } do
       token = Archiving.generate_token(snapshot.id)
 
       conn =
@@ -107,7 +127,9 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       [csp] = get_resp_header(conn, "content-security-policy")
       assert csp =~ "default-src 'none'"
-      assert csp =~ "script-src 'unsafe-inline'"
+      # Without serve_host, scripts are blocked to prevent XSS on the app domain
+      refute csp =~ "script-src"
+      assert csp =~ "style-src 'unsafe-inline'"
     end
 
     test "returns 403 for invalid token", %{conn: conn} do
@@ -137,11 +159,13 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
+      archive = insert(:archive, link_id: link.id, user_id: user.id, url: link.url)
 
       {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, nil, %{
+        Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
-          state: :pending
+          state: :pending,
+          archive_id: archive.id
         })
 
       conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/full")
@@ -168,11 +192,13 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
+      archive = insert(:archive, link_id: link.id, user_id: user.id, url: link.url)
 
       {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, nil, %{
+        Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
-          state: :pending
+          state: :pending,
+          archive_id: archive.id
         })
 
       conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/download")
@@ -206,7 +232,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert body =~ "Failed"
     end
 
-    test "hides pending_deletion archives", %{conn: conn, user: user} do
+    test "redirects when only pending_deletion archives exist", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
       insert(:archive,
@@ -217,8 +243,101 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       )
 
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
+    end
+
+    test "shows processing state for processing archive with pending snapshots", %{
+      conn: conn,
+      user: user
+    } do
+      link = insert(:link, user_id: user.id)
+
+      archive =
+        insert(:archive,
+          link_id: link.id,
+          user_id: user.id,
+          url: link.url,
+          state: :processing
+        )
+
+      {:ok, _snapshot} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          type: "singlefile",
+          state: :pending,
+          archive_id: archive.id
+        })
+
+      conn = get(conn, ~p"/_/archive/#{link.id}/all")
       body = html_response(conn, 200)
-      assert body =~ "No archives yet."
+      assert body =~ "Processing"
+    end
+
+    test "shows queued state for pending archive", %{conn: conn, user: user} do
+      link = insert(:link, user_id: user.id)
+
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :pending
+      )
+
+      conn = get(conn, ~p"/_/archive/#{link.id}/all")
+      body = html_response(conn, 200)
+      assert body =~ "Queued"
+    end
+
+    test "hides re-crawl button when archive is processing", %{conn: conn, user: user} do
+      link = insert(:link, user_id: user.id)
+
+      archive =
+        insert(:archive,
+          link_id: link.id,
+          user_id: user.id,
+          url: link.url,
+          state: :processing
+        )
+
+      {:ok, _snapshot} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          type: "singlefile",
+          state: :pending,
+          archive_id: archive.id
+        })
+
+      conn = get(conn, ~p"/_/archive/#{link.id}/all")
+      body = html_response(conn, 200)
+      refute body =~ "Re-crawl"
+    end
+
+    test "hides re-crawl button when archive is pending", %{conn: conn, user: user} do
+      link = insert(:link, user_id: user.id)
+
+      insert(:archive,
+        link_id: link.id,
+        user_id: user.id,
+        url: link.url,
+        state: :pending
+      )
+
+      conn = get(conn, ~p"/_/archive/#{link.id}/all")
+      body = html_response(conn, 200)
+      refute body =~ "Re-crawl"
+    end
+
+    test "shows re-crawl button when no archive is processing", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/all")
+      body = html_response(conn, 200)
+      assert body =~ "Re-crawl"
+    end
+
+    test "redirects to user page when no archives exist yet", %{conn: conn, user: user} do
+      link = insert(:link, user_id: user.id)
+
+      conn = get(conn, ~p"/_/archive/#{link.id}/all")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
     end
 
     test "redirects when link not found", %{conn: conn, user: user} do
@@ -239,6 +358,44 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "redirects when link not found", %{conn: conn, user: user} do
       conn = post(conn, ~p"/_/archive/999999/recrawl")
       assert redirected_to(conn) == ~p"/~#{user.username}"
+    end
+  end
+
+  describe "invalid link_id" do
+    test "show redirects for non-numeric link_id", %{conn: conn, user: user} do
+      conn = get(conn, ~p"/_/archive/abc")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
+    end
+
+    test "show redirects for trailing-text link_id", %{conn: conn, user: user} do
+      conn = get(conn, ~p"/_/archive/123abc")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
+    end
+
+    test "index redirects for non-numeric link_id", %{conn: conn, user: user} do
+      conn = get(conn, ~p"/_/archive/abc/all")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
+    end
+
+    test "full redirects for non-numeric link_id", %{conn: conn, user: user} do
+      conn = get(conn, ~p"/_/archive/abc/type/singlefile/full")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
+    end
+
+    test "download redirects for non-numeric link_id", %{conn: conn, user: user} do
+      conn = get(conn, ~p"/_/archive/abc/type/singlefile/download")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
+    end
+
+    test "recrawl redirects for non-numeric link_id", %{conn: conn, user: user} do
+      conn = post(conn, ~p"/_/archive/abc/recrawl")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
     end
   end
 

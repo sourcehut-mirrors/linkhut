@@ -5,8 +5,12 @@ defmodule Linkhut.Application do
 
   use Application
 
+  require Logger
+
   def start(_type, _args) do
     validate_crawlers!()
+    validate_archiving_config!()
+    warn_missing_serve_host()
 
     # List all child processes to be supervised
     children = [
@@ -31,6 +35,27 @@ defmodule Linkhut.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Linkhut.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  defp warn_missing_serve_host do
+    if Linkhut.Config.archiving(:mode, :disabled) != :disabled and
+         is_nil(Linkhut.Config.archiving(:serve_host)) do
+      Logger.warning(
+        "archiving :serve_host is not configured — archived HTML will be served from the app origin with a restrictive CSP. Set :serve_host to a dedicated subdomain for full fidelity."
+      )
+    end
+  end
+
+  defp validate_archiving_config! do
+    if Linkhut.Config.archiving(:mode, :disabled) != :disabled do
+      case Linkhut.Config.archiving(:max_file_size) do
+        n when is_integer(n) and n > 0 ->
+          :ok
+
+        other ->
+          raise "archiving :max_file_size must be a positive integer, got: #{inspect(other)}"
+      end
+    end
   end
 
   defp validate_crawlers! do

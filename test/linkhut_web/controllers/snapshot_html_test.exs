@@ -59,8 +59,8 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   end
 
   describe "crawler_display_name/1" do
-    test "returns 'SingleFile' for singlefile" do
-      assert SnapshotHTML.crawler_display_name("singlefile") == "SingleFile"
+    test "returns 'Web page' for singlefile" do
+      assert SnapshotHTML.crawler_display_name("singlefile") == "Web page"
     end
 
     test "returns 'Wget' for wget" do
@@ -106,6 +106,7 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     test "returns labels for known states" do
       assert SnapshotHTML.state_label(:pending) == "Pending"
       assert SnapshotHTML.state_label(:crawling) == "Crawling"
+      assert SnapshotHTML.state_label(:retryable) == "Retrying"
       assert SnapshotHTML.state_label(:complete) == "Complete"
       assert SnapshotHTML.state_label(:failed) == "Failed"
       assert SnapshotHTML.state_label(:pending_deletion) == "Pending deletion"
@@ -120,6 +121,7 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     test "returns CSS classes for known states" do
       assert SnapshotHTML.state_class(:pending) == "pending"
       assert SnapshotHTML.state_class(:crawling) == "crawling"
+      assert SnapshotHTML.state_class(:retryable) == "retryable"
       assert SnapshotHTML.state_class(:complete) == "complete"
       assert SnapshotHTML.state_class(:failed) == "failed"
       assert SnapshotHTML.state_class(:pending_deletion) == "pending-deletion"
@@ -146,42 +148,93 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   end
 
   describe "crawler_version/1" do
-    test "extracts from string-keyed metadata" do
-      assert SnapshotHTML.crawler_version(%{archive_metadata: %{"crawler_version" => "1.0"}}) ==
-               "1.0"
+    test "extracts from string-keyed crawler_meta" do
+      assert SnapshotHTML.crawler_version(%{crawler_meta: %{"version" => "1.0"}}) == "1.0"
     end
 
     test "returns nil when not available" do
-      assert SnapshotHTML.crawler_version(%{archive_metadata: nil}) == nil
+      assert SnapshotHTML.crawler_version(%{crawler_meta: nil}) == nil
+    end
+
+    test "returns nil for empty crawler_meta" do
+      assert SnapshotHTML.crawler_version(%{crawler_meta: %{}}) == nil
     end
   end
 
   describe "crawler_label/1" do
-    test "returns display name when no version" do
+    test "returns display name without version" do
       assert SnapshotHTML.crawler_label(%{type: "singlefile", archive_metadata: nil}) ==
-               "SingleFile"
+               "Web page"
     end
 
-    test "returns display name with version" do
+    test "returns display name only (version moved to tool_label)" do
       assert SnapshotHTML.crawler_label(%{
                type: "singlefile",
                archive_metadata: %{"crawler_version" => "1.2.3"}
-             }) == "SingleFile 1.2.3"
+             }) == "Web page"
     end
 
     test "handles nil archive_metadata" do
       assert SnapshotHTML.crawler_label(%{type: "singlefile", archive_metadata: nil}) ==
-               "SingleFile"
+               "Web page"
     end
 
     test "handles missing type" do
       assert SnapshotHTML.crawler_label(%{archive_metadata: nil}) == "Unknown"
     end
+
+    test "returns File for httpfetch type" do
+      assert SnapshotHTML.crawler_label(%{type: "httpfetch", archive_metadata: nil}) ==
+               "File"
+    end
+  end
+
+  describe "tool_name/1" do
+    test "extracts tool name from string-keyed crawler_meta" do
+      assert SnapshotHTML.tool_name(%{crawler_meta: %{"tool_name" => "Req"}}) == "Req"
+    end
+
+    test "returns nil for missing crawler_meta" do
+      assert SnapshotHTML.tool_name(%{crawler_meta: nil}) == nil
+    end
+
+    test "returns nil for missing tool_name key" do
+      assert SnapshotHTML.tool_name(%{crawler_meta: %{}}) == nil
+    end
+  end
+
+  describe "tool_label/1" do
+    test "returns tool name with version" do
+      assert SnapshotHTML.tool_label(%{
+               type: "httpfetch",
+               crawler_meta: %{"tool_name" => "Req", "version" => "0.5.8"}
+             }) == "Req 0.5.8"
+    end
+
+    test "returns tool name without version" do
+      assert SnapshotHTML.tool_label(%{
+               type: "httpfetch",
+               crawler_meta: %{"tool_name" => "Req"}
+             }) == "Req"
+    end
+
+    test "falls back to default tool name with version when no tool_name" do
+      assert SnapshotHTML.tool_label(%{
+               type: "singlefile",
+               crawler_meta: %{"version" => "1.2.3"}
+             }) == "SingleFile 1.2.3"
+    end
+
+    test "returns nil when no tool_name and no version" do
+      assert SnapshotHTML.tool_label(%{type: "singlefile", crawler_meta: nil}) == nil
+    end
   end
 
   describe "archive_state_label/1" do
     test "returns labels for known archive states" do
-      assert SnapshotHTML.archive_state_label(:active) == "Active"
+      assert SnapshotHTML.archive_state_label(:pending) == "Queued"
+      assert SnapshotHTML.archive_state_label(:processing) == "Processing"
+      assert SnapshotHTML.archive_state_label(:complete) == "Complete"
       assert SnapshotHTML.archive_state_label(:failed) == "Failed"
       assert SnapshotHTML.archive_state_label(:pending_deletion) == "Pending deletion"
     end
@@ -193,7 +246,9 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
 
   describe "archive_state_class/1" do
     test "returns CSS classes for known archive states" do
-      assert SnapshotHTML.archive_state_class(:active) == "active"
+      assert SnapshotHTML.archive_state_class(:pending) == "pending"
+      assert SnapshotHTML.archive_state_class(:processing) == "processing"
+      assert SnapshotHTML.archive_state_class(:complete) == "complete"
       assert SnapshotHTML.archive_state_class(:failed) == "failed"
       assert SnapshotHTML.archive_state_class(:pending_deletion) == "pending-deletion"
     end
@@ -257,28 +312,6 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "visible_snapshots/2" do
-    test "returns all snapshots when show_all is true" do
-      snapshots = [
-        %{state: :complete},
-        %{state: :failed},
-        %{state: :pending}
-      ]
-
-      assert SnapshotHTML.visible_snapshots(snapshots, true) == snapshots
-    end
-
-    test "returns only complete snapshots when show_all is false" do
-      snapshots = [
-        %{state: :complete},
-        %{state: :failed},
-        %{state: :pending}
-      ]
-
-      assert SnapshotHTML.visible_snapshots(snapshots, false) == [%{state: :complete}]
-    end
-  end
-
   describe "step_class/1" do
     test "returns step-failed for failed step" do
       assert SnapshotHTML.step_class(%{"step" => "failed"}) == "step-failed"
@@ -286,6 +319,10 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
 
     test "returns step-complete for complete step" do
       assert SnapshotHTML.step_class(%{"step" => "complete"}) == "step-complete"
+    end
+
+    test "returns step-complete for completed step" do
+      assert SnapshotHTML.step_class(%{"step" => "completed"}) == "step-complete"
     end
 
     test "returns empty string for other steps" do
@@ -296,7 +333,10 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   describe "step_display_name/1" do
     test "capitalizes step name" do
       assert SnapshotHTML.step_display_name(%{"step" => "created"}) == "Created"
-      assert SnapshotHTML.step_display_name(%{"step" => "head_preflight"}) == "Head_preflight"
+    end
+
+    test "humanizes underscored step names" do
+      assert SnapshotHTML.step_display_name(%{"step" => "head_preflight"}) == "Head preflight"
     end
 
     test "returns Unknown for missing step" do

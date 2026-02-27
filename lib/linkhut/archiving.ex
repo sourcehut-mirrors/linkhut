@@ -11,7 +11,7 @@ defmodule Linkhut.Archiving do
   import Ecto.Query
 
   alias Linkhut.Accounts.User
-  alias Linkhut.Archiving.{Archive, Snapshot, Storage, Tokens}
+  alias Linkhut.Archiving.{Archive, Snapshot, Steps, Storage, Tokens}
   alias Linkhut.Links.Link
   alias Linkhut.Repo
 
@@ -37,36 +37,29 @@ defmodule Linkhut.Archiving do
 
   # --- Archive functions ---
 
+  @doc "Creates a new archive record."
+  def create_archive(attrs) do
+    %Archive{}
+    |> Archive.changeset(attrs)
+    |> Repo.insert()
+  end
+
   @doc """
-  Finds or creates an Archive by Oban job_id (idempotent).
-  If an archive with the given job_id already exists, returns it.
-  Otherwise creates a new one.
+  Transitions a `:pending` archive to `:processing`.
+  Idempotent for already-processing archives (safe for Oban retries).
+  Returns `{:error, :not_found}` if the archive doesn't exist or is in
+  an unexpected state.
   """
-  def get_or_create_archive(job_id, link_id, user_id, url) do
-    case Repo.get_by(Archive, job_id: job_id) do
-      %Archive{} = archive ->
+  def start_processing(archive_id) do
+    case Repo.get(Archive, archive_id) do
+      %Archive{state: :pending} = archive ->
+        update_archive(archive, %{state: :processing})
+
+      %Archive{state: :processing} = archive ->
         {:ok, archive}
 
-      nil ->
-        %Archive{}
-        |> Archive.changeset(%{
-          job_id: job_id,
-          link_id: link_id,
-          user_id: user_id,
-          url: url,
-          steps: []
-        })
-        |> Repo.insert()
-        |> case do
-          {:ok, archive} ->
-            {:ok, archive}
-
-          {:error, %Ecto.Changeset{errors: [{:job_id, _} | _]}} ->
-            {:ok, Repo.get_by!(Archive, job_id: job_id)}
-
-          {:error, _} = error ->
-            error
-        end
+      _ ->
+        {:error, :not_found}
     end
   end
 
@@ -77,7 +70,6 @@ defmodule Linkhut.Archiving do
     |> Repo.update()
   end
 
-
   @doc """
   Marks old archives (and their snapshots) for deletion for a given link,
   excluding specific archive IDs.
@@ -85,27 +77,29 @@ defmodule Linkhut.Archiving do
   def mark_old_archives_for_deletion(link_id, opts \\ []) do
     exclude_ids = Keyword.get(opts, :exclude, []) |> Enum.reject(&is_nil/1)
 
-    archive_query =
-      from(a in Archive,
-        where: a.link_id == ^link_id and a.state == :active
-      )
+    Repo.transaction(fn ->
+      archive_query =
+        from(a in Archive,
+          where: a.link_id == ^link_id and a.state in [:pending, :processing, :complete, :failed]
+        )
 
-    archive_query =
-      if exclude_ids != [] do
-        from(a in archive_query, where: a.id not in ^exclude_ids)
-      else
-        archive_query
+      archive_query =
+        if exclude_ids != [] do
+          from(a in archive_query, where: a.id not in ^exclude_ids)
+        else
+          archive_query
+        end
+
+      archive_ids = Repo.all(from(a in archive_query, select: a.id))
+
+      if archive_ids != [] do
+        from(a in Archive, where: a.id in ^archive_ids)
+        |> Repo.update_all(set: [state: :pending_deletion])
+
+        from(s in Snapshot, where: s.archive_id in ^archive_ids)
+        |> Repo.update_all(set: [state: :pending_deletion])
       end
-
-    archive_ids = Repo.all(from(a in archive_query, select: a.id))
-
-    if archive_ids != [] do
-      from(a in Archive, where: a.id in ^archive_ids)
-      |> Repo.update_all(set: [state: :pending_deletion])
-
-      from(s in Snapshot, where: s.archive_id in ^archive_ids)
-      |> Repo.update_all(set: [state: :pending_deletion])
-    end
+    end)
 
     :ok
   end
@@ -115,7 +109,7 @@ defmodule Linkhut.Archiving do
   with the recrawl flag.
   """
   def schedule_recrawl(link) do
-    Linkhut.Archiving.Workers.Archiver.enqueue(link, recrawl: true)
+    Linkhut.Archiving.Workers.Archiver.enqueue(link, recrawl: true, schedule_in: 10)
   end
 
   # --- Snapshot functions ---
@@ -182,8 +176,8 @@ defmodule Linkhut.Archiving do
   end
 
   @doc "Creates a new snapshot for a link."
-  def create_snapshot(link_id, user_id, job_id, attrs \\ %{}) do
-    %Snapshot{link_id: link_id, user_id: user_id, job_id: job_id}
+  def create_snapshot(link_id, user_id, attrs \\ %{}) do
+    %Snapshot{link_id: link_id, user_id: user_id}
     |> Snapshot.create_changeset(attrs)
     |> Repo.insert()
   end
@@ -220,13 +214,15 @@ defmodule Linkhut.Archiving do
 
   @doc "Marks all snapshots and archives for a link as pending deletion."
   def mark_snapshots_for_deletion(link_id) do
-    # Also mark archives for this link
-    from(a in Archive, where: a.link_id == ^link_id)
-    |> Repo.update_all(set: [state: :pending_deletion])
+    Repo.transaction(fn ->
+      from(a in Archive, where: a.link_id == ^link_id and a.state != :pending_deletion)
+      |> Repo.update_all(set: [state: :pending_deletion])
 
-    Snapshot
-    |> where(link_id: ^link_id)
-    |> Repo.update_all(set: [state: :pending_deletion])
+      from(s in Snapshot, where: s.link_id == ^link_id and s.state != :pending_deletion)
+      |> Repo.update_all(set: [state: :pending_deletion])
+    end)
+
+    :ok
   end
 
   @doc """
@@ -270,13 +266,18 @@ defmodule Linkhut.Archiving do
   def delete_snapshot(snapshot_id) when is_integer(snapshot_id) do
     case Repo.get(Snapshot, snapshot_id) do
       %Snapshot{state: :pending_deletion} = snapshot ->
-        with :ok <- delete_snapshot_storage(snapshot),
-             {:ok, _} <- Repo.delete(snapshot) do
-          :ok
-        end
+        do_delete_snapshot(snapshot)
 
       _ ->
         :ok
+    end
+  end
+
+  defp do_delete_snapshot(snapshot) do
+    with :ok <- delete_snapshot_storage(snapshot),
+         {:ok, _} <- Repo.delete(snapshot) do
+      if snapshot.archive_id, do: recompute_archive_size_by_id(snapshot.archive_id)
+      :ok
     end
   end
 
@@ -292,9 +293,9 @@ defmodule Linkhut.Archiving do
       left_join: s in Snapshot,
       on: l.id == s.link_id and s.state == :complete,
       left_join: a in Archive,
-      on: l.id == a.link_id and a.state == :active,
+      on: l.id == a.link_id and a.state in [:pending, :processing, :complete],
       where: l.user_id == ^user.id and is_nil(s.id) and is_nil(a.id),
-      order_by: [asc: l.inserted_at],
+      order_by: [desc: l.inserted_at],
       limit: ^limit
     )
     |> Repo.all()
@@ -325,8 +326,91 @@ defmodule Linkhut.Archiving do
   defp snapshot_type(%{type: type}), do: type
   defp snapshot_type(_), do: "unknown"
 
-  defp crawl_steps(%{crawl_info: %{"steps" => steps}}) when is_list(steps), do: steps
-  defp crawl_steps(_), do: []
+  @doc "Extracts crawl steps from a snapshot's crawl_info."
+  def crawl_steps(%{crawl_info: %{"steps" => steps}}) when is_list(steps), do: steps
+  def crawl_steps(_), do: []
+
+  @doc """
+  Atomically recomputes the `total_size_bytes` for a single archive
+  from its complete snapshots.
+  """
+  def recompute_archive_size(%Archive{id: archive_id}) do
+    recompute_archive_size_by_id(archive_id)
+  end
+
+  @doc """
+  Atomically recomputes the `total_size_bytes` for an archive by ID.
+  Uses a single UPDATE ... SET ... = (SELECT ...) statement — no locks needed.
+  """
+  def recompute_archive_size_by_id(nil), do: :ok
+
+  def recompute_archive_size_by_id(archive_id) when is_integer(archive_id) do
+    Repo.query!(
+      "UPDATE archives SET total_size_bytes = (SELECT COALESCE(SUM(file_size_bytes), 0) FROM snapshots WHERE archive_id = $1 AND state = 'complete') WHERE id = $1",
+      [archive_id]
+    )
+
+    :ok
+  end
+
+  @doc """
+  Transitions a `:processing` archive to `:complete` when all its snapshots
+  have reached a terminal state (`:complete`, `:failed`, or `:pending_deletion`).
+
+  Uses atomic `UPDATE ... WHERE state = :processing` to prevent race conditions
+  when concurrent crawlers finish simultaneously.
+  """
+  def maybe_complete_archive(archive_id) when is_integer(archive_id) do
+    %{num_rows: count} =
+      Repo.query!(
+        """
+        UPDATE archives SET state = 'complete', lock_version = lock_version + 1, updated_at = NOW()
+        WHERE id = $1 AND state = 'processing'
+        AND EXISTS (
+          SELECT 1 FROM snapshots WHERE archive_id = $1 AND state != 'pending_deletion'
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM snapshots WHERE archive_id = $1
+          AND state NOT IN ('complete', 'failed', 'pending_deletion')
+        )
+        """,
+        [archive_id]
+      )
+
+    if count == 1 do
+      case Repo.get(Archive, archive_id) do
+        nil ->
+          :ok
+
+        archive ->
+          update_archive(archive, %{
+            steps: Steps.append_step(archive.steps, "completed", %{"msg" => "completed"})
+          })
+      end
+    else
+      :ok
+    end
+  end
+
+  def maybe_complete_archive(_), do: :ok
+
+  @doc """
+  Atomically recomputes `total_size_bytes` for all archives
+  using a single correlated subquery UPDATE.
+  """
+  def recompute_all_archive_sizes do
+    Repo.query!("""
+    UPDATE archives
+    SET total_size_bytes = (
+      SELECT COALESCE(SUM(file_size_bytes), 0)
+      FROM snapshots
+      WHERE snapshots.archive_id = archives.id
+        AND snapshots.state = 'complete'
+    )
+    """)
+
+    :ok
+  end
 
   defp to_integer(nil), do: 0
   defp to_integer(%Decimal{} = d), do: Decimal.to_integer(d)

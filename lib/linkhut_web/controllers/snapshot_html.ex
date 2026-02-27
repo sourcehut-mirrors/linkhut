@@ -11,7 +11,6 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :tabs, :list, required: true, doc: "list of crawler type strings"
   attr :link_id, :integer, required: true
-  attr :all_count, :integer, required: true
   attr :request_path, :string, required: true
 
   def snapshot_tabs(assigns) do
@@ -28,7 +27,7 @@ defmodule LinkhutWeb.SnapshotHTML do
         <.nav_link
           request_path={@request_path}
           to={~p"/_/archive/#{@link_id}/all"}
-          name={"All (#{@all_count})"}
+          name="All snapshots"
         />
       </ul>
     </div>
@@ -88,12 +87,12 @@ defmodule LinkhutWeb.SnapshotHTML do
             <td>{format_datetime(@snapshot.inserted_at)}</td>
           </tr>
           <tr>
-            <th>Size</th>
-            <td>{format_file_size(@snapshot.file_size_bytes)}</td>
-          </tr>
-          <tr>
-            <th>Crawler</th>
+            <th>Type</th>
             <td>{crawler_label(@snapshot)}</td>
+          </tr>
+          <tr :if={tool_label(@snapshot)}>
+            <th>Tool</th>
+            <td>{tool_label(@snapshot)}</td>
           </tr>
           <tr :if={content_type(@snapshot)}>
             <th>Content type</th>
@@ -106,6 +105,10 @@ defmodule LinkhutWeb.SnapshotHTML do
           <tr :if={@snapshot.processing_time_ms}>
             <th>Processing time</th>
             <td>{format_processing_time(@snapshot.processing_time_ms)}</td>
+          </tr>
+          <tr>
+            <th>Size</th>
+            <td>{format_file_size(@snapshot.file_size_bytes)}</td>
           </tr>
           <tr>
             <th>State</th>
@@ -121,6 +124,7 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
         </tbody>
       </table>
+      <h4 :if={@timeline != []} class="step-timeline-header">Timeline</h4>
       <.step_timeline :if={@timeline != []} steps={@timeline} />
     </details>
     """
@@ -130,7 +134,6 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :archive, :map, required: true
   attr :link, :map, required: true
-  attr :show_all, :boolean, default: false
 
   def archive_group(assigns) do
     assigns =
@@ -148,6 +151,9 @@ defmodule LinkhutWeb.SnapshotHTML do
           {format_datetime(@archive.inserted_at)}
         </span>
         <div class="archive-header-right">
+          <span :if={@archive.total_size_bytes > 0} class="archive-size">
+            {format_file_size(@archive.total_size_bytes)}
+          </span>
           <span :if={@archive.state == :failed && @max_retry_count > 0} class="archive-retries">
             {ngettext("1 retry", "%{count} retries", @max_retry_count)}
           </span>
@@ -155,32 +161,33 @@ defmodule LinkhutWeb.SnapshotHTML do
         </div>
       </div>
       <div :if={@archive.error} class="archive-error">{@archive.error}</div>
-      <details class="archive-details" open={@archive.state == :failed}>
-        <summary>Pipeline</summary>
+      <details class="archive-details" open={@archive.state in [:failed, :processing, :pending]}>
+        <summary>Details</summary>
         <.step_timeline :if={@timeline != []} steps={@timeline} />
       </details>
-      <% snapshots = visible_snapshots(@archive.snapshots, @show_all) %>
-      <table :if={snapshots != []} class="snapshot-table">
+      <table :if={@archive.snapshots != []} class="snapshot-table">
         <thead>
           <tr>
             <th>Captured</th>
-            <th>Size</th>
-            <th>Crawler</th>
+            <th>Type</th>
+            <th>Tool</th>
             <th>Response</th>
             <th>Processing time</th>
+            <th>Size</th>
             <th>State</th>
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody :for={snapshot <- snapshots}>
+        <tbody :for={snapshot <- @archive.snapshots}>
           <tr class={state_class(snapshot.state)}>
             <td data-label="Captured" title={format_relative_datetime(snapshot.inserted_at)}>
               {format_datetime(snapshot.inserted_at)}
             </td>
-            <td data-label="Size">{format_file_size(snapshot.file_size_bytes)}</td>
-            <td data-label="Crawler">{crawler_label(snapshot)}</td>
+            <td data-label="Type">{crawler_label(snapshot)}</td>
+            <td data-label="Tool">{tool_label(snapshot)}</td>
             <td data-label="Response">{format_response_code(snapshot.response_code)}</td>
             <td data-label="Processing time">{format_processing_time(snapshot.processing_time_ms)}</td>
+            <td data-label="Size">{format_file_size(snapshot.file_size_bytes)}</td>
             <td data-label="State">
               <span class={"state #{state_class(snapshot.state)}"}>{state_label(snapshot.state)}</span>
             </td>
@@ -190,9 +197,6 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
         </tbody>
       </table>
-      <div :if={snapshots == [] && @archive.state != :failed}>
-        <span>No snapshots yet.</span>
-      </div>
     </div>
     """
   end
@@ -262,9 +266,15 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Returns the display name for a crawler type.
   """
-  def crawler_display_name("singlefile"), do: "SingleFile"
+  def crawler_display_name("singlefile"), do: "Web page"
+  def crawler_display_name("httpfetch"), do: "File"
   def crawler_display_name("wget"), do: "Wget"
   def crawler_display_name(type), do: String.capitalize(type)
+
+  defp default_tool_name("singlefile"), do: "SingleFile"
+  defp default_tool_name("httpfetch"), do: "Req"
+  defp default_tool_name("wget"), do: "Wget"
+  defp default_tool_name(type), do: String.capitalize(type)
 
   @doc """
   Formats a datetime as a relative time string (e.g. "3 days ago").
@@ -292,6 +302,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   """
   def state_label(:pending), do: "Pending"
   def state_label(:crawling), do: "Crawling"
+  def state_label(:retryable), do: "Retrying"
   def state_label(:complete), do: "Complete"
   def state_label(:failed), do: "Failed"
   def state_label(:pending_deletion), do: "Pending deletion"
@@ -302,6 +313,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   """
   def state_class(:pending), do: "pending"
   def state_class(:crawling), do: "crawling"
+  def state_class(:retryable), do: "retryable"
   def state_class(:complete), do: "complete"
   def state_class(:failed), do: "failed"
   def state_class(:pending_deletion), do: "pending-deletion"
@@ -315,22 +327,45 @@ defmodule LinkhutWeb.SnapshotHTML do
   def final_url(_), do: nil
 
   @doc """
-  Extracts the crawler version from a snapshot's archive_metadata.
+  Extracts the crawler version from a snapshot's crawler_meta.
   Returns nil if not available.
   """
-  def crawler_version(%{archive_metadata: %{"crawler_version" => v}}) when not is_nil(v), do: v
+  def crawler_version(%{crawler_meta: %{"version" => v}}) when not is_nil(v), do: v
   def crawler_version(_), do: nil
 
   @doc """
-  Returns a combined crawler label with type and optional version.
-  E.g. "SingleFile" or "SingleFile 1.2.3".
+  Returns the crawler type display name.
+  E.g. "SingleFile" or "HTTP Fetch".
   """
   def crawler_label(snapshot) do
-    name = crawler_display_name(snapshot_type(snapshot))
+    crawler_display_name(snapshot_type(snapshot))
+  end
 
-    case crawler_version(snapshot) do
-      nil -> name
-      version -> "#{name} #{version}"
+  @doc """
+  Extracts the tool name from a snapshot's crawler_meta.
+  Returns nil if not available.
+  """
+  def tool_name(%{crawler_meta: %{"tool_name" => name}}) when is_binary(name), do: name
+  def tool_name(_), do: nil
+
+  @doc """
+  Returns a combined tool label with name and optional version.
+  E.g. "Req 0.5.8" or "SingleFile 1.2.3".
+  Returns nil if tool name is not available.
+  """
+  def tool_label(snapshot) do
+    case tool_name(snapshot) do
+      nil ->
+        case crawler_version(snapshot) do
+          nil -> nil
+          version -> "#{default_tool_name(snapshot_type(snapshot))} #{version}"
+        end
+
+      name ->
+        case crawler_version(snapshot) do
+          nil -> name
+          version -> "#{name} #{version}"
+        end
     end
   end
 
@@ -339,7 +374,9 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Returns a human-readable label for an archive state.
   """
-  def archive_state_label(:active), do: "Active"
+  def archive_state_label(:pending), do: "Queued"
+  def archive_state_label(:processing), do: "Processing"
+  def archive_state_label(:complete), do: "Complete"
   def archive_state_label(:failed), do: "Failed"
   def archive_state_label(:pending_deletion), do: "Pending deletion"
   def archive_state_label(_), do: "Unknown"
@@ -347,7 +384,9 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Returns a CSS class suffix for an archive state.
   """
-  def archive_state_class(:active), do: "active"
+  def archive_state_class(:pending), do: "pending"
+  def archive_state_class(:processing), do: "processing"
+  def archive_state_class(:complete), do: "complete"
   def archive_state_class(:failed), do: "failed"
   def archive_state_class(:pending_deletion), do: "pending-deletion"
   def archive_state_class(_), do: ""
@@ -378,26 +417,30 @@ defmodule LinkhutWeb.SnapshotHTML do
   Extracts crawl steps from a snapshot's crawl_info.
   Returns an empty list if not available.
   """
-  def crawl_steps(%{crawl_info: %{"steps" => steps}}) when is_list(steps), do: steps
-  def crawl_steps(_), do: []
+  defdelegate crawl_steps(snapshot), to: Linkhut.Archiving
 
   @doc """
-  Filters snapshots for display. When show_all is false, only complete snapshots are shown.
+  Returns true if any archive is still being processed (active with no complete snapshots).
   """
-  def visible_snapshots(snapshots, true), do: snapshots
-  def visible_snapshots(snapshots, false), do: Enum.filter(snapshots, &(&1.state == :complete))
+  def any_processing?(archives) do
+    Enum.any?(archives, &(&1.state in [:pending, :processing]))
+  end
 
   @doc """
   Returns a CSS class for a pipeline step based on its name.
   """
   def step_class(%{"step" => "failed"}), do: "step-failed"
   def step_class(%{"step" => "complete"}), do: "step-complete"
+  def step_class(%{"step" => "completed"}), do: "step-complete"
   def step_class(_), do: ""
 
   @doc """
   Returns a human-readable display name for a pipeline step.
   """
-  def step_display_name(%{"step" => step}) when is_binary(step), do: String.capitalize(step)
+  def step_display_name(%{"step" => step}) when is_binary(step) do
+    step |> String.replace("_", " ") |> String.capitalize()
+  end
+
   def step_display_name(_), do: "Unknown"
 
   @doc """
