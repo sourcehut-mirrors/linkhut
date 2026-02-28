@@ -3,8 +3,6 @@ submitter:
     enabled: true
     allow-refs:
       - refs/heads/master
-  hub.sr.ht:
-    enabled: false
 image: ubuntu/24.04
 packages:
     - rsync
@@ -15,6 +13,7 @@ packages:
     - erlang-asn1
     - erlang-os-mon
     - erlang-xmerl
+    - postgresql
 repositories:
   rabbitmq: https://ppa.launchpadcontent.net/rabbitmq/rabbitmq-erlang/ubuntu noble main 0xB279943D2A549531E144B875F77F1EDA57EBB1CC
 secrets:
@@ -33,11 +32,13 @@ tasks:
         cd linkhut
         mix local.hex --force
         mix local.rebar --force
-        mix deps.get --only-prod
-    - prepare: |
+        mix deps.get
+    - setup-db: |
+        sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+    - test: |
         export PATH="${GOPATH:-$HOME/go/bin}:$PATH"
         export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
         cd linkhut
-        MIX_ENV=test mix compile
+        MIX_ENV=test mix ecto.setup
         MIX_ENV=test mix test
-        MIX_ENV=test mix excoveralls
+        MIX_ENV=test mix coveralls
