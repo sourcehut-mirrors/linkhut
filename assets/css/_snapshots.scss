@@ -133,6 +133,14 @@ div.snapshot-content {
     }
 }
 
+div.snapshot-content-external {
+    padding: $spacing-small;
+
+    & > .button {
+        margin-top: $spacing-small;
+    }
+}
+
 // Snapshot listing (index page)
 
 div.snapshot-list {

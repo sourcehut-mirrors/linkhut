@@ -96,5 +96,9 @@ config :linkhut, Linkhut,
     data_dir: "/tmp/store",
     serve_host: nil,
     storage: Linkhut.Archiving.Storage.Local,
-    crawlers: [Linkhut.Archiving.Crawler.SingleFile, Linkhut.Archiving.Crawler.HttpFetch]
+    crawlers: [
+      Linkhut.Archiving.Crawler.SingleFile,
+      Linkhut.Archiving.Crawler.HttpFetch,
+      Linkhut.Archiving.Crawler.WaybackMachine
+    ]
   ]

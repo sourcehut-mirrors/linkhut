@@ -7,7 +7,8 @@ defmodule Linkhut.Archiving.Storage do
   that identifies the stored content.
   """
 
-  alias Linkhut.Archiving.Snapshot
+  alias Linkhut.Archiving.{Snapshot, StorageKey}
+  alias Linkhut.Archiving.Storage.Local
 
   @typedoc """
   The source of archive content to store.
@@ -53,14 +54,38 @@ defmodule Linkhut.Archiving.Storage do
   @doc """
   Resolves a storage key by dispatching to the backend that produced it.
 
-  The key prefix (e.g. `"local:"`) determines which module handles resolution,
+  Uses `StorageKey.parse/1` to determine which module handles resolution,
   regardless of the currently configured storage backend.
   """
-  def resolve("local:" <> _ = key), do: Linkhut.Archiving.Storage.Local.resolve(key)
-  def resolve(_), do: {:error, :invalid_storage_key}
+  def resolve(key) do
+    case StorageKey.parse(key) do
+      {:ok, {:local, _}} ->
+        Local.resolve(key)
 
-  def delete("local:" <> _ = key), do: Linkhut.Archiving.Storage.Local.delete(key)
-  def delete(_), do: {:error, :invalid_storage_key}
+      {:ok, {:external, url}} ->
+        if valid_external_url?(url),
+          do: {:ok, {:redirect, url}},
+          else: {:error, :invalid_storage_key}
+
+      {:error, _} ->
+        {:error, :invalid_storage_key}
+    end
+  end
+
+  def delete(key) do
+    case StorageKey.parse(key) do
+      {:ok, {:local, _}} -> Local.delete(key)
+      {:ok, {:external, _}} -> :ok
+      {:error, _} -> {:error, :invalid_storage_key}
+    end
+  end
+
+  defp valid_external_url?(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme} when scheme in ["http", "https"] -> true
+      _ -> false
+    end
+  end
 
   def storage_used(opts \\ []) do
     storage_module().storage_used(opts)

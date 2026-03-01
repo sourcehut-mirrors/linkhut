@@ -286,14 +286,14 @@ defmodule Linkhut.Archiving do
 
   @doc """
   Lists unarchived links for a user (links without completed snapshots
-  and without an active archive in progress).
+  and without an existing archive).
   """
   def list_unarchived_links_for_user(%User{} = user, limit \\ 50) do
     from(l in Link,
       left_join: s in Snapshot,
       on: l.id == s.link_id and s.state == :complete,
       left_join: a in Archive,
-      on: l.id == a.link_id and a.state in [:pending, :processing, :complete],
+      on: l.id == a.link_id and a.state in [:pending, :processing, :complete, :failed],
       where: l.user_id == ^user.id and is_nil(s.id) and is_nil(a.id),
       order_by: [desc: l.inserted_at],
       limit: ^limit
@@ -303,24 +303,45 @@ defmodule Linkhut.Archiving do
 
   @doc """
   Merges archive pipeline steps with crawler steps from snapshots into a
-  single chronological timeline. Each crawler step is annotated with a
-  `"prefix"` key (the crawler type, e.g. "singlefile") so the timeline
-  component can show which crawler a step belongs to.
+  single chronological timeline, sorted by timestamp.
 
-  Archive-level steps (created, preflight, dispatched, failed) have no prefix.
+  Each crawler step is annotated with a `"prefix"` key (the crawler type,
+  e.g. "singlefile") so the timeline component can show which crawler a
+  step belongs to. Archive-level steps have no prefix.
+
+  Steps from the same crawler are kept together as a group — sorted among
+  archive steps by the timestamp of the group's first entry. Crawler
+  steps receive a `"group"` integer (starting at 1) identifying their
+  group; archive steps have no `"group"` key.
   """
   def merge_timeline(archive_steps, snapshots) when is_list(snapshots) do
-    archive_entries = archive_steps || []
+    archive_groups =
+      (archive_steps || [])
+      |> Enum.map(&{:archive, [&1]})
 
-    crawler_entries =
-      Enum.flat_map(snapshots, fn snapshot ->
+    crawler_groups =
+      snapshots
+      |> Enum.flat_map(fn snapshot ->
         prefix = snapshot_type(snapshot)
-
-        crawl_steps(snapshot)
-        |> Enum.map(&Map.put(&1, "prefix", prefix))
+        steps = crawl_steps(snapshot) |> Enum.map(&Map.put(&1, "prefix", prefix))
+        if steps == [], do: [], else: [{:crawler, steps}]
       end)
 
-    archive_entries ++ crawler_entries
+    (archive_groups ++ crawler_groups)
+    |> Enum.sort_by(fn {_, [first | _]} -> first["at"] || "" end)
+    |> assign_crawler_groups(1, [])
+    |> List.flatten()
+  end
+
+  defp assign_crawler_groups([], _n, acc), do: Enum.reverse(acc)
+
+  defp assign_crawler_groups([{:archive, steps} | rest], n, acc) do
+    assign_crawler_groups(rest, n, [steps | acc])
+  end
+
+  defp assign_crawler_groups([{:crawler, steps} | rest], n, acc) do
+    tagged = Enum.map(steps, &Map.put(&1, "group", n))
+    assign_crawler_groups(rest, n + 1, [tagged | acc])
   end
 
   defp snapshot_type(%{type: type}), do: type

@@ -16,6 +16,8 @@ defmodule Linkhut.Archiving.SchemaHelpers do
     end)
   end
 
+  defp stringify_keys(%_{} = struct), do: struct |> Map.from_struct() |> stringify_keys()
+
   defp stringify_keys(%{} = map) do
     Map.new(map, fn
       {k, v} when is_atom(k) -> {Atom.to_string(k), stringify_keys(v)}

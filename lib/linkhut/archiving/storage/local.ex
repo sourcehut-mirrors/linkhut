@@ -8,7 +8,7 @@ defmodule Linkhut.Archiving.Storage.Local do
   Returns storage keys prefixed with `local:`, e.g. `local:/data/archiving/42/1234/567/890.singlefile`.
   """
 
-  alias Linkhut.Archiving.Snapshot
+  alias Linkhut.Archiving.{Snapshot, StorageKey}
 
   @behaviour Linkhut.Archiving.Storage
 
@@ -19,12 +19,12 @@ defmodule Linkhut.Archiving.Storage.Local do
 
     case File.rename(source_path, dest_path) do
       :ok ->
-        {:ok, "local:" <> dest_path}
+        {:ok, StorageKey.local(dest_path)}
 
       {:error, :exdev} ->
         with {:ok, _} <- File.copy(source_path, dest_path),
              :ok <- File.rm(source_path) do
-          {:ok, "local:" <> dest_path}
+          {:ok, StorageKey.local(dest_path)}
         end
     end
   end
@@ -35,7 +35,7 @@ defmodule Linkhut.Archiving.Storage.Local do
     File.mkdir_p!(Path.dirname(dest_path))
 
     case File.write(dest_path, content) do
-      :ok -> {:ok, "local:" <> dest_path}
+      :ok -> {:ok, StorageKey.local(dest_path)}
       {:error, reason} -> {:error, reason}
     end
   end
@@ -54,7 +54,7 @@ defmodule Linkhut.Archiving.Storage.Local do
           end
         end)
 
-        {:ok, "local:" <> dest_path}
+        {:ok, StorageKey.local(dest_path)}
       rescue
         e -> {:error, e}
       catch

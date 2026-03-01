@@ -24,11 +24,21 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   def meta, do: %{tool_name: @tool_name, version: req_version()}
 
   @impl true
+  def network_access, do: :target_url
+
+  @impl true
+  def queue, do: :crawler
+
+  @impl true
+  def can_handle?(_url, nil), do: false
+
   def can_handle?(_url, preflight_meta) do
+    status = Map.get(preflight_meta, :status)
     content_type = Map.get(preflight_meta, :content_type)
     content_length = Map.get(preflight_meta, :content_length)
 
-    content_type in allowed_types() and
+    is_integer(status) and status < 400 and
+      content_type in allowed_types() and
       (not is_integer(content_length) or content_length <= max_bytes())
   end
 
@@ -153,11 +163,12 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
     case verify_content(path, expected_content_type) do
       :ok ->
         {:ok,
-         %{
-           path: path,
-           response_code: status,
-           content_type: expected_content_type
-         }}
+         {:file,
+          %{
+            path: path,
+            response_code: status,
+            content_type: expected_content_type
+          }}}
 
       {:error, reason} ->
         {:error, %{msg: "content verification failed: #{reason}"}}

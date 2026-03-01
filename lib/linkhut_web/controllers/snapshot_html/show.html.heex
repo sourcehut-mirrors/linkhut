@@ -1,6 +1,10 @@
 <.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
 <div class="snapshot-viewer">
-  <.toolbar link={@link} snapshot={@snapshot} />
-  <.details snapshot={@snapshot} link={@link} />
-  <.content_iframe serve_url={@serve_url} title={@link.title} />
+  <.toolbar link={@link} snapshot={@snapshot} external_url={assigns[:external_url]} />
+  <.details snapshot={@snapshot} link={@link} external_url={assigns[:external_url]} />
+  <%= if assigns[:external_url] do %>
+    <.content_external external_url={@external_url} snapshot={@snapshot} />
+  <% else %>
+    <.content_iframe serve_url={@serve_url} title={@link.title} />
+  <% end %>
 </div>

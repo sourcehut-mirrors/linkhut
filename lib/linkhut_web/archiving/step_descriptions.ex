@@ -51,12 +51,18 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
     )
   end
 
-  def render(%{"msg" => "failed_final"} = detail) do
+  def render(
+        %{"msg" => "failed_final", "attempt" => attempt, "max_attempts" => max_attempts} = detail
+      ) do
     gettext("%{error} (attempt %{attempt}/%{max_attempts})",
       error: detail["error"],
-      attempt: detail["attempt"],
-      max_attempts: detail["max_attempts"]
+      attempt: attempt,
+      max_attempts: max_attempts
     )
+  end
+
+  def render(%{"msg" => "failed_final", "error" => error}) do
+    gettext("Non-retryable failure: %{error}", error: error)
   end
 
   # Crawler step messages
@@ -69,6 +75,14 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
 
   def render(%{"msg" => "stored", "size" => size}) do
     gettext("Stored %{size}", size: size)
+  end
+
+  def render(%{"msg" => "external_snapshot", "url" => url}) do
+    gettext("External snapshot: %{url}", url: url)
+  end
+
+  def render(%{"msg" => "partial_failure", "error" => error}) do
+    gettext("Partial failure: %{error}", error: error)
   end
 
   def render(%{"msg" => "crawler_failed_will_retry"} = detail) do
@@ -86,6 +100,8 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
       max_attempts: detail["max_attempts"]
     )
   end
+
+  def render(%{"msg" => "completed"}), do: gettext("Archive completed")
 
   # Fallback
   def render(%{"msg" => msg}), do: msg

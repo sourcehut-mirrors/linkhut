@@ -2,6 +2,7 @@ defmodule LinkhutWeb.SnapshotController do
   use LinkhutWeb, :controller
 
   alias Linkhut.{Links, Archiving}
+  alias Linkhut.Archiving.StorageKey
   alias LinkhutWeb.Breadcrumb
 
   plug :require_archiving when action in [:show, :full, :download, :index, :recrawl]
@@ -71,15 +72,31 @@ defmodule LinkhutWeb.SnapshotController do
 
     if type in tabs do
       snapshot = grouped[type] |> hd()
-      token = Archiving.generate_token(snapshot.id)
 
-      render(conn, :show, %{
-        link: link,
-        snapshot: snapshot,
-        tabs: tabs,
-        serve_url: serve_url(conn, token),
-        breadcrumb: %Breadcrumb{user: user, url: link.url}
-      })
+      assigns =
+        case StorageKey.parse(snapshot.storage_key) do
+          {:ok, {:external, url}} ->
+            %{
+              link: link,
+              snapshot: snapshot,
+              tabs: tabs,
+              external_url: url,
+              breadcrumb: %Breadcrumb{user: user, url: link.url}
+            }
+
+          _ ->
+            token = Archiving.generate_token(snapshot.id)
+
+            %{
+              link: link,
+              snapshot: snapshot,
+              tabs: tabs,
+              serve_url: serve_url(conn, token),
+              breadcrumb: %Breadcrumb{user: user, url: link.url}
+            }
+        end
+
+      render(conn, :show, assigns)
     else
       redirect(conn, to: ~p"/_/archive/#{link_id}/type/#{hd(tabs)}")
     end
@@ -92,16 +109,22 @@ defmodule LinkhutWeb.SnapshotController do
   def serve(conn, %{"token" => token}) do
     with {:ok, snapshot_id} <- Archiving.verify_token(token),
          {:ok, snapshot} <- Archiving.get_complete_snapshot(snapshot_id),
-         {:ok, {:file, path}} <- Archiving.Storage.resolve(snapshot.storage_key) do
-      content_type = snapshot_content_type(snapshot)
+         {:ok, instruction} <- Archiving.Storage.resolve(snapshot.storage_key) do
+      case instruction do
+        {:redirect, url} ->
+          redirect(conn, external: url)
 
-      conn
-      |> put_resp_header("content-type", serve_content_type_header(content_type))
-      |> put_resp_header("x-frame-options", "SAMEORIGIN")
-      |> put_resp_header("x-content-type-options", "nosniff")
-      |> put_resp_header("cache-control", "no-cache, no-store, must-revalidate")
-      |> put_resp_header("content-security-policy", csp_for_content_type(content_type))
-      |> send_file(200, path)
+        {:file, path} ->
+          content_type = snapshot_content_type(snapshot)
+
+          conn
+          |> put_resp_header("content-type", serve_content_type_header(content_type))
+          |> put_resp_header("x-frame-options", "SAMEORIGIN")
+          |> put_resp_header("x-content-type-options", "nosniff")
+          |> put_resp_header("cache-control", "no-cache, no-store, must-revalidate")
+          |> put_resp_header("content-security-policy", csp_for_content_type(content_type))
+          |> send_file(200, path)
+      end
     else
       {:error, :invalid_token} ->
         conn
@@ -130,8 +153,7 @@ defmodule LinkhutWeb.SnapshotController do
       {:ok, link_id} ->
         with {:ok, _link} <- Links.get_user_link(link_id, user.id),
              {:ok, snapshot} <- Archiving.get_latest_complete_snapshot(link_id, type) do
-          token = Archiving.generate_token(snapshot.id)
-          redirect(conn, external: serve_url(conn, token))
+          redirect_to_snapshot(conn, snapshot)
         else
           {:error, :not_found} ->
             conn
@@ -155,19 +177,10 @@ defmodule LinkhutWeb.SnapshotController do
     case parse_link_id(link_id) do
       {:ok, link_id} ->
         with {:ok, link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <- Archiving.get_latest_complete_snapshot(link_id, type),
-             {:ok, {:file, path}} <- Archiving.Storage.resolve(snapshot.storage_key) do
-          filename = download_filename(link.title, snapshot.inserted_at, snapshot)
-
-          conn
-          |> send_download({:file, path}, filename: filename, charset: "utf-8")
+             {:ok, snapshot} <- Archiving.get_latest_complete_snapshot(link_id, type) do
+          serve_download(conn, link, snapshot, link_id, type, user)
         else
           {:error, :not_found} ->
-            conn
-            |> put_flash(:error, "Snapshot not found")
-            |> redirect(to: ~p"/~#{user.username}")
-
-          {:error, :invalid_storage_key} ->
             conn
             |> put_flash(:error, "Snapshot not found")
             |> redirect(to: ~p"/~#{user.username}")
@@ -257,6 +270,37 @@ defmodule LinkhutWeb.SnapshotController do
       :error ->
         conn
         |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+    end
+  end
+
+  defp redirect_to_snapshot(conn, snapshot) do
+    case Archiving.Storage.resolve(snapshot.storage_key) do
+      {:ok, {:redirect, url}} ->
+        redirect(conn, external: url)
+
+      _ ->
+        token = Archiving.generate_token(snapshot.id)
+        redirect(conn, external: serve_url(conn, token))
+    end
+  end
+
+  defp serve_download(conn, link, snapshot, link_id, type, user) do
+    case Archiving.Storage.resolve(snapshot.storage_key) do
+      {:ok, {:file, path}} ->
+        filename = download_filename(link.title, snapshot.inserted_at, snapshot)
+
+        conn
+        |> send_download({:file, path}, filename: filename, charset: "utf-8")
+
+      {:ok, {:redirect, _url}} ->
+        conn
+        |> put_flash(:info, "This snapshot is hosted externally and cannot be downloaded.")
+        |> redirect(to: ~p"/_/archive/#{link_id}/type/#{type}")
+
+      {:error, :invalid_storage_key} ->
+        conn
+        |> put_flash(:error, "Snapshot not found")
         |> redirect(to: ~p"/~#{user.username}")
     end
   end

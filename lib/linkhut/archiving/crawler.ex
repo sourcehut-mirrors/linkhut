@@ -7,14 +7,23 @@ defmodule Linkhut.Archiving.Crawler do
     @moduledoc "Structured context passed to crawler `fetch/1` callbacks."
 
     @enforce_keys [:user_id, :link_id, :url, :snapshot_id]
-    defstruct [:user_id, :link_id, :url, :snapshot_id, :preflight_meta, cookies: []]
+    defstruct [
+      :user_id,
+      :link_id,
+      :url,
+      :snapshot_id,
+      :preflight_meta,
+      :link_inserted_at,
+      cookies: []
+    ]
 
     @type t :: %__MODULE__{
             user_id: integer(),
             link_id: integer(),
             url: String.t(),
             snapshot_id: integer(),
-            preflight_meta: map() | nil,
+            preflight_meta: Linkhut.Archiving.PreflightMeta.t() | nil,
+            link_inserted_at: DateTime.t() | nil,
             cookies: list()
           }
   end
@@ -31,7 +40,7 @@ defmodule Linkhut.Archiving.Crawler do
   HTTP/HTTPS also includes:
     - `:status` — HTTP status code
   """
-  @type preflight_meta :: map()
+  @type preflight_meta :: Linkhut.Archiving.PreflightMeta.t() | nil
 
   @typedoc """
   Static identity metadata for the crawler.
@@ -44,10 +53,26 @@ defmodule Linkhut.Archiving.Crawler do
   """
   @type crawler_meta :: %{tool_name: String.t(), version: String.t() | nil}
 
+  @typedoc """
+  Indicates what network access pattern a crawler uses.
+
+  - `:target_url` — crawler connects to the user-supplied URL (SSRF checks required)
+  - `:third_party` — crawler only talks to a fixed external service (safe after SSRF failure)
+  """
+  @type network_access :: :target_url | :third_party
+
   @callback type() :: String.t()
   @callback meta() :: crawler_meta()
   @callback can_handle?(url :: String.t(), preflight_meta()) :: boolean()
-  @callback fetch(Context.t()) :: {:ok, map()} | {:error, map()}
+
+  @callback fetch(Context.t()) ::
+              {:ok, {:file, map()}}
+              | {:ok, {:external, map()}}
+              | {:error, map()}
+              | {:error, map(), :noretry}
+
+  @callback network_access() :: network_access()
+  @callback queue() :: atom()
 
   @base_user_agent "LinkhutArchiver/1.0 (web page snapshot for personal archiving)"
 

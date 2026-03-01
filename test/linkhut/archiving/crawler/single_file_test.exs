@@ -11,7 +11,22 @@ defmodule Linkhut.Archiving.Crawler.SingleFileTest do
 
   describe "can_handle?/2" do
     test "returns true for text/html content type" do
-      assert SingleFile.can_handle?("https://example.com", %{content_type: "text/html"})
+      assert SingleFile.can_handle?("https://example.com", %{
+               content_type: "text/html",
+               status: 200
+             })
+    end
+
+    test "returns false for error status codes" do
+      refute SingleFile.can_handle?("https://example.com", %{
+               content_type: "text/html",
+               status: 404
+             })
+
+      refute SingleFile.can_handle?("https://example.com", %{
+               content_type: "text/html",
+               status: 500
+             })
     end
 
     test "returns false for application/pdf" do

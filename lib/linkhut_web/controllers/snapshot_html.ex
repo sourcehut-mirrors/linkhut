@@ -37,6 +37,7 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :link, :map, required: true
   attr :snapshot, :map, required: true
+  attr :external_url, :string, default: nil
 
   def toolbar(assigns) do
     ~H"""
@@ -47,7 +48,7 @@ defmodule LinkhutWeb.SnapshotHTML do
         <dt>URL</dt>
         <dd><a rel="nofollow" href={@link.url}>{@link.url}</a></dd>
       </dl>
-      <div class="snapshot-nav">
+      <div :if={!@external_url} class="snapshot-nav">
         <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/full"}>full page</a>
         <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/download"}>download</a>
       </div>
@@ -57,6 +58,7 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :snapshot, :map, required: true
   attr :link, :map, required: true
+  attr :external_url, :string, default: nil
 
   def details(assigns) do
     archive = assigns.snapshot.archive
@@ -106,9 +108,13 @@ defmodule LinkhutWeb.SnapshotHTML do
             <th>Processing time</th>
             <td>{format_processing_time(@snapshot.processing_time_ms)}</td>
           </tr>
-          <tr>
+          <tr :if={@snapshot.file_size_bytes}>
             <th>Size</th>
             <td>{format_file_size(@snapshot.file_size_bytes)}</td>
+          </tr>
+          <tr :if={@external_url}>
+            <th>External URL</th>
+            <td><a rel="nofollow noopener" href={@external_url} target="_blank">{@external_url}</a></td>
           </tr>
           <tr>
             <th>State</th>
@@ -187,7 +193,7 @@ defmodule LinkhutWeb.SnapshotHTML do
             <td data-label="Tool">{tool_label(snapshot)}</td>
             <td data-label="Response">{format_response_code(snapshot.response_code)}</td>
             <td data-label="Processing time">{format_processing_time(snapshot.processing_time_ms)}</td>
-            <td data-label="Size">{format_file_size(snapshot.file_size_bytes)}</td>
+            <td data-label="Size">{if snapshot.file_size_bytes, do: format_file_size(snapshot.file_size_bytes), else: "N/A"}</td>
             <td data-label="State">
               <span class={"state #{state_class(snapshot.state)}"}>{state_label(snapshot.state)}</span>
             </td>
@@ -206,7 +212,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   def step_timeline(assigns) do
     ~H"""
     <ol class="step-timeline">
-      <li :for={step <- @steps} class={"step-timeline-item #{step_class(step)}"}>
+      <li :for={step <- @steps} class={"step-timeline-item #{step_class(step)}"} data-group={step["prefix"] && step["group"]}>
         <time :if={step["at"]} class="step-time">{format_step_time(step["at"])}</time>
         <span :if={step["prefix"]} class="step-prefix">{step["prefix"]}</span>
         <span class="step-name">{step_display_name(step)}</span>
@@ -228,6 +234,31 @@ defmodule LinkhutWeb.SnapshotHTML do
         title={"Snapshot of #{@title}"}
       >
       </iframe>
+    </div>
+    """
+  end
+
+  attr :external_url, :string, required: true
+  attr :snapshot, :map, required: true
+
+  def content_external(assigns) do
+    ~H"""
+    <div class="snapshot-content-external">
+      <table class="details-table">
+        <tbody>
+          <tr :if={wayback_timestamp(@snapshot)}>
+            <th>Captured</th>
+            <td>{wayback_timestamp(@snapshot)}</td>
+          </tr>
+          <tr>
+            <th>URL</th>
+            <td><a rel="nofollow noopener" href={@external_url} target="_blank">{@external_url}</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <a href={@external_url} rel="nofollow noopener" target="_blank" class="button">
+        View on {crawler_label(@snapshot)}
+      </a>
     </div>
     """
   end
@@ -269,6 +300,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   def crawler_display_name("singlefile"), do: "Web page"
   def crawler_display_name("httpfetch"), do: "File"
   def crawler_display_name("wget"), do: "Wget"
+  def crawler_display_name("wayback"), do: "Wayback Machine"
   def crawler_display_name(type), do: String.capitalize(type)
 
   defp default_tool_name("singlefile"), do: "SingleFile"
@@ -449,6 +481,38 @@ defmodule LinkhutWeb.SnapshotHTML do
   """
   def content_type(%{archive_metadata: %{"content_type" => ct}}) when is_binary(ct), do: ct
   def content_type(_), do: nil
+
+  @doc """
+  Extracts and formats the Wayback Machine capture timestamp from archive_metadata.
+  Returns nil if not available.
+  """
+  def wayback_timestamp(%{archive_metadata: %{"timestamp" => ts}}) when is_binary(ts) do
+    case parse_wayback_timestamp(ts) do
+      {:ok, dt} -> format_datetime(dt)
+      :error -> ts
+    end
+  end
+
+  def wayback_timestamp(_), do: nil
+
+  defp parse_wayback_timestamp(ts) when byte_size(ts) >= 14 do
+    <<y::binary-4, m::binary-2, d::binary-2, h::binary-2, mi::binary-2, s::binary-2, _::binary>> =
+      ts
+
+    with {year, ""} <- Integer.parse(y),
+         {month, ""} <- Integer.parse(m),
+         {day, ""} <- Integer.parse(d),
+         {hour, ""} <- Integer.parse(h),
+         {minute, ""} <- Integer.parse(mi),
+         {second, ""} <- Integer.parse(s),
+         {:ok, ndt} <- NaiveDateTime.new(year, month, day, hour, minute, second) do
+      {:ok, DateTime.from_naive!(ndt, "Etc/UTC")}
+    else
+      _ -> :error
+    end
+  end
+
+  defp parse_wayback_timestamp(_), do: :error
 
   @doc """
   Returns the maximum retry_count across a list of snapshots.

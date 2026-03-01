@@ -13,7 +13,13 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   def meta, do: %{tool_name: "SingleFile", version: SingleFile.configured_version()}
 
   @impl true
-  def can_handle?(_url, %{content_type: "text/html"}) do
+  def network_access, do: :target_url
+
+  @impl true
+  def queue, do: :crawler
+
+  @impl true
+  def can_handle?(_url, %{content_type: "text/html", status: status}) when status < 400 do
     true
   end
 
@@ -39,15 +45,16 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
     case SingleFile.run(:default, args) do
       {output, code} when code == 0 ->
         {:ok,
-         %{
-           path: Path.join(staging_dir, "#{link_id}"),
-           id: link_id,
-           code: code,
-           cmd: "single-file",
-           args: args,
-           content_type: "text/html",
-           output: IO.iodata_to_binary(output)
-         }}
+         {:file,
+          %{
+            path: Path.join(staging_dir, "#{link_id}"),
+            id: link_id,
+            code: code,
+            cmd: "single-file",
+            args: args,
+            content_type: "text/html",
+            output: IO.iodata_to_binary(output)
+          }}}
 
       {error_msg, code} ->
         File.rm_rf(staging_dir)

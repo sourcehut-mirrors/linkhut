@@ -21,19 +21,34 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
   describe "can_handle?/2" do
     test "returns true for application/pdf" do
       assert HttpFetch.can_handle?("https://example.com/doc.pdf", %{
-               content_type: "application/pdf"
+               content_type: "application/pdf",
+               status: 200
              })
     end
 
     test "returns true for text/plain" do
       assert HttpFetch.can_handle?("https://example.com/file.txt", %{
-               content_type: "text/plain"
+               content_type: "text/plain",
+               status: 200
              })
     end
 
     test "returns true for application/json" do
       assert HttpFetch.can_handle?("https://example.com/data.json", %{
-               content_type: "application/json"
+               content_type: "application/json",
+               status: 200
+             })
+    end
+
+    test "returns false for error status codes" do
+      refute HttpFetch.can_handle?("https://example.com/doc.pdf", %{
+               content_type: "application/pdf",
+               status: 404
+             })
+
+      refute HttpFetch.can_handle?("https://example.com/doc.pdf", %{
+               content_type: "application/pdf",
+               status: 500
              })
     end
 
@@ -58,21 +73,24 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
     test "returns true when content_length is within limit" do
       assert HttpFetch.can_handle?("https://example.com/doc.pdf", %{
                content_type: "application/pdf",
-               content_length: 1_000_000
+               content_length: 1_000_000,
+               status: 200
              })
     end
 
     test "returns false when content_length exceeds max_bytes" do
       refute HttpFetch.can_handle?("https://example.com/doc.pdf", %{
                content_type: "application/pdf",
-               content_length: 100_000_000
+               content_length: 100_000_000,
+               status: 200
              })
     end
 
     test "returns true when content_length is nil (unknown size)" do
       assert HttpFetch.can_handle?("https://example.com/doc.pdf", %{
                content_type: "application/pdf",
-               content_length: nil
+               content_length: nil,
+               status: 200
              })
     end
   end
@@ -152,7 +170,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
 
       context = build_context("https://example.com/doc.pdf", "application/pdf")
 
-      assert {:ok, result} = HttpFetch.fetch(context)
+      assert {:ok, {:file, result}} = HttpFetch.fetch(context)
       assert result[:content_type] == "application/pdf"
       assert result[:response_code] == 200
       assert File.exists?(result[:path])
@@ -172,7 +190,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
 
       context = build_context("https://example.com/data.json", "application/json")
 
-      assert {:ok, result} = HttpFetch.fetch(context)
+      assert {:ok, {:file, result}} = HttpFetch.fetch(context)
       assert result[:content_type] == "application/json"
 
       File.rm_rf(Path.dirname(result[:path]))
@@ -187,7 +205,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
 
       context = build_context("https://example.com/file.txt", "text/plain")
 
-      assert {:ok, result} = HttpFetch.fetch(context)
+      assert {:ok, {:file, result}} = HttpFetch.fetch(context)
       assert result[:content_type] == "text/plain"
 
       content = File.read!(result[:path])
@@ -243,7 +261,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
 
       context = build_context("https://example.com/doc.pdf", "application/pdf")
 
-      assert {:ok, result} = HttpFetch.fetch(context)
+      assert {:ok, {:file, result}} = HttpFetch.fetch(context)
       assert File.exists?(result[:path])
       staging_dir = Path.dirname(result[:path])
       assert File.exists?(staging_dir)

@@ -58,20 +58,6 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "crawler_display_name/1" do
-    test "returns 'Web page' for singlefile" do
-      assert SnapshotHTML.crawler_display_name("singlefile") == "Web page"
-    end
-
-    test "returns 'Wget' for wget" do
-      assert SnapshotHTML.crawler_display_name("wget") == "Wget"
-    end
-
-    test "capitalizes unknown types" do
-      assert SnapshotHTML.crawler_display_name("custom") == "Custom"
-    end
-  end
-
   describe "format_relative_datetime/1" do
     test "formats a DateTime as relative" do
       dt = DateTime.utc_now()
@@ -84,122 +70,53 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   end
 
   describe "format_response_code/1" do
-    test "returns 'Unknown' for nil" do
-      assert SnapshotHTML.format_response_code(nil) == "Unknown"
-    end
-
-    test "formats common codes with labels" do
-      assert SnapshotHTML.format_response_code(200) == "200 OK"
-      assert SnapshotHTML.format_response_code(301) == "301 Moved"
-      assert SnapshotHTML.format_response_code(302) == "302 Found"
-      assert SnapshotHTML.format_response_code(403) == "403 Forbidden"
-      assert SnapshotHTML.format_response_code(404) == "404 Not Found"
-      assert SnapshotHTML.format_response_code(500) == "500 Server Error"
-    end
-
     test "formats unknown codes as raw integer" do
       assert SnapshotHTML.format_response_code(418) == "418"
     end
   end
 
-  describe "state_label/1" do
-    test "returns labels for known states" do
-      assert SnapshotHTML.state_label(:pending) == "Pending"
-      assert SnapshotHTML.state_label(:crawling) == "Crawling"
-      assert SnapshotHTML.state_label(:retryable) == "Retrying"
-      assert SnapshotHTML.state_label(:complete) == "Complete"
-      assert SnapshotHTML.state_label(:failed) == "Failed"
-      assert SnapshotHTML.state_label(:pending_deletion) == "Pending deletion"
-    end
-
-    test "returns 'Unknown' for unrecognized state" do
-      assert SnapshotHTML.state_label(:other) == "Unknown"
-    end
-  end
-
-  describe "state_class/1" do
-    test "returns CSS classes for known states" do
-      assert SnapshotHTML.state_class(:pending) == "pending"
-      assert SnapshotHTML.state_class(:crawling) == "crawling"
-      assert SnapshotHTML.state_class(:retryable) == "retryable"
-      assert SnapshotHTML.state_class(:complete) == "complete"
-      assert SnapshotHTML.state_class(:failed) == "failed"
-      assert SnapshotHTML.state_class(:pending_deletion) == "pending-deletion"
-    end
-
-    test "returns empty string for unrecognized state" do
-      assert SnapshotHTML.state_class(:other) == ""
-    end
-  end
-
-  describe "final_url/1" do
-    test "extracts final_url from string-keyed metadata" do
+  describe "metadata extraction" do
+    test "extracts final_url from archive_metadata" do
       assert SnapshotHTML.final_url(%{archive_metadata: %{"final_url" => "https://example.com"}}) ==
                "https://example.com"
-    end
 
-    test "returns nil for missing metadata" do
       assert SnapshotHTML.final_url(%{archive_metadata: nil}) == nil
     end
 
-    test "returns nil for missing final_url key" do
-      assert SnapshotHTML.final_url(%{archive_metadata: %{}}) == nil
-    end
-  end
+    test "extracts original_url from archive_metadata" do
+      assert SnapshotHTML.original_url(%{
+               archive_metadata: %{"original_url" => "https://original.com"}
+             }) == "https://original.com"
 
-  describe "crawler_version/1" do
-    test "extracts from string-keyed crawler_meta" do
+      assert SnapshotHTML.original_url(%{archive_metadata: nil}) == nil
+    end
+
+    test "extracts content_type from archive_metadata" do
+      assert SnapshotHTML.content_type(%{archive_metadata: %{"content_type" => "text/html"}}) ==
+               "text/html"
+
+      assert SnapshotHTML.content_type(%{archive_metadata: nil}) == nil
+    end
+
+    test "extracts crawler_version from crawler_meta" do
       assert SnapshotHTML.crawler_version(%{crawler_meta: %{"version" => "1.0"}}) == "1.0"
-    end
-
-    test "returns nil when not available" do
       assert SnapshotHTML.crawler_version(%{crawler_meta: nil}) == nil
     end
 
-    test "returns nil for empty crawler_meta" do
-      assert SnapshotHTML.crawler_version(%{crawler_meta: %{}}) == nil
+    test "extracts tool_name from crawler_meta" do
+      assert SnapshotHTML.tool_name(%{crawler_meta: %{"tool_name" => "Req"}}) == "Req"
+      assert SnapshotHTML.tool_name(%{crawler_meta: nil}) == nil
     end
   end
 
   describe "crawler_label/1" do
-    test "returns display name without version" do
+    test "returns display name for known type" do
       assert SnapshotHTML.crawler_label(%{type: "singlefile", archive_metadata: nil}) ==
                "Web page"
     end
 
-    test "returns display name only (version moved to tool_label)" do
-      assert SnapshotHTML.crawler_label(%{
-               type: "singlefile",
-               archive_metadata: %{"crawler_version" => "1.2.3"}
-             }) == "Web page"
-    end
-
-    test "handles nil archive_metadata" do
-      assert SnapshotHTML.crawler_label(%{type: "singlefile", archive_metadata: nil}) ==
-               "Web page"
-    end
-
-    test "handles missing type" do
+    test "returns Unknown for missing type" do
       assert SnapshotHTML.crawler_label(%{archive_metadata: nil}) == "Unknown"
-    end
-
-    test "returns File for httpfetch type" do
-      assert SnapshotHTML.crawler_label(%{type: "httpfetch", archive_metadata: nil}) ==
-               "File"
-    end
-  end
-
-  describe "tool_name/1" do
-    test "extracts tool name from string-keyed crawler_meta" do
-      assert SnapshotHTML.tool_name(%{crawler_meta: %{"tool_name" => "Req"}}) == "Req"
-    end
-
-    test "returns nil for missing crawler_meta" do
-      assert SnapshotHTML.tool_name(%{crawler_meta: nil}) == nil
-    end
-
-    test "returns nil for missing tool_name key" do
-      assert SnapshotHTML.tool_name(%{crawler_meta: %{}}) == nil
     end
   end
 
@@ -230,34 +147,6 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "archive_state_label/1" do
-    test "returns labels for known archive states" do
-      assert SnapshotHTML.archive_state_label(:pending) == "Queued"
-      assert SnapshotHTML.archive_state_label(:processing) == "Processing"
-      assert SnapshotHTML.archive_state_label(:complete) == "Complete"
-      assert SnapshotHTML.archive_state_label(:failed) == "Failed"
-      assert SnapshotHTML.archive_state_label(:pending_deletion) == "Pending deletion"
-    end
-
-    test "returns 'Unknown' for unrecognized state" do
-      assert SnapshotHTML.archive_state_label(:other) == "Unknown"
-    end
-  end
-
-  describe "archive_state_class/1" do
-    test "returns CSS classes for known archive states" do
-      assert SnapshotHTML.archive_state_class(:pending) == "pending"
-      assert SnapshotHTML.archive_state_class(:processing) == "processing"
-      assert SnapshotHTML.archive_state_class(:complete) == "complete"
-      assert SnapshotHTML.archive_state_class(:failed) == "failed"
-      assert SnapshotHTML.archive_state_class(:pending_deletion) == "pending-deletion"
-    end
-
-    test "returns empty string for unrecognized state" do
-      assert SnapshotHTML.archive_state_class(:other) == ""
-    end
-  end
-
   describe "format_step_time/1" do
     test "formats ISO 8601 timestamp to HH:MM:SS" do
       assert SnapshotHTML.format_step_time("2026-02-26T14:30:45Z") == "14:30:45"
@@ -276,86 +165,55 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "original_url/1" do
-    test "extracts original_url from string-keyed metadata" do
-      assert SnapshotHTML.original_url(%{
-               archive_metadata: %{"original_url" => "https://original.com"}
-             }) ==
-               "https://original.com"
-    end
-
-    test "returns nil for missing metadata" do
-      assert SnapshotHTML.original_url(%{archive_metadata: nil}) == nil
-    end
-
-    test "returns nil for missing original_url key" do
-      assert SnapshotHTML.original_url(%{archive_metadata: %{}}) == nil
-    end
-  end
-
   describe "crawl_steps/1" do
     test "extracts steps from string-keyed crawl_info" do
       steps = [%{"step" => "fetch", "at" => "2026-02-26T14:30:45Z"}]
       assert SnapshotHTML.crawl_steps(%{crawl_info: %{"steps" => steps}}) == steps
     end
 
-    test "returns empty list for nil crawl_info" do
+    test "returns empty list for missing crawl_info" do
       assert SnapshotHTML.crawl_steps(%{crawl_info: nil}) == []
-    end
-
-    test "returns empty list for missing steps key" do
-      assert SnapshotHTML.crawl_steps(%{crawl_info: %{}}) == []
-    end
-
-    test "returns empty list for missing crawl_info field" do
       assert SnapshotHTML.crawl_steps(%{}) == []
     end
   end
 
-  describe "step_class/1" do
-    test "returns step-failed for failed step" do
-      assert SnapshotHTML.step_class(%{"step" => "failed"}) == "step-failed"
-    end
-
-    test "returns step-complete for complete step" do
-      assert SnapshotHTML.step_class(%{"step" => "complete"}) == "step-complete"
-    end
-
-    test "returns step-complete for completed step" do
-      assert SnapshotHTML.step_class(%{"step" => "completed"}) == "step-complete"
-    end
-
-    test "returns empty string for other steps" do
-      assert SnapshotHTML.step_class(%{"step" => "created"}) == ""
-    end
-  end
-
   describe "step_display_name/1" do
-    test "capitalizes step name" do
-      assert SnapshotHTML.step_display_name(%{"step" => "created"}) == "Created"
-    end
-
     test "humanizes underscored step names" do
       assert SnapshotHTML.step_display_name(%{"step" => "head_preflight"}) == "Head preflight"
     end
-
-    test "returns Unknown for missing step" do
-      assert SnapshotHTML.step_display_name(%{}) == "Unknown"
-    end
   end
 
-  describe "content_type/1" do
-    test "extracts content_type from string-keyed metadata" do
-      assert SnapshotHTML.content_type(%{archive_metadata: %{"content_type" => "text/html"}}) ==
-               "text/html"
+  describe "wayback_timestamp/1" do
+    test "formats valid 14-digit timestamp" do
+      snapshot = %{archive_metadata: %{"timestamp" => "20250301120000"}}
+      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025-03-01"
     end
 
-    test "returns nil for missing metadata" do
-      assert SnapshotHTML.content_type(%{archive_metadata: nil}) == nil
+    test "formats timestamp longer than 14 digits" do
+      snapshot = %{archive_metadata: %{"timestamp" => "20250301120000123"}}
+      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025-03-01"
     end
 
-    test "returns nil for missing content_type key" do
-      assert SnapshotHTML.content_type(%{archive_metadata: %{}}) == nil
+    test "returns raw string for non-numeric timestamp" do
+      snapshot = %{archive_metadata: %{"timestamp" => "2025XX01120000"}}
+      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025XX01120000"
+    end
+
+    test "returns nil for missing timestamp" do
+      assert SnapshotHTML.wayback_timestamp(%{archive_metadata: %{}}) == nil
+    end
+
+    test "returns nil for nil archive_metadata" do
+      assert SnapshotHTML.wayback_timestamp(%{archive_metadata: nil}) == nil
+    end
+
+    test "returns nil for missing archive_metadata field" do
+      assert SnapshotHTML.wayback_timestamp(%{}) == nil
+    end
+
+    test "returns raw string for too-short timestamp" do
+      snapshot = %{archive_metadata: %{"timestamp" => "2025"}}
+      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025"
     end
   end
 

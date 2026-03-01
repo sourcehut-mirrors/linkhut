@@ -52,7 +52,7 @@ defmodule Linkhut.Factory do
       link_id: link_id,
       type: "singlefile",
       state: :complete,
-      storage_key: "local:/tmp/test/archive",
+      storage_key: Linkhut.Archiving.StorageKey.local("/tmp/test/archive"),
       file_size_bytes: 1024,
       processing_time_ms: 500,
       response_code: 200,

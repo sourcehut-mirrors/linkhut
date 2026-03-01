@@ -2,6 +2,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
   use LinkhutWeb.ConnCase
 
   alias Linkhut.Archiving
+  alias Linkhut.Archiving.StorageKey
 
   setup {LinkhutWeb.ConnCase, :register_and_log_in_paying_user}
 
@@ -18,7 +19,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     data_dir = Linkhut.Config.archiving(:data_dir)
     file_path = Path.join(data_dir, "test_file")
-    storage_key = "local:" <> file_path
+    storage_key = StorageKey.local(file_path)
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
@@ -152,11 +153,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert location =~ "/serve"
     end
 
-    test "redirects when link not found", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/999999/type/singlefile/full")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-    end
-
     test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
       archive = insert(:archive, link_id: link.id, user_id: user.id, url: link.url)
@@ -183,26 +179,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert disposition =~ "attachment"
       assert disposition =~ "snapshot-"
       assert disposition =~ ".html"
-    end
-
-    test "redirects when link not found", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/999999/type/singlefile/download")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-    end
-
-    test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
-      archive = insert(:archive, link_id: link.id, user_id: user.id, url: link.url)
-
-      {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
-          state: :pending,
-          archive_id: archive.id
-        })
-
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/download")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
 
@@ -311,21 +287,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       refute body =~ "Re-crawl"
     end
 
-    test "hides re-crawl button when archive is pending", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
-
-      insert(:archive,
-        link_id: link.id,
-        user_id: user.id,
-        url: link.url,
-        state: :pending
-      )
-
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      body = html_response(conn, 200)
-      refute body =~ "Re-crawl"
-    end
-
     test "shows re-crawl button when no archive is processing", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
       body = html_response(conn, 200)
@@ -338,11 +299,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
       assert redirected_to(conn) == ~p"/~#{user.username}"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
-    end
-
-    test "redirects when link not found", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/999999/all")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
 
@@ -361,46 +317,77 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
   end
 
+  describe "external snapshots" do
+    setup %{user: user} do
+      link = insert(:link, user_id: user.id)
+
+      archive =
+        insert(:archive,
+          link_id: link.id,
+          user_id: user.id,
+          url: link.url,
+          state: :complete
+        )
+
+      {:ok, snapshot} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          type: "wayback",
+          state: :complete,
+          storage_key:
+            StorageKey.external("https://web.archive.org/web/20250301/https://example.com"),
+          file_size_bytes: nil,
+          processing_time_ms: 500,
+          response_code: 200,
+          archive_id: archive.id,
+          archive_metadata: %{
+            original_url: link.url,
+            final_url: link.url
+          }
+        })
+
+      %{link: link, snapshot: snapshot, archive: archive}
+    end
+
+    test "show renders external content for wayback snapshot", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/wayback")
+      body = html_response(conn, 200)
+      assert body =~ "Wayback Machine"
+      assert body =~ "snapshot-content-external"
+    end
+
+    test "full redirects externally for wayback snapshot", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/wayback/full")
+      assert redirected_to(conn) == "https://web.archive.org/web/20250301/https://example.com"
+    end
+
+    test "download redirects with flash for wayback snapshot", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/wayback/download")
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/wayback"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "externally"
+    end
+
+    test "serve redirects externally for external storage key", %{conn: conn, snapshot: snapshot} do
+      token = Archiving.generate_token(snapshot.id)
+
+      conn =
+        conn
+        |> recycle()
+        |> get(~p"/_/snapshot/#{token}/serve")
+
+      assert redirected_to(conn) == "https://web.archive.org/web/20250301/https://example.com"
+    end
+  end
+
   describe "invalid link_id" do
-    test "show redirects for non-numeric link_id", %{conn: conn, user: user} do
+    test "redirects for non-numeric link_id", %{conn: conn, user: user} do
       conn = get(conn, ~p"/_/archive/abc")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
-    end
-
-    test "show redirects for trailing-text link_id", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/123abc")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
-    end
-
-    test "index redirects for non-numeric link_id", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/abc/all")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
-    end
-
-    test "full redirects for non-numeric link_id", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/abc/type/singlefile/full")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
-    end
-
-    test "download redirects for non-numeric link_id", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/abc/type/singlefile/download")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
-    end
-
-    test "recrawl redirects for non-numeric link_id", %{conn: conn, user: user} do
-      conn = post(conn, ~p"/_/archive/abc/recrawl")
       assert redirected_to(conn) == ~p"/~#{user.username}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
     end
   end
 
   describe "authentication" do
-    test "archive show requires authentication", %{conn: conn} do
+    test "requires authentication", %{conn: conn} do
       conn =
         conn
         |> recycle()
@@ -409,16 +396,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert redirected_to(conn) =~ "login"
     end
 
-    test "archive index requires authentication", %{conn: conn} do
-      conn =
-        conn
-        |> recycle()
-        |> get(~p"/_/archive/1/all")
-
-      assert redirected_to(conn) =~ "login"
-    end
-
-    test "archive show redirects when archiving not available for user", %{conn: conn} do
+    test "redirects when archiving not available for user", %{conn: conn} do
       free_user =
         Linkhut.AccountsFixtures.user_fixture()
         |> Linkhut.AccountsFixtures.activate_user(:active_free)

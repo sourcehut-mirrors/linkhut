@@ -66,7 +66,8 @@ config :linkhut, Linkhut.Mailer, adapter: Swoosh.Adapters.Local
 # Oban configuration
 config :linkhut, Oban,
   engine: Oban.Engines.Basic,
-  queues: [default: 10, mailer: 5, archiver: 5, crawler: 5],
+  # wayback: 1 — single concurrency rate-limits requests to archive.org (~1 req/s)
+  queues: [default: 10, mailer: 5, archiver: 5, crawler: 5, wayback: 1],
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
@@ -87,7 +88,11 @@ config :linkhut, Linkhut,
     # STRONGLY RECOMMENDED for self-hosters: without this, archived HTML is served
     # from the same origin as the main application, requiring a restrictive CSP
     # that may break archived page rendering. Set this to a separate subdomain.
-    crawlers: [Linkhut.Archiving.Crawler.SingleFile, Linkhut.Archiving.Crawler.HttpFetch],
+    crawlers: [
+      Linkhut.Archiving.Crawler.SingleFile,
+      Linkhut.Archiving.Crawler.HttpFetch,
+      Linkhut.Archiving.Crawler.WaybackMachine
+    ],
     direct_file: [
       allowed_types: ["application/pdf", "text/plain", "application/json"]
     ],

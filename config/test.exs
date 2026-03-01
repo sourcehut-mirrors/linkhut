@@ -34,7 +34,11 @@ config :linkhut, Linkhut,
     data_dir: Path.join(System.tmp_dir!(), "linkhut_test_archives"),
     serve_host: nil,
     storage: Linkhut.Archiving.Storage.Local,
-    crawlers: [Linkhut.Archiving.Crawler.SingleFile, Linkhut.Archiving.Crawler.HttpFetch]
+    crawlers: [
+      Linkhut.Archiving.Crawler.SingleFile,
+      Linkhut.Archiving.Crawler.HttpFetch,
+      Linkhut.Archiving.Crawler.WaybackMachine
+    ]
   ]
 
 # Oban configuration
@@ -44,4 +48,7 @@ config :linkhut, Oban, testing: :manual
 config :linkhut,
   req_options: [
     plug: {Req.Test, Linkhut.Links.Link}
+  ],
+  wayback_req_options: [
+    plug: {Req.Test, Linkhut.Archiving.Crawler.WaybackMachine}
   ]

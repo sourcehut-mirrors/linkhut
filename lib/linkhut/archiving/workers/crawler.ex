@@ -11,6 +11,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
   alias Linkhut.Archiving
   alias Linkhut.Archiving.Crawler.Context
+  alias Linkhut.Archiving.PreflightMeta
   alias Linkhut.Archiving.Steps
 
   require Logger
@@ -52,18 +53,26 @@ defmodule Linkhut.Archiving.Workers.Crawler do
           })
 
         preflight_meta = decode_preflight_meta(args)
+        link_inserted_at = decode_datetime(args["link_inserted_at"])
 
         context = %Context{
           user_id: user_id,
           link_id: link_id,
           url: url,
           snapshot_id: snapshot.id,
-          preflight_meta: preflight_meta
+          preflight_meta: preflight_meta,
+          link_inserted_at: link_inserted_at
         }
 
         case module.fetch(context) do
-          {:ok, result} ->
-            handle_crawl_success(snapshot, job, result, url, args, start_time)
+          {:ok, {:file, result}} ->
+            handle_file_result(snapshot, job, result, url, args, start_time)
+
+          {:ok, {:external, result}} ->
+            handle_external_result(snapshot, job, result, url, args, start_time)
+
+          {:error, error, :noretry} ->
+            update_failed_final(snapshot, job, error, start_time)
 
           {:error, error} ->
             update_failed(snapshot, job, error, start_time)
@@ -71,7 +80,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
   end
 
-  defp handle_crawl_success(snapshot, job, result, url, args, start_time) do
+  defp handle_file_result(snapshot, job, result, url, args, start_time) do
     processing_time = System.monotonic_time(:millisecond) - start_time
     file_size = get_file_size(result[:path])
     staging_dir = Path.dirname(result[:path])
@@ -122,6 +131,45 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
   end
 
+  defp handle_external_result(snapshot, _job, result, url, args, start_time) do
+    processing_time = System.monotonic_time(:millisecond) - start_time
+    storage_key = Linkhut.Archiving.StorageKey.external(result[:url])
+
+    metadata =
+      %{
+        original_url: url,
+        final_url: result[:final_url] || url
+      }
+      |> Map.merge(Map.drop(result, [:url, :response_code, :final_url]))
+
+    case Archiving.update_snapshot(snapshot, %{
+           state: :complete,
+           storage_key: storage_key,
+           processing_time_ms: processing_time,
+           file_size_bytes: nil,
+           response_code: result[:response_code],
+           crawl_info:
+             Steps.add_crawl_step(
+               snapshot.crawl_info,
+               "complete",
+               %{"msg" => "external_snapshot", "url" => result[:url]}
+             ),
+           archive_metadata: metadata
+         }) do
+      {:ok, _} ->
+        maybe_mark_old_archives(args)
+        Archiving.maybe_complete_archive(snapshot.archive_id)
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning(
+          "Failed to update snapshot #{snapshot.id} with external result: #{inspect(changeset.errors)}"
+        )
+
+        {:error, changeset}
+    end
+  end
+
   defp maybe_mark_old_archives(args) do
     if Map.get(args, "recrawl", false) do
       link_id = args["link_id"]
@@ -144,21 +192,58 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
   defp get_file_size(_), do: nil
 
-  @known_preflight_keys %{
-    "scheme" => :scheme,
-    "content_type" => :content_type,
-    "content_length" => :content_length,
-    "final_url" => :final_url,
-    "status" => :status
-  }
+  defp format_error(%{msg: msg}) when is_binary(msg), do: msg
+  defp format_error(msg) when is_binary(msg), do: msg
+  defp format_error(error), do: inspect(error)
 
-  defp decode_preflight_meta(%{"preflight_meta" => meta}) when is_map(meta) do
-    Map.new(meta, fn {k, v} ->
-      {Map.get(@known_preflight_keys, k, k), v}
-    end)
-  end
+  defp decode_preflight_meta(%{"preflight_meta" => meta}) when is_map(meta),
+    do: PreflightMeta.from_map(meta)
 
   defp decode_preflight_meta(_), do: nil
+
+  defp decode_datetime(iso8601) when is_binary(iso8601) do
+    case DateTime.from_iso8601(iso8601) do
+      {:ok, dt, _offset} -> dt
+      _ -> nil
+    end
+  end
+
+  defp decode_datetime(_), do: nil
+
+  # Non-retryable failure: mark snapshot as :failed immediately and return :ok
+  # to tell Oban not to retry. Used when the error is definitive (e.g. "no
+  # Wayback Machine snapshot available") and retrying would be pointless.
+  defp update_failed_final(snapshot, job, error, start_time) do
+    processing_time = System.monotonic_time(:millisecond) - start_time
+
+    failed_detail = %{
+      "msg" => "crawler_failed_final",
+      "error" => format_error(error),
+      "attempt" => job.attempt,
+      "max_attempts" => job.attempt
+    }
+
+    case Archiving.update_snapshot(snapshot, %{
+           state: :failed,
+           retry_count: job.attempt - 1,
+           failed_at: DateTime.utc_now(),
+           processing_time_ms: processing_time,
+           crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "failed", failed_detail),
+           archive_metadata: %{error: format_error(error)}
+         }) do
+      {:ok, _} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning(
+          "Failed to update snapshot #{snapshot.id} to failed state: #{inspect(changeset.errors)}"
+        )
+    end
+
+    maybe_mark_old_archives(job.args)
+    Archiving.maybe_complete_archive(snapshot.archive_id)
+    :ok
+  end
 
   # Non-final failures set the snapshot to :retryable (non-terminal), which
   # prevents maybe_complete_archive from marking the archive as :complete
@@ -175,7 +260,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
     failed_detail = %{
       "msg" => msg,
-      "error" => inspect(error),
+      "error" => format_error(error),
       "attempt" => job.attempt,
       "max_attempts" => job.max_attempts
     }
@@ -186,7 +271,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            failed_at: DateTime.utc_now(),
            processing_time_ms: processing_time,
            crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "failed", failed_detail),
-           archive_metadata: %{error: inspect(error)}
+           archive_metadata: %{error: format_error(error)}
          }) do
       {:ok, _} ->
         :ok
@@ -198,6 +283,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
 
     if final_attempt? do
+      maybe_mark_old_archives(job.args)
       Archiving.maybe_complete_archive(snapshot.archive_id)
     end
 

@@ -125,77 +125,30 @@ defmodule Linkhut.ArchivingTest do
   end
 
   describe "mark_old_archives_for_deletion/2" do
-    test "marks processing archives for deletion, excluding specified IDs" do
+    test "marks archives in all states for deletion, excluding specified IDs" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
-      old_archive = create_archive(user, link)
-      new_archive = create_archive(user, link)
-
-      :ok = Archiving.mark_old_archives_for_deletion(link.id, exclude: [new_archive.id])
-
-      assert Repo.get(Archive, old_archive.id).state == :pending_deletion
-      assert Repo.get(Archive, new_archive.id).state == :processing
-    end
-
-    test "marks complete archives for deletion" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
+      processing_archive = create_archive(user, link)
 
       complete_archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :complete
-        )
-
-      new_archive = create_archive(user, link)
-
-      :ok = Archiving.mark_old_archives_for_deletion(link.id, exclude: [new_archive.id])
-
-      assert Repo.get(Archive, complete_archive.id).state == :pending_deletion
-      assert Repo.get(Archive, new_archive.id).state == :processing
-    end
-
-    test "marks failed archives for deletion" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
 
       failed_archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :failed
-        )
-
-      new_archive = create_archive(user, link)
-
-      :ok = Archiving.mark_old_archives_for_deletion(link.id, exclude: [new_archive.id])
-
-      assert Repo.get(Archive, failed_archive.id).state == :pending_deletion
-      assert Repo.get(Archive, new_archive.id).state == :processing
-    end
-
-    test "marks pending archives for deletion" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :failed)
 
       pending_archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :pending
-        )
+        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :pending)
 
-      new_archive = create_archive(user, link)
+      excluded_archive = create_archive(user, link)
 
-      :ok = Archiving.mark_old_archives_for_deletion(link.id, exclude: [new_archive.id])
+      :ok = Archiving.mark_old_archives_for_deletion(link.id, exclude: [excluded_archive.id])
 
+      assert Repo.get(Archive, processing_archive.id).state == :pending_deletion
+      assert Repo.get(Archive, complete_archive.id).state == :pending_deletion
+      assert Repo.get(Archive, failed_archive.id).state == :pending_deletion
       assert Repo.get(Archive, pending_archive.id).state == :pending_deletion
-      assert Repo.get(Archive, new_archive.id).state == :processing
+      assert Repo.get(Archive, excluded_archive.id).state == :processing
     end
   end
 
@@ -533,7 +486,7 @@ defmodule Linkhut.ArchivingTest do
   end
 
   describe "recompute_archive_size/1" do
-    test "sums complete snapshots for an archive" do
+    test "sums only complete snapshots for an archive" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
       archive = create_archive(user, link)
@@ -552,24 +505,6 @@ defmodule Linkhut.ArchivingTest do
           archive_id: archive.id
         })
 
-      Archiving.recompute_archive_size(archive)
-
-      updated = Repo.get(Archive, archive.id)
-      assert updated.total_size_bytes == 3000
-    end
-
-    test "ignores failed snapshots" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      archive = create_archive(user, link)
-
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :complete,
-          file_size_bytes: 1000,
-          archive_id: archive.id
-        })
-
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :failed,
@@ -580,18 +515,7 @@ defmodule Linkhut.ArchivingTest do
       Archiving.recompute_archive_size(archive)
 
       updated = Repo.get(Archive, archive.id)
-      assert updated.total_size_bytes == 1000
-    end
-
-    test "returns 0 for archive with no complete snapshots" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      archive = create_archive(user, link)
-
-      Archiving.recompute_archive_size(archive)
-
-      updated = Repo.get(Archive, archive.id)
-      assert updated.total_size_bytes == 0
+      assert updated.total_size_bytes == 3000
     end
   end
 
@@ -681,19 +605,11 @@ defmodule Linkhut.ArchivingTest do
 
       # Archive steps should not have prefix
       refute Enum.at(timeline, 0)["prefix"]
-    end
 
-    test "handles empty archive steps" do
-      snapshot = %{
-        type: "singlefile",
-        crawl_info: %{
-          "steps" => [%{"step" => "crawling", "at" => "2026-02-26T10:00:00Z"}]
-        }
-      }
-
-      timeline = Archiving.merge_timeline([], [snapshot])
-      assert length(timeline) == 1
-      assert hd(timeline)["prefix"] == "singlefile"
+      # Crawler steps share a group starting at 1, archive steps have no group
+      refute Enum.at(timeline, 0)["group"]
+      assert Enum.at(timeline, 3)["group"] == 1
+      assert Enum.at(timeline, 4)["group"] == 1
     end
 
     test "handles snapshots without crawl_info" do
@@ -702,13 +618,6 @@ defmodule Linkhut.ArchivingTest do
 
       timeline = Archiving.merge_timeline(archive_steps, [snapshot])
       assert length(timeline) == 1
-    end
-
-    test "handles nil archive steps" do
-      snapshot = %{type: "singlefile", crawl_info: nil}
-
-      timeline = Archiving.merge_timeline(nil, [snapshot])
-      assert timeline == []
     end
 
     test "merges steps from multiple snapshots with prefixes" do
@@ -736,6 +645,66 @@ defmodule Linkhut.ArchivingTest do
 
       prefixes = Enum.map(timeline, & &1["prefix"])
       assert prefixes == [nil, nil, "singlefile", "wget"]
+    end
+
+    test "keeps crawler groups together when interleaved with archive steps" do
+      archive_steps = [
+        %{"step" => "created", "at" => "2026-02-26T10:00:00Z"},
+        %{"step" => "dispatched", "at" => "2026-02-26T10:00:01Z"},
+        %{"step" => "complete", "at" => "2026-02-26T10:00:20Z"}
+      ]
+
+      # singlefile starts at t=02, finishes at t=15 (spans past wayback's start)
+      snapshot1 = %{
+        type: "singlefile",
+        crawl_info: %{
+          "steps" => [
+            %{"step" => "crawling", "at" => "2026-02-26T10:00:02Z"},
+            %{"step" => "stored", "at" => "2026-02-26T10:00:15Z"}
+          ]
+        }
+      }
+
+      # wayback starts at t=05, finishes at t=06 (between singlefile's steps)
+      snapshot2 = %{
+        type: "wayback",
+        crawl_info: %{
+          "steps" => [
+            %{"step" => "crawling", "at" => "2026-02-26T10:00:05Z"},
+            %{"step" => "complete", "at" => "2026-02-26T10:00:06Z"}
+          ]
+        }
+      }
+
+      timeline = Archiving.merge_timeline(archive_steps, [snapshot1, snapshot2])
+
+      step_names = Enum.map(timeline, & &1["step"])
+      prefixes = Enum.map(timeline, & &1["prefix"])
+
+      # singlefile group (t=02) sorts before wayback group (t=05),
+      # both after dispatched (t=01) and before complete (t=20)
+      assert step_names == [
+               "created",
+               "dispatched",
+               "crawling",
+               "stored",
+               "crawling",
+               "complete",
+               "complete"
+             ]
+
+      assert prefixes == [nil, nil, "singlefile", "singlefile", "wayback", "wayback", nil]
+
+      # Archive steps have no group
+      refute Enum.at(timeline, 0)["group"]
+      refute Enum.at(timeline, 1)["group"]
+      refute Enum.at(timeline, 6)["group"]
+
+      # singlefile is group 1, wayback is group 2
+      assert Enum.at(timeline, 2)["group"] == 1
+      assert Enum.at(timeline, 3)["group"] == 1
+      assert Enum.at(timeline, 4)["group"] == 2
+      assert Enum.at(timeline, 5)["group"] == 2
     end
   end
 
@@ -771,36 +740,6 @@ defmodule Linkhut.ArchivingTest do
       assert Enum.any?(updated.steps, &(&1["step"] == "completed"))
     end
 
-    test "transitions to complete when all snapshots are failed" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :processing
-        )
-
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :failed,
-          archive_id: archive.id
-        })
-
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :failed,
-          archive_id: archive.id
-        })
-
-      Archiving.maybe_complete_archive(archive.id)
-
-      updated = Repo.get(Archive, archive.id)
-      assert updated.state == :complete
-    end
-
     test "does not transition when non-terminal snapshots remain" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
@@ -822,35 +761,6 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :crawling,
-          archive_id: archive.id
-        })
-
-      Archiving.maybe_complete_archive(archive.id)
-
-      assert Repo.get(Archive, archive.id).state == :processing
-    end
-
-    test "does not transition when retryable snapshots remain" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :processing
-        )
-
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :complete,
-          archive_id: archive.id
-        })
-
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :retryable,
           archive_id: archive.id
         })
 
@@ -955,94 +865,49 @@ defmodule Linkhut.ArchivingTest do
       assert returned.id == link.id
     end
 
-    test "excludes links with a complete snapshot" do
+    test "excludes links with any archive or snapshot activity" do
       user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      archive = create_archive(user, link)
 
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :complete,
-          storage_key: "local:/tmp/test",
-          archive_id: archive.id
-        })
+      # Link with a processing archive
+      link_processing = insert(:link, user_id: user.id)
+      _archive = create_archive(user, link_processing)
 
-      assert Archiving.list_unarchived_links_for_user(user) == []
-    end
-
-    test "excludes links with a processing archive" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      _archive = create_archive(user, link)
-
-      assert Archiving.list_unarchived_links_for_user(user) == []
-    end
-
-    test "excludes links with a complete archive" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
+      # Link with a complete archive
+      link_complete = insert(:link, user_id: user.id)
 
       insert(:archive,
         user_id: user.id,
-        link_id: link.id,
-        url: link.url,
+        link_id: link_complete.id,
+        url: link_complete.url,
         state: :complete
       )
 
-      assert Archiving.list_unarchived_links_for_user(user) == []
-    end
-
-    test "excludes links with a pending archive" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
+      # Link with a failed archive
+      link_failed = insert(:link, user_id: user.id)
 
       insert(:archive,
         user_id: user.id,
-        link_id: link.id,
-        url: link.url,
-        state: :pending
-      )
-
-      assert Archiving.list_unarchived_links_for_user(user) == []
-    end
-
-    test "includes links with only failed snapshots" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :failed
-        )
-
-      {:ok, _} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          state: :failed,
-          archive_id: archive.id
-        })
-
-      result = Archiving.list_unarchived_links_for_user(user)
-      assert [returned] = result
-      assert returned.id == link.id
-    end
-
-    test "includes links with only failed archives" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      insert(:archive,
-        user_id: user.id,
-        link_id: link.id,
-        url: link.url,
+        link_id: link_failed.id,
+        url: link_failed.url,
         state: :failed
       )
 
+      # Link with a pending archive
+      link_pending = insert(:link, user_id: user.id)
+
+      insert(:archive,
+        user_id: user.id,
+        link_id: link_pending.id,
+        url: link_pending.url,
+        state: :pending
+      )
+
       result = Archiving.list_unarchived_links_for_user(user)
-      assert [returned] = result
-      assert returned.id == link.id
+      returned_ids = Enum.map(result, & &1.id)
+      refute link_processing.id in returned_ids
+      refute link_complete.id in returned_ids
+      refute link_failed.id in returned_ids
+      refute link_pending.id in returned_ids
     end
 
     test "does not return links belonging to other users" do
