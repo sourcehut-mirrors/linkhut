@@ -41,7 +41,7 @@ defmodule LinkhutWeb.LinkHTML do
     """
   end
 
-  def is_search_result?(%Plug.Conn{query_params: params} = _conn) do
+  def search_result?(%Plug.Conn{query_params: params} = _conn) do
     case params do
       %{"query" => query} when is_binary(query) and query != "" -> true
       _ -> false
@@ -51,7 +51,7 @@ defmodule LinkhutWeb.LinkHTML do
   def sort_option(%Plug.Conn{query_params: params} = conn) do
     case params do
       %{"sort" => sort_option} -> sort_option
-      _ -> if is_search_result?(conn), do: "relevance", else: "recency"
+      _ -> if search_result?(conn), do: "relevance", else: "recency"
     end
   end
 

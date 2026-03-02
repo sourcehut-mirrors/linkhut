@@ -298,12 +298,6 @@ defmodule Linkhut.LinksTest do
       links = Links.all(user, from: from)
       assert length(links) == 1
     end
-
-    test "all/1 with search query returns matching links", %{user: user} do
-      links = Links.all(user, query: "Example 1")
-      assert length(links) == 1
-      assert hd(links).title == "Example 1"
-    end
   end
 
   describe "recent/2 with account age filter" do

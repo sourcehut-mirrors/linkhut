@@ -143,6 +143,7 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, Utils.Tags.parse_options(params)),
       query: query,
+      parsed_query: nil,
       context: context,
       breadcrumb: Breadcrumb.from_context(context, title: :unread),
       scope: Utils.scope(conn)
@@ -150,35 +151,29 @@ defmodule LinkhutWeb.LinkController do
   end
 
   defp query_opts(%Plug.Conn{query_params: query_params} = conn) do
-    order =
-      case query_params do
-        %{"order" => "asc"} -> :asc
-        %{"order" => "desc"} -> :desc
-        _ -> nil
-      end
-
-    sort_by =
-      case query_params do
-        %{"sort" => "recency"} -> :recency
-        %{"sort" => "popularity"} -> :popularity
-        %{"sort" => "relevancy"} -> :relevancy
-        %{"query" => query} when is_binary(query) and query != "" -> :relevancy
-        _ -> nil
-      end
-
-    opts =
-      case {sort_by, order} do
-        {nil, nil} -> []
-        {nil, order} -> [order: order]
-        {sort_by, nil} -> [sort_by: sort_by]
-        {sort_by, order} -> [sort_by: sort_by, order: order]
-      end
-
-    case conn.assigns[:current_user] do
-      %{id: user_id} -> Keyword.put(opts, :current_user_id, user_id)
-      _ -> opts
-    end
+    []
+    |> maybe_put(:sort_by, parse_sort(query_params))
+    |> maybe_put(:order, parse_order(query_params))
+    |> maybe_put_current_user(conn)
   end
+
+  defp parse_order(%{"order" => "asc"}), do: :asc
+  defp parse_order(%{"order" => "desc"}), do: :desc
+  defp parse_order(_), do: nil
+
+  defp parse_sort(%{"sort" => "recency"}), do: :recency
+  defp parse_sort(%{"sort" => "popularity"}), do: :popularity
+  defp parse_sort(%{"sort" => "relevancy"}), do: :relevancy
+  defp parse_sort(%{"query" => query}) when is_binary(query) and query != "", do: :relevancy
+  defp parse_sort(_), do: nil
+
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp maybe_put_current_user(opts, %{assigns: %{current_user: %{id: user_id}}}),
+    do: Keyword.put(opts, :current_user_id, user_id)
+
+  defp maybe_put_current_user(opts, _conn), do: opts
 
   defp explore(conn, view, page, tag_options) do
     context =
@@ -198,6 +193,7 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, tag_options),
       query: "",
+      parsed_query: nil,
       context: context,
       breadcrumb: Breadcrumb.from_context(context, title: view),
       scope: Utils.scope(conn)
@@ -218,6 +214,7 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, tag_options),
       query: query,
+      parsed_query: nil,
       context: context,
       breadcrumb: Breadcrumb.from_context(context),
       scope: Utils.scope(conn)
@@ -238,6 +235,7 @@ defmodule LinkhutWeb.LinkController do
       links: realize_query(links_query, page),
       tags: Tags.for_query(links_query, tag_options),
       query: "",
+      parsed_query: nil,
       context: context,
       breadcrumb: Breadcrumb.from_context(context),
       scope: Utils.scope(conn)

@@ -5,7 +5,7 @@
       <div>
         {gettext("Sort by:")}
         <ul>
-          <%= if is_search_result?(@conn) do %>
+          <%= if search_result?(@conn) do %>
             <li>
               <a href={html_path(@scope, sort_by: "relevance")} class={if sort_option(@conn) == "relevance", do: "active"}>{gettext("relevance")}</a>
             </li>
@@ -42,5 +42,5 @@
     <% end %>
     {_pagination(Map.put(assigns, :page, Map.drop(@links, [:entries])))}
   </section>
-  {_side_pannel(assigns)}
+  {_side_panel(assigns)}
 </div>

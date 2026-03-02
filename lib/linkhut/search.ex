@@ -7,43 +7,45 @@ defmodule Linkhut.Search do
 
   alias Linkhut.Links
   alias Linkhut.Search.Context
+  alias Linkhut.Search.ParsedQuery
   alias Linkhut.Search.QueryParser
+  alias Linkhut.Search.Ranking
 
-  def search(context, query, params \\ [])
+  @doc """
+  Searches links within the given context.
 
-  def search(context, "", params) do
+  Parses the raw query string to extract operators and text, applies
+  context-based filtering (user, tags, visibility, URL), then applies
+  full-text search ranking when a text query is present.
+  """
+  @spec search(Context.t(), String.t(), keyword()) :: Ecto.Query.t()
+  def search(context, raw_query, params \\ [])
+
+  def search(context, raw_query, params) when is_binary(raw_query) do
+    case String.trim(raw_query) do
+      "" -> search_without_query(context, params)
+      trimmed -> search_with_query(context, trimmed, params)
+    end
+  end
+
+  defp search_without_query(context, params) do
+    parsed = %ParsedQuery{}
+
     links_for_context(context, params)
+    |> Ranking.apply_scoring(parsed)
     |> preload([_, _, u], user: u)
     |> Links.ordering(params)
   end
 
-  def search(context, query, params) do
-    {cleaned_query, filters} = QueryParser.parse(query)
+  defp search_with_query(context, raw_query, params) do
+    parsed = QueryParser.parse(raw_query)
+    updated_context = %Context{context | query_filters: parsed.filters}
 
-    # Update context with parsed query filters
-    updated_context = %{context | query_filters: filters}
-
-    if cleaned_query == "" do
-      # If only site filters were provided, just filter without text search
-      links_for_context(updated_context, params)
-      |> select_merge([_, _, _], %{score: fragment("1.0") |> selected_as(:score)})
-      |> preload([_, _, u], user: u)
-      |> Links.ordering(params)
-    else
-      # Perform text search with site filtering
-      links_for_context(updated_context, params)
-      |> select_merge([_, _, _], %{
-        score:
-          fragment("ts_rank(search_vector, websearch_to_tsquery(?))", ^cleaned_query)
-          |> selected_as(:score)
-      })
-      |> where(
-        [l, _, _],
-        fragment("? @@ websearch_to_tsquery(?)", l.search_vector, ^cleaned_query)
-      )
-      |> preload([_, _, u], user: u)
-      |> Links.ordering(params)
-    end
+    links_for_context(updated_context, params)
+    |> Ranking.apply_text_filter(parsed)
+    |> Ranking.apply_scoring(parsed)
+    |> preload([_, _, u], user: u)
+    |> Links.ordering(params)
   end
 
   defp links_for_context(
@@ -57,7 +59,6 @@ defmodule Linkhut.Search do
          params
        ) do
     Links.links(params)
-    |> join(:inner, [l, _], u in assoc(l, :user))
     |> from_user(from)
     |> tagged_with(tags)
     |> visible_as(visible_as)
@@ -66,18 +67,17 @@ defmodule Linkhut.Search do
     |> filtered_by_url_terms(query_filters.url_parts)
   end
 
-  defp from_user(query, user) when is_nil(user), do: query
+  defp from_user(query, nil), do: query
 
   defp from_user(query, user) do
-    query
-    |> where([_, _, u], u.id == ^user.id)
+    where(query, [_, _, u], u.id == ^user.id)
   end
 
-  defp tagged_with(query, tags) when is_nil(tags) or tags == [], do: query
+  defp tagged_with(query, []), do: query
 
   defp tagged_with(query, tags) do
-    query
-    |> where(
+    where(
+      query,
       [l, _, _],
       fragment(
         "array_lowercase(?) @> string_to_array(?, ',')::varchar[]",
@@ -87,7 +87,7 @@ defmodule Linkhut.Search do
     )
   end
 
-  defp visible_as(query, user) when is_nil(user) do
+  defp visible_as(query, nil) do
     query
     |> where([_, _, u], u.is_banned == false)
     |> where(is_private: false)
@@ -103,26 +103,31 @@ defmodule Linkhut.Search do
     |> where([l, _, u], fragment("NOT 'via:ifttt' = ANY(?)", l.tags) or u.username == ^user)
   end
 
-  defp matching(query, url) when is_nil(url), do: query
+  defp matching(query, nil), do: query
 
   defp matching(query, url) do
-    query
-    |> where(url: ^url)
+    where(query, url: ^url)
   end
 
-  defp filtered_by_hosts(query, hosts) when is_nil(hosts) or hosts == [], do: query
+  defp filtered_by_hosts(query, []), do: query
 
   defp filtered_by_hosts(query, hosts) do
-    query
-    |> where([l, _, _], fragment("?->>'host' = ANY(?)", l.metadata, ^hosts))
+    where(query, [l, _, _], fragment("?->>'host' = ANY(?)", l.metadata, ^hosts))
   end
 
-  defp filtered_by_url_terms(query, url_parts) when is_nil(url_parts) or url_parts == [],
-    do: query
+  defp filtered_by_url_terms(query, []), do: query
 
   defp filtered_by_url_terms(query, url_parts) do
     Enum.reduce(url_parts, query, fn term, acc_query ->
-      where(acc_query, [l, _, _], ilike(l.url, ^"%#{term}%"))
+      sanitized = sanitize_like_pattern(term)
+      where(acc_query, [l, _, _], ilike(l.url, ^"%#{sanitized}%"))
     end)
+  end
+
+  defp sanitize_like_pattern(term) do
+    term
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
   end
 end

@@ -1,44 +1,65 @@
 defmodule Linkhut.Search.QueryParser do
   @moduledoc """
-  Parser for search query modifiers like site: and inurl: terms.
+  Parser for search query strings.
+
+  Extracts structured operators (`site:`, `inurl:`) and produces a
+  `%ParsedQuery{}` that downstream modules consume. Also sanitizes
+  input (strips null bytes, caps length).
   """
 
+  alias Linkhut.Search.ParsedQuery
   alias Linkhut.Search.QueryFilters
 
-  @doc """
-  Parses a search query and extracts query filters.
+  @max_query_length 500
 
-  Returns a tuple {cleaned_query, query_filters} where:
-  - cleaned_query is the original query with filter terms removed
-  - query_filters is a QueryFilters struct containing extracted filters
+  @site_regex ~r/site:([^\s]+)/i
+  @inurl_regex ~r/inurl:([^\s]+)/i
+
+  @doc """
+  Parses a raw search query string into a `%ParsedQuery{}`.
+
+  Sanitizes input (strips null bytes, caps length), extracts `site:` and
+  `inurl:` operators, identifies positive and negated terms, and returns
+  the cleaned text suitable for `websearch_to_tsquery`.
 
   ## Examples
 
       iex> parse("hello world site:example.com")
-      {"hello world", %Linkhut.Search.QueryFilters{sites: ["example.com"]}}
+      %ParsedQuery{raw: "hello world site:example.com", text_query: "hello world",
+                   terms: ["hello", "world"],
+                   filters: %QueryFilters{sites: ["example.com"]}}
 
-      iex> parse("site:foo.com site:bar.com test")
-      {"test", %Linkhut.Search.QueryFilters{sites: ["foo.com", "bar.com"]}}
-
-      iex> parse("inurl:admin inurl:dashboard phoenix")
-      {"phoenix", %Linkhut.Search.QueryFilters{url_parts: ["admin", "dashboard"]}}
-
-      iex> parse("no filters here")
-      {"no filters here", %Linkhut.Search.QueryFilters{sites: [], url_parts: []}}
+      iex> parse("site:foo.com -excluded test")
+      %ParsedQuery{raw: "site:foo.com -excluded test", text_query: "-excluded test",
+                   terms: ["test"], negated_terms: ["excluded"],
+                   filters: %QueryFilters{sites: ["foo.com"]}}
   """
-  @spec parse(String.t()) :: {String.t(), QueryFilters.t()}
+  @spec parse(String.t()) :: ParsedQuery.t()
   def parse(query) when is_binary(query) do
-    {cleaned_query, sites} = parse_sites(query)
-    {cleaned_query, url_parts} = parse_inurl(cleaned_query)
-    filters = QueryFilters.new(sites: sites, url_parts: url_parts)
-    {cleaned_query, filters}
+    sanitized = sanitize(query)
+    {after_sites, sites} = extract_filter(sanitized, @site_regex)
+    {text_query, url_parts} = extract_filter(after_sites, @inurl_regex)
+    {terms, negated_terms} = extract_terms(text_query)
+
+    %ParsedQuery{
+      raw: query,
+      text_query: text_query,
+      terms: terms,
+      negated_terms: negated_terms,
+      filters: QueryFilters.new(sites: sites, url_parts: url_parts)
+    }
   end
 
-  defp parse_sites(query) when is_binary(query) do
-    site_regex = ~r/site:([^\s]+)/i
+  defp sanitize(query) do
+    query
+    |> String.replace(<<0>>, "")
+    |> String.slice(0, @max_query_length)
+    |> String.trim()
+  end
 
-    sites =
-      site_regex
+  defp extract_filter(query, regex) do
+    values =
+      regex
       |> Regex.scan(query, capture: :all_but_first)
       |> List.flatten()
       |> Enum.map(&String.downcase/1)
@@ -46,29 +67,30 @@ defmodule Linkhut.Search.QueryParser do
 
     cleaned_query =
       query
-      |> String.replace(site_regex, "")
+      |> String.replace(regex, "")
       |> String.replace(~r/\s+/, " ")
       |> String.trim()
 
-    {cleaned_query, sites}
+    {cleaned_query, values}
   end
 
-  defp parse_inurl(query) when is_binary(query) do
-    inurl_regex = ~r/inurl:([^\s]+)/i
+  defp extract_terms(text_query) do
+    tokens = Regex.scan(~r/-?"[^"]*"|\S+/, text_query) |> List.flatten()
 
-    url_parts =
-      inurl_regex
-      |> Regex.scan(query, capture: :all_but_first)
-      |> List.flatten()
-      |> Enum.map(&String.downcase/1)
-      |> Enum.uniq()
+    {negated, positive} =
+      Enum.split_with(tokens, &String.starts_with?(&1, "-"))
 
-    cleaned_query =
-      query
-      |> String.replace(inurl_regex, "")
-      |> String.replace(~r/\s+/, " ")
-      |> String.trim()
+    positive_terms =
+      positive
+      |> Enum.map(&String.replace(&1, ~r/^"|"$/, ""))
+      |> Enum.reject(&(&1 == ""))
 
-    {cleaned_query, url_parts}
+    negated_terms =
+      negated
+      |> Enum.map(&String.replace_leading(&1, "-", ""))
+      |> Enum.map(&String.replace(&1, ~r/^"|"$/, ""))
+      |> Enum.reject(&(&1 == ""))
+
+    {positive_terms, negated_terms}
   end
 end

@@ -7,15 +7,17 @@ defmodule Linkhut.Search.Context do
   alias Linkhut.Search.QueryFilters
 
   @type t() :: %__MODULE__{
-          from: Accounts.User.t(),
+          from: Accounts.User.t() | nil,
           tagged_with: [String.t()],
-          visible_as: String.t(),
-          url: String.t(),
+          visible_as: String.t() | nil,
+          url: String.t() | nil,
           query_filters: QueryFilters.t()
         }
 
   defstruct from: nil, tagged_with: [], visible_as: nil, url: nil, query_filters: %QueryFilters{}
 
-  def is_user?(%__MODULE__{from: from}) when is_nil(from), do: false
-  def is_user?(%__MODULE__{from: _}), do: true
+  @doc "Returns whether this context is scoped to a specific user."
+  @spec user?(t()) :: boolean()
+  def user?(%__MODULE__{from: nil}), do: false
+  def user?(%__MODULE__{from: _}), do: true
 end

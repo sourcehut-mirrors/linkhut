@@ -204,10 +204,6 @@ defmodule Linkhut.Links do
     dynamic([l], ^dynamic and l.inserted_at <= ^datetime)
   end
 
-  defp filter({:query, query}, dynamic) when is_binary(query) and query != "" do
-    dynamic([l], ^dynamic and fragment("? @@ websearch_to_tsquery(?)", l.search_vector, ^query))
-  end
-
   defp filter({:tags, tags}, dynamic) when not is_nil(tags) and tags != [] do
     dynamic(
       [l],
@@ -311,17 +307,6 @@ defmodule Linkhut.Links do
       },
       &select_field/2
     )
-  end
-
-  defp select_field({:query, query}, fields) when is_binary(query) and query != "" do
-    Map.merge(fields, %{
-      score:
-        dynamic(
-          [l],
-          fragment("ts_rank(search_vector, websearch_to_tsquery(?))", ^query)
-          |> selected_as(:score)
-        )
-    })
   end
 
   defp select_field({:current_user_id, user_id}, fields) do

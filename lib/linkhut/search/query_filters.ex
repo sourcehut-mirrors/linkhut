@@ -22,17 +22,13 @@ defmodule Linkhut.Search.QueryFilters do
   """
   @spec new(Keyword.t()) :: t()
   def new(opts \\ []) do
-    %__MODULE__{
-      sites: Keyword.get(opts, :sites, []),
-      url_parts: Keyword.get(opts, :url_parts, [])
-    }
+    struct(__MODULE__, opts)
   end
 
   @doc """
   Returns true if any filters are set.
   """
   @spec has_filters?(t()) :: boolean()
-  def has_filters?(%__MODULE__{sites: sites, url_parts: url_parts}) do
-    length(sites) > 0 or length(url_parts) > 0
-  end
+  def has_filters?(%__MODULE__{sites: [], url_parts: []}), do: false
+  def has_filters?(%__MODULE__{}), do: true
 end

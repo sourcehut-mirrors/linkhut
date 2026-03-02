@@ -1,5 +1,5 @@
 <aside>
-  <%= if Context.is_user?(@context) && @context.from.bio != nil do %>
+  <%= if Context.user?(@context) && @context.from.bio != nil do %>
     <section>
       <h5>{gettext("%{name}'s bio", name: @context.from.username)}</h5>
       {sanitize(Earmark.as_html!(@context.from.bio))}

@@ -1,155 +1,145 @@
 defmodule Linkhut.Search.QueryParserTest do
   use ExUnit.Case, async: true
-  alias Linkhut.Search.QueryParser
+
+  alias Linkhut.Search.ParsedQuery
   alias Linkhut.Search.QueryFilters
+  alias Linkhut.Search.QueryParser
 
-  describe "site filtering" do
-    test "extracts single site filter" do
-      {query, filters} = QueryParser.parse("hello world site:example.com")
-      assert query == "hello world"
-      assert filters.sites == ["example.com"]
+  for {operator, field} <- [{"site", :sites}, {"inurl", :url_parts}] do
+    @operator operator
+    @field field
+
+    describe "#{@operator}: filter extraction" do
+      test "extracts single filter" do
+        %ParsedQuery{text_query: text, filters: filters} =
+          QueryParser.parse("hello #{@operator}:example.com world")
+
+        assert text == "hello world"
+        assert Map.fetch!(filters, @field) == ["example.com"]
+      end
+
+      test "extracts multiple filters" do
+        %ParsedQuery{text_query: text, filters: filters} =
+          QueryParser.parse("#{@operator}:foo.com #{@operator}:bar.com search")
+
+        assert text == "search"
+        assert Enum.sort(Map.fetch!(filters, @field)) == ["bar.com", "foo.com"]
+      end
+
+      test "produces empty text when only filters present" do
+        %ParsedQuery{text_query: text, terms: terms} =
+          QueryParser.parse("#{@operator}:foo.com #{@operator}:bar.com")
+
+        assert text == ""
+        assert terms == []
+      end
+
+      test "deduplicates case-insensitively" do
+        %ParsedQuery{filters: filters} =
+          QueryParser.parse("#{@operator}:Foo.COM test #{@operator}:foo.com")
+
+        assert Map.fetch!(filters, @field) == ["foo.com"]
+      end
+
+      test "recognizes operator regardless of casing" do
+        upper = String.upcase(@operator)
+        mixed = String.capitalize(@operator)
+
+        %ParsedQuery{text_query: text, filters: filters} =
+          QueryParser.parse("#{upper}:a.com #{mixed}:b.com")
+
+        assert text == ""
+        assert Enum.sort(Map.fetch!(filters, @field)) == ["a.com", "b.com"]
+      end
     end
+  end
 
-    test "extracts multiple site filters" do
-      {query, filters} = QueryParser.parse("site:foo.com site:bar.com test search")
-      assert query == "test search"
-      assert Enum.sort(filters.sites) == ["bar.com", "foo.com"]
-    end
-
-    test "handles site filters at different positions" do
-      {query, filters} = QueryParser.parse("search site:example.com more terms site:test.org")
-      assert query == "search more terms"
-      assert Enum.sort(filters.sites) == ["example.com", "test.org"]
-    end
-
-    test "handles query with only site filters" do
-      {query, filters} = QueryParser.parse("site:example.com site:test.org")
-      assert query == ""
-      assert Enum.sort(filters.sites) == ["example.com", "test.org"]
-    end
-
-    test "returns empty sites list when no site filters present" do
-      {query, filters} = QueryParser.parse("regular search query")
-      assert query == "regular search query"
-      refute QueryFilters.has_filters?(filters)
-    end
-
-    test "handles empty query" do
-      {query, filters} = QueryParser.parse("")
-      assert query == ""
-      refute QueryFilters.has_filters?(filters)
-    end
-
-    test "normalizes whitespace in cleaned query" do
-      {query, filters} = QueryParser.parse("  hello   site:example.com   world  ")
-      assert query == "hello world"
-      assert filters.sites == ["example.com"]
-    end
-
-    test "converts site hosts to lowercase" do
-      {query, filters} = QueryParser.parse("site:EXAMPLE.COM site:Test.ORG")
-      assert query == ""
-      assert Enum.sort(filters.sites) == ["example.com", "test.org"]
-    end
-
-    test "deduplicates identical site filters" do
-      {query, filters} = QueryParser.parse("site:example.com test site:example.com")
-      assert query == "test"
-      assert filters.sites == ["example.com"]
-    end
-
-    test "deduplicates case-insensitive site filters" do
-      {query, filters} = QueryParser.parse("site:Example.COM test site:example.com")
-      assert query == "test"
-      assert filters.sites == ["example.com"]
-    end
-
+  describe "site-specific" do
     test "handles complex domains and subdomains" do
-      {query, filters} = QueryParser.parse("site:blog.example.co.uk site:api.test-site.com")
-      assert query == ""
+      %ParsedQuery{filters: filters} =
+        QueryParser.parse("site:blog.example.co.uk site:api.test-site.com")
+
       assert Enum.sort(filters.sites) == ["api.test-site.com", "blog.example.co.uk"]
     end
-
-    test "case insensitive site: prefix matching" do
-      {query, filters} = QueryParser.parse("SITE:example.com Site:test.org sITe:foo.bar")
-      assert query == ""
-      assert Enum.sort(filters.sites) == ["example.com", "foo.bar", "test.org"]
-    end
   end
 
-  describe "inurl filtering" do
-    test "extracts single inurl filter" do
-      {query, filters} = QueryParser.parse("hello world inurl:foobar")
-      assert query == "hello world"
-      assert filters.url_parts == ["foobar"]
-    end
+  describe "combined filters" do
+    test "handles both site and inurl filters together" do
+      %ParsedQuery{text_query: text, filters: filters} =
+        QueryParser.parse("phoenix site:github.com inurl:api")
 
-    test "extracts multiple inurl filters" do
-      {query, filters} = QueryParser.parse("inurl:foobar inurl:dashboard test search")
-      assert query == "test search"
-      assert Enum.sort(filters.url_parts) == ["dashboard", "foobar"]
-    end
-
-    test "handles inurl filters at different positions" do
-      {query, filters} = QueryParser.parse("search inurl:api more terms inurl:v1")
-      assert query == "search more terms"
-      assert Enum.sort(filters.url_parts) == ["api", "v1"]
-    end
-
-    test "handles query with only inurl filters" do
-      {query, filters} = QueryParser.parse("inurl:foobar inurl:login")
-      assert query == ""
-      assert Enum.sort(filters.url_parts) == ["foobar", "login"]
-    end
-
-    test "converts inurl terms to lowercase" do
-      {query, filters} = QueryParser.parse("inurl:FOOBAR inurl:DashBoard")
-      assert query == ""
-      assert Enum.sort(filters.url_parts) == ["dashboard", "foobar"]
-    end
-
-    test "deduplicates identical inurl filters" do
-      {query, filters} = QueryParser.parse("inurl:foobar test inurl:foobar")
-      assert query == "test"
-      assert filters.url_parts == ["foobar"]
-    end
-
-    test "deduplicates case-insensitive inurl filters" do
-      {query, filters} = QueryParser.parse("inurl:Foobar test inurl:foobar")
-      assert query == "test"
-      assert filters.url_parts == ["foobar"]
-    end
-
-    test "case insensitive inurl: prefix matching" do
-      {query, filters} = QueryParser.parse("INURL:foobar InUrl:dashboard iNuRl:api")
-      assert query == ""
-      assert Enum.sort(filters.url_parts) == ["api", "dashboard", "foobar"]
-    end
-  end
-
-  describe "combined filtering" do
-    test "handles both site and inurl filters" do
-      {query, filters} = QueryParser.parse("phoenix tutorial site:github.com inurl:foobar")
-      assert query == "phoenix tutorial"
+      assert text == "phoenix"
       assert filters.sites == ["github.com"]
-      assert filters.url_parts == ["foobar"]
-    end
-
-    test "processes both filter types from complex query" do
-      {query, filters} =
-        QueryParser.parse("site:example.com inurl:api inurl:v1 documentation site:test.org")
-
-      assert query == "documentation"
-      assert Enum.sort(filters.sites) == ["example.com", "test.org"]
-      assert Enum.sort(filters.url_parts) == ["api", "v1"]
-    end
-
-    test "query with only filters results in empty query string" do
-      {query, filters} = QueryParser.parse("site:example.com inurl:foobar inurl:dashboard")
-      assert query == ""
-      assert filters.sites == ["example.com"]
-      assert Enum.sort(filters.url_parts) == ["dashboard", "foobar"]
+      assert filters.url_parts == ["api"]
       assert QueryFilters.has_filters?(filters)
+    end
+  end
+
+  describe "term extraction" do
+    test "extracts simple terms" do
+      assert %ParsedQuery{terms: ["hello", "world"]} = QueryParser.parse("hello world")
+    end
+
+    test "extracts quoted phrases as single terms" do
+      assert %ParsedQuery{terms: ["exact phrase", "other"]} =
+               QueryParser.parse(~s("exact phrase" other))
+    end
+
+    test "separates negated terms" do
+      %ParsedQuery{terms: terms, negated_terms: negated} =
+        QueryParser.parse("-excluded included")
+
+      assert terms == ["included"]
+      assert negated == ["excluded"]
+    end
+
+    test "handles negated quoted phrases" do
+      %ParsedQuery{terms: terms, negated_terms: negated} =
+        QueryParser.parse(~s(-"exact phrase"))
+
+      assert terms == []
+      assert negated == ["exact phrase"]
+    end
+
+    test "excludes operators from terms" do
+      assert %ParsedQuery{terms: ["elixir", "phoenix"]} =
+               QueryParser.parse("site:example.com elixir inurl:api phoenix")
+    end
+
+    test "empty query produces empty terms" do
+      assert %ParsedQuery{terms: [], negated_terms: []} = QueryParser.parse("")
+    end
+  end
+
+  describe "input sanitization" do
+    test "strips null bytes" do
+      assert %ParsedQuery{text_query: "helloworld"} = QueryParser.parse("hello\0world")
+    end
+
+    test "truncates input to 500 characters" do
+      %ParsedQuery{text_query: text} = QueryParser.parse(String.duplicate("a", 600))
+      assert String.length(text) == 500
+    end
+
+    test "preserves raw field even when input is sanitized" do
+      input = "  hello\0world  "
+      assert %ParsedQuery{raw: ^input} = QueryParser.parse(input)
+    end
+  end
+
+  describe "edge cases" do
+    test "operator with no value is not extracted as filter" do
+      parsed = QueryParser.parse("site: hello")
+
+      refute QueryFilters.has_filters?(parsed.filters)
+      assert "hello" in parsed.terms
+    end
+
+    test "plain query has no filters" do
+      parsed = QueryParser.parse("just some words")
+
+      refute QueryFilters.has_filters?(parsed.filters)
+      assert parsed.terms == ["just", "some", "words"]
     end
   end
 end
