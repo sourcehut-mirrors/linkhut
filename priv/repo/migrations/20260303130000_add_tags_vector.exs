@@ -28,6 +28,10 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
     $$ LANGUAGE plpgsql;
     """
 
+    # Flush pending DDL so the new column/index/function are committed
+    # before the backfill queries reference them.
+    flush()
+
     # Backfill in batches — each batch is its own transaction so dead tuples
     # can be reclaimed between batches and we don't bloat the table.
     backfill_up()
@@ -46,6 +50,9 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
     END
     $$ LANGUAGE plpgsql;
     """
+
+    # Flush so the restored trigger function is committed before backfill.
+    flush()
 
     # Backfill search_vector with tags included again.
     backfill_down()
