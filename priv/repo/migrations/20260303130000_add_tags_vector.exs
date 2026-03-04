@@ -62,15 +62,21 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
     execute "ALTER TABLE links DROP COLUMN IF EXISTS tags_vector"
   end
 
+  @batch_size 10_000
+  @query_timeout 120_000
+
   defp backfill_up do
-    {:ok, %{rows: [[total]]}} = repo().query("SELECT count(*) FROM links WHERE tags_vector IS NULL")
+    {:ok, %{rows: [[total]]}} =
+      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NULL", [], timeout: @query_timeout)
 
     if total > 0 do
-      batches = ceil(total / 10_000)
+      batches = ceil(total / @batch_size)
 
       Enum.each(1..batches, fn _batch ->
         repo().query!(
-          "UPDATE links SET tags = tags WHERE id IN (SELECT id FROM links WHERE tags_vector IS NULL LIMIT 10000)"
+          "UPDATE links SET tags = tags WHERE id IN (SELECT id FROM links WHERE tags_vector IS NULL LIMIT $1)",
+          [@batch_size],
+          timeout: @query_timeout
         )
       end)
     end
@@ -78,14 +84,16 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
 
   defp backfill_down do
     {:ok, %{rows: [[total]]}} =
-      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NOT NULL")
+      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NOT NULL", [], timeout: @query_timeout)
 
     if total > 0 do
-      batches = ceil(total / 10_000)
+      batches = ceil(total / @batch_size)
 
       Enum.each(1..batches, fn _batch ->
         repo().query!(
-          "UPDATE links SET tags = tags, tags_vector = NULL WHERE id IN (SELECT id FROM links WHERE tags_vector IS NOT NULL LIMIT 10000)"
+          "UPDATE links SET tags = tags, tags_vector = NULL WHERE id IN (SELECT id FROM links WHERE tags_vector IS NOT NULL LIMIT $1)",
+          [@batch_size],
+          timeout: @query_timeout
         )
       end)
     end
