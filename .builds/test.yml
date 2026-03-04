@@ -40,5 +40,4 @@ tasks:
         export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
         cd linkhut
         MIX_ENV=test mix ecto.setup
-        MIX_ENV=test mix test
         MIX_ENV=test mix coveralls
