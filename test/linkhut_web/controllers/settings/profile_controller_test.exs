@@ -10,7 +10,7 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
     test "Responds with user info if the user is logged in", %{conn: conn, user: user} do
       response =
         conn
-        |> get(Routes.profile_path(conn, :show))
+        |> get(~p"/_/profile")
         |> html_response(200)
 
       assert response =~ user.username
@@ -23,7 +23,7 @@ defmodule LinkhutWeb.Settings.ProfileControllerTest do
 
       redirect_path =
         conn
-        |> get(Routes.profile_path(conn, :show))
+        |> get(~p"/_/profile")
         |> redirected_to(302)
 
       assert redirect_path == "/_/login"

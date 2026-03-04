@@ -1,6 +1,5 @@
 defmodule LinkhutWeb.Settings.AdminHTML do
   use LinkhutWeb, :html
-  use Phoenix.Component
 
   import LinkhutWeb.SettingsComponents
 

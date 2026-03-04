@@ -7,7 +7,7 @@ defmodule LinkhutWeb.Settings.ProfileController do
     user = conn.assigns[:current_user]
     changeset = Accounts.change_user(user)
 
-    render(conn, :profile,
+    render(conn, :show,
       user: user,
       changeset: changeset
     )
@@ -21,7 +21,7 @@ defmodule LinkhutWeb.Settings.ProfileController do
   def remove(conn, _) do
     user = conn.assigns[:current_user]
 
-    render(conn, :delete_account, changeset: Accounts.change_user(user))
+    render(conn, :delete, changeset: Accounts.change_user(user))
   end
 
   def delete(conn, %{"delete_form" => delete_form}) do
@@ -36,11 +36,11 @@ defmodule LinkhutWeb.Settings.ProfileController do
 
       {:error, changeset} ->
         conn
-        |> render(:delete_account, changeset: changeset)
+        |> render(:delete, changeset: changeset)
     end
   end
 
-  defp update(conn, user, params) when not is_nil(user) do
+  defp update(conn, %Accounts.User{} = user, params) do
     with {:ok, user} <- Accounts.update_profile(user, params),
          {:ok, user, current_email} <- Accounts.apply_email_change(user, params) do
       Accounts.deliver_update_email_instructions(
@@ -51,16 +51,16 @@ defmodule LinkhutWeb.Settings.ProfileController do
 
       conn
       |> put_flash(:info, "Profile updated")
-      |> redirect(to: Routes.profile_path(conn, :show))
+      |> redirect(to: ~p"/_/profile")
     else
       {:ok, _user} ->
         conn
         |> put_flash(:info, "Profile updated")
-        |> redirect(to: Routes.profile_path(conn, :show))
+        |> redirect(to: ~p"/_/profile")
 
       {:error, changeset} ->
         conn
-        |> render(:profile,
+        |> render(:show,
           user: user,
           changeset: changeset
         )

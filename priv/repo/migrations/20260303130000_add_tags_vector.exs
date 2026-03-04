@@ -67,7 +67,9 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
 
   defp backfill_up do
     {:ok, %{rows: [[total]]}} =
-      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NULL", [], timeout: @query_timeout)
+      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NULL", [],
+        timeout: @query_timeout
+      )
 
     if total > 0 do
       batches = ceil(total / @batch_size)
@@ -84,7 +86,9 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
 
   defp backfill_down do
     {:ok, %{rows: [[total]]}} =
-      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NOT NULL", [], timeout: @query_timeout)
+      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NOT NULL", [],
+        timeout: @query_timeout
+      )
 
     if total > 0 do
       batches = ceil(total / @batch_size)

@@ -5,14 +5,15 @@ defmodule LinkhutWeb.Settings.ExportController do
   Controller for exporting bookmarks
   """
   alias Linkhut.Dump
+  alias LinkhutWeb.Settings.ExportHTML
 
   def download(conn, _) do
     user = conn.assigns[:current_user]
     links = Dump.export(user)
 
-    bookmarks = Phoenix.View.render(LinkhutWeb.SettingsView, "bookmarks.netscape", links: links)
+    bookmarks = ExportHTML.bookmarks_netscape(links: links)
 
     conn
-    |> send_download({:binary, bookmarks}, filename: "bookmarks.html", content_type: "html")
+    |> send_download({:binary, bookmarks}, filename: "bookmarks.html", content_type: "text/html")
   end
 end

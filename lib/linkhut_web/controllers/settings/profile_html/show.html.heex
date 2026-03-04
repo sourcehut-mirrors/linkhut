@@ -1,0 +1,39 @@
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
+<div>
+  <section
+    :if={@current_user.type == :unconfirmed and Date.diff(Date.utc_today(), @current_user.inserted_at) >= 1}
+    class="settings warning"
+  >
+    <h4>{gettext("Email Verification")}</h4>
+    <p>
+      {gettext("You haven't yet verified your e-mail. Doing so is required in order to be able to reset your password.")}
+    </p>
+    <.form for={%{}} as={:confirm} action={~p"/_/confirm"}>
+      <.button type="submit">Send verification email</.button>
+    </.form>
+  </section>
+  <section class="settings">
+    <h4>Profile Information</h4>
+    <.form :let={f} for={@changeset} action={~p"/_/profile"}>
+      <fieldset>
+        <.input field={f[:username]} label="Username" disabled />
+        <.inputs_for :let={cf} field={f[:credential]}>
+          <.input field={cf[:email]} type="email" label="Email" />
+        </.inputs_for>
+        <div :if={@current_user.type != :unconfirmed} class="inline-info">
+          {gettext("Confirmed on:")}
+          <span>{Timex.format!(@changeset.data.credential.email_confirmed_at, "{YYYY}-{0M}-{0D}")}</span>
+        </div>
+        <.input field={f[:bio]} type="textarea" label="Bio" placeholder="Tell something about yourself" />
+      </fieldset>
+      <.button type="submit">Save</.button>
+    </.form>
+  </section>
+  <section class="settings">
+    <h4>Delete Account</h4>
+    <p>
+      {gettext("To close your account, permanently removing your bookmarks and all personal data, you may do so here.")}
+    </p>
+    <a class="button" href={~p"/_/profile/delete"}>{gettext("Delete")}</a>
+  </section>
+</div>

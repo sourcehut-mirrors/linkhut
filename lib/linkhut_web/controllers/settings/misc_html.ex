@@ -3,8 +3,6 @@ defmodule LinkhutWeb.Settings.MiscHTML do
 
   import LinkhutWeb.SettingsComponents
 
-  embed_templates "../templates/settings/*"
-
   def misc(assigns) do
     ~H"""
     <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
