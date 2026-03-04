@@ -1,14 +1,17 @@
 defmodule Linkhut.Repo.Migrations.AddTagsVector do
   use Ecto.Migration
 
+  # Disable the wrapping transaction so each execute/batch runs independently.
+  # This lets the backfill commit per-batch, avoiding massive dead-tuple bloat.
+  @disable_ddl_transaction true
+  @disable_migration_lock true
+
   def up do
     # Add tags_vector column
-    alter table(:links) do
-      add :tags_vector, :tsvector
-    end
+    execute "ALTER TABLE links ADD COLUMN IF NOT EXISTS tags_vector tsvector"
 
     # GIN index for tags_vector
-    execute "CREATE INDEX link_tags_search_index ON links USING GIN(tags_vector)"
+    execute "CREATE INDEX IF NOT EXISTS link_tags_search_index ON links USING GIN(tags_vector)"
 
     # Replace trigger function: search_vector gets title(A) + notes(B) only,
     # tags_vector gets tags via to_tsvector('simple', ...) with positions
@@ -25,22 +28,9 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
     $$ LANGUAGE plpgsql;
     """
 
-    # Backfill in batches to avoid locking the entire table in one transaction
-    execute """
-    DO $$
-    DECLARE
-      rows_updated INT;
-    BEGIN
-      LOOP
-        UPDATE links SET tags = tags
-        WHERE id IN (
-          SELECT id FROM links WHERE tags_vector IS NULL LIMIT 10000
-        );
-        GET DIAGNOSTICS rows_updated = ROW_COUNT;
-        EXIT WHEN rows_updated = 0;
-      END LOOP;
-    END $$;
-    """
+    # Backfill in batches — each batch is its own transaction so dead tuples
+    # can be reclaimed between batches and we don't bloat the table.
+    backfill_up()
   end
 
   def down do
@@ -58,29 +48,39 @@ defmodule Linkhut.Repo.Migrations.AddTagsVector do
     """
 
     # Backfill search_vector with tags included again.
-    # Use tags_vector IS NOT NULL as a progress marker — the restored trigger
-    # does not write tags_vector, so we NULL it explicitly per batch.
-    execute """
-    DO $$
-    DECLARE
-      rows_updated INT;
-    BEGIN
-      LOOP
-        UPDATE links SET tags = tags, tags_vector = NULL
-        WHERE id IN (
-          SELECT id FROM links WHERE tags_vector IS NOT NULL LIMIT 10000
-        );
-        GET DIAGNOSTICS rows_updated = ROW_COUNT;
-        EXIT WHEN rows_updated = 0;
-      END LOOP;
-    END $$;
-    """
+    backfill_down()
 
     # Drop index and column
-    execute "DROP INDEX link_tags_search_index"
+    execute "DROP INDEX IF EXISTS link_tags_search_index"
+    execute "ALTER TABLE links DROP COLUMN IF EXISTS tags_vector"
+  end
 
-    alter table(:links) do
-      remove :tags_vector
+  defp backfill_up do
+    {:ok, %{rows: [[total]]}} = repo().query("SELECT count(*) FROM links WHERE tags_vector IS NULL")
+
+    if total > 0 do
+      batches = ceil(total / 10_000)
+
+      Enum.each(1..batches, fn _batch ->
+        repo().query!(
+          "UPDATE links SET tags = tags WHERE id IN (SELECT id FROM links WHERE tags_vector IS NULL LIMIT 10000)"
+        )
+      end)
+    end
+  end
+
+  defp backfill_down do
+    {:ok, %{rows: [[total]]}} =
+      repo().query("SELECT count(*) FROM links WHERE tags_vector IS NOT NULL")
+
+    if total > 0 do
+      batches = ceil(total / 10_000)
+
+      Enum.each(1..batches, fn _batch ->
+        repo().query!(
+          "UPDATE links SET tags = tags, tags_vector = NULL WHERE id IN (SELECT id FROM links WHERE tags_vector IS NOT NULL LIMIT 10000)"
+        )
+      end)
     end
   end
 end
