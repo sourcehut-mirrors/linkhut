@@ -5,7 +5,7 @@ defmodule SingleFile.MixProject do
     [
       app: :single_file,
       version: "0.1.0",
-      elixir: "~> 1.18",
+      elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: [test: ["single_file.install --if-missing", "test"]]

@@ -37,7 +37,7 @@ defmodule Linkhut.Search do
     |> Links.ordering(params)
   end
 
-  defp search_with_query(context, raw_query, params) do
+  defp search_with_query(%Context{} = context, raw_query, params) do
     parsed = QueryParser.parse(raw_query)
     updated_context = %Context{context | query_filters: parsed.filters}
 

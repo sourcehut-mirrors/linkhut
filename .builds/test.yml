@@ -27,8 +27,8 @@ tasks:
         export PATH="${GOPATH:-$HOME/go/bin}:$PATH"
         export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
         asdf plugin add elixir
-        asdf install elixir 1.18
-        asdf set elixir 1.18
+        asdf install elixir 1.19
+        asdf set elixir 1.19
         cd linkhut
         mix local.hex --force
         mix local.rebar --force

@@ -15,7 +15,10 @@ config :linkhut, LinkhutWeb.Endpoint,
   url: [host: "localhost"],
   static_url: [path: "/_"],
   secret_key_base: "mlPw70YW1sAUSrz5sF/LPkteFQ7Q75zutsNjXVNNDOpTag5Opi0WjVGIESGmddDd",
-  render_errors: [view: LinkhutWeb.ErrorView, accepts: ~w(html json xml)],
+  render_errors: [
+    formats: [html: LinkhutWeb.ErrorView, json: LinkhutWeb.ErrorView, xml: LinkhutWeb.ErrorView],
+    layout: false
+  ],
   pubsub_server: Linkhut.PubSub,
   live_view: [signing_salt: "b58amlvXfHSJ+dhn5yTMgbiMwJubVUHf"]
 

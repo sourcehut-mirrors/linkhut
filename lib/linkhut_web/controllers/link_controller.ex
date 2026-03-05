@@ -200,7 +200,7 @@ defmodule LinkhutWeb.LinkController do
     )
   end
 
-  defp query(conn, context, query, page, tag_options) do
+  defp query(conn, %Context{} = context, query, page, tag_options) do
     context =
       case conn.assigns[:current_user] do
         nil -> context

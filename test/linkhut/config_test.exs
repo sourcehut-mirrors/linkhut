@@ -11,13 +11,13 @@ defmodule Linkhut.ConfigTest do
     assert Linkhut.Config.get([Linkhut, :ifttt]) ==
              Keyword.get(Application.get_env(:linkhut, Linkhut), :ifttt)
 
-    assert Linkhut.Config.get([Linkhut.Web.Endpoint, :render_errors, :view]) ==
+    assert Linkhut.Config.get([Linkhut.Web.Endpoint, :render_errors, :formats]) ==
              get_in(
                Application.get_env(
                  :linkhut,
                  Linkhut.Web.Endpoint
                ),
-               [:render_errors, :view]
+               [:render_errors, :formats]
              )
 
     assert Linkhut.Config.get([:qwerty, :uiop]) == nil
