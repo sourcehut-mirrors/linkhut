@@ -173,7 +173,6 @@ defmodule LinkhutWeb.Router do
 
     get "/register", OauthController, :new_application
     post "/register", OauthController, :create_application
-    get "/registered", OauthController, :show_application
     get "/application/:uid/settings", OauthController, :edit_application
     put "/application/:uid/settings", OauthController, :update_application
     post "/application/delete/:uid", OauthController, :delete_application

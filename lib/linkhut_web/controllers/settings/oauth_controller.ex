@@ -1,13 +1,11 @@
 defmodule LinkhutWeb.Settings.OauthController do
+  @moduledoc """
+  Controller for OAuth management
+  """
   use LinkhutWeb, :controller
 
   alias Linkhut.Oauth
   alias Linkhut.Oauth.Application
-
-  @moduledoc """
-  Controller for OAuth management
-  """
-  plug :put_view, LinkhutWeb.SettingsView
 
   @personal_access_token_scopes for(
                                   scope <- ~w(posts tags),
@@ -19,7 +17,7 @@ defmodule LinkhutWeb.Settings.OauthController do
   def show(conn, _) do
     user = conn.assigns[:current_user]
 
-    render(conn, "oauth/index.html",
+    render(conn, :index,
       personal_access_tokens: Oauth.get_tokens(user),
       authorized_applications: Oauth.get_authorized_applications_for(user),
       applications: Oauth.get_applications_for(user)
@@ -27,7 +25,7 @@ defmodule LinkhutWeb.Settings.OauthController do
   end
 
   def new_personal_token(conn, _) do
-    render(conn, "oauth/personal_token/new.html")
+    render(conn, :personal_token_new)
   end
 
   def create_personal_token(conn, %{"comment" => comment}) do
@@ -39,7 +37,7 @@ defmodule LinkhutWeb.Settings.OauthController do
         scopes: @personal_access_token_scopes
       })
 
-    render(conn, "oauth/personal_token/show.html", token: token.token)
+    render(conn, :personal_token_show, token: token.token)
   end
 
   def revoke_token(conn, %{"id" => token_id, "access_token" => %{"id" => id}})
@@ -52,7 +50,7 @@ defmodule LinkhutWeb.Settings.OauthController do
 
     conn
     |> put_flash(:info, "Revoked token: #{String.slice(token.token, 0, 8)}...")
-    |> redirect(to: Routes.oauth_path(conn, :show))
+    |> redirect(to: ~p"/_/oauth")
   end
 
   def revoke_token(conn, %{"id" => token_id}) do
@@ -60,14 +58,14 @@ defmodule LinkhutWeb.Settings.OauthController do
 
     token = Oauth.get_token!(user, token_id)
 
-    render(conn, "oauth/revoke.html",
+    render(conn, :revoke,
       token: token,
       changeset: Oauth.change_token(token)
     )
   end
 
   def new_application(conn, _) do
-    render(conn, "oauth/application/new.html",
+    render(conn, :application_new,
       changeset: Oauth.change_application(%Application{})
     )
   end
@@ -81,10 +79,14 @@ defmodule LinkhutWeb.Settings.OauthController do
       {:ok, application} ->
         conn
         |> put_flash(:info, "Application created successfully.")
-        |> render("oauth/application/show.html", application: application)
+        |> render(:application_show,
+          application: application,
+          heading: "OAuth application registered",
+          description: "Your OAuth application has been successfully registered. Write down this information:"
+        )
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "oauth/application/new.html", changeset: changeset)
+        render(conn, :application_new, changeset: changeset)
     end
   end
 
@@ -99,7 +101,7 @@ defmodule LinkhutWeb.Settings.OauthController do
       application
       |> Oauth.change_application()
 
-    render(conn, "oauth/application/edit.html", changeset: changeset, application: application)
+    render(conn, :application_edit, changeset: changeset, application: application)
   end
 
   def update_application(conn, %{"uid" => uid, "application" => params}) do
@@ -112,11 +114,11 @@ defmodule LinkhutWeb.Settings.OauthController do
     |> case do
       {:ok, _} ->
         conn
-        |> put_flash(:info, "Application updated succesfully.")
-        |> redirect(to: Routes.oauth_path(conn, :show))
+        |> put_flash(:info, "Application updated successfully.")
+        |> redirect(to: ~p"/_/oauth")
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        render(conn, "oauth/application/edit.html",
+        render(conn, :application_edit,
           changeset: changeset,
           application: application
         )
@@ -126,14 +128,17 @@ defmodule LinkhutWeb.Settings.OauthController do
   def delete_application(conn, %{"uid" => uid}) do
     user = conn.assigns[:current_user]
 
-    {:ok, _application} =
-      user
-      |> Oauth.get_application_for!(uid)
-      |> Oauth.delete_application()
+    case user |> Oauth.get_application_for!(uid) |> Oauth.delete_application() do
+      {:ok, _application} ->
+        conn
+        |> put_flash(:info, "Application deleted successfully.")
+        |> redirect(to: ~p"/_/oauth")
 
-    conn
-    |> put_flash(:info, "Application deleted successfully.")
-    |> redirect(to: Routes.oauth_path(conn, :show))
+      {:error, _changeset} ->
+        conn
+        |> put_flash(:error, "Failed to delete application.")
+        |> redirect(to: ~p"/_/oauth")
+    end
   end
 
   def new_authorization(conn, params) do
@@ -143,14 +148,14 @@ defmodule LinkhutWeb.Settings.OauthController do
     |> Oauth.preauthorize(params)
     |> case do
       {:ok, client, scopes} ->
-        render(conn, "oauth/authorization/new.html",
+        render(conn, :authorization_new,
           params: params,
           client: client,
           scopes: scopes
         )
 
       {:native_redirect, %{code: _code}} ->
-        redirect(conn, to: Routes.oauth_path(conn, :show))
+        redirect(conn, to: ~p"/_/oauth")
 
       {:redirect, redirect_uri} ->
         redirect(conn, external: redirect_uri)
@@ -159,7 +164,7 @@ defmodule LinkhutWeb.Settings.OauthController do
         conn
         |> put_status(status)
         |> put_flash(:error, "An error occurred")
-        |> render("oauth/authorization/error.html", error: error)
+        |> render(:authorization_error, error: error)
     end
   end
 
@@ -182,19 +187,22 @@ defmodule LinkhutWeb.Settings.OauthController do
   def revoke_application(conn, %{"uid" => uid}) do
     user = conn.assigns[:current_user]
 
-    user
-    |> Oauth.get_application_for!(uid)
-    |> Oauth.revoke_all_access_tokens_for(user)
-    |> case do
+    case user |> Oauth.get_application_for!(uid) |> Oauth.revoke_all_access_tokens_for(user) do
       {:ok, []} ->
         conn
         |> put_flash(:info, "All tokens are revoked.")
+        |> redirect(to: ~p"/_/oauth/application/#{uid}/settings")
 
       {:ok, tokens} ->
         conn
         |> put_flash(:info, "Revoked #{Enum.count(tokens)} tokens.")
+        |> redirect(to: ~p"/_/oauth/application/#{uid}/settings")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Failed to revoke tokens.")
+        |> redirect(to: ~p"/_/oauth/application/#{uid}/settings")
     end
-    |> redirect(to: Routes.oauth_path(conn, :edit_application, uid))
   end
 
   def reset_application(conn, %{"uid" => uid}) do
@@ -207,7 +215,16 @@ defmodule LinkhutWeb.Settings.OauthController do
       {:ok, application} ->
         conn
         |> put_flash(:info, "Application secret reset successfully.")
-        |> render("oauth/application/show.html", application: application)
+        |> render(:application_show,
+          application: application,
+          heading: "Application secret reset",
+          description: "Your application secret has been reset. Write down the new secret:"
+        )
+
+      {:error, _changeset} ->
+        conn
+        |> put_flash(:error, "Failed to reset application secret.")
+        |> redirect(to: ~p"/_/oauth/application/#{uid}/settings")
     end
   end
 
@@ -216,14 +233,17 @@ defmodule LinkhutWeb.Settings.OauthController do
 
     app = Oauth.get_application!(uid)
 
-    app
-    |> Oauth.revoke_all_access_tokens_for(user)
-    |> case do
+    case Oauth.revoke_all_access_tokens_for(app, user) do
       {:ok, _} ->
         conn
         |> put_flash(:info, "Revoked access to '#{app.name}'")
+        |> redirect(to: ~p"/_/oauth")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Failed to revoke access.")
+        |> redirect(to: ~p"/_/oauth")
     end
-    |> redirect(to: Routes.oauth_path(conn, :show))
   end
 
   defp redirect_or_render({:redirect, redirect_uri}, conn) do

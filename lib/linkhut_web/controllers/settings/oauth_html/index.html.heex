@@ -1,0 +1,17 @@
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
+<div>
+  <section class="settings">
+    <h4>Personal Access Tokens</h4>
+    <.personal_token_list personal_access_tokens={@personal_access_tokens} />
+    <a class="button" href={~p"/_/oauth/personal-token"}>Generate new token</a>
+  </section>
+  <section class="settings">
+    <h4>Authorized Applications</h4>
+    <.authorized_application_list authorized_applications={@authorized_applications} />
+  </section>
+  <section class="settings">
+    <h4>Registered Applications</h4>
+    <.application_list applications={@applications} />
+    <a class="button" href={~p"/_/oauth/register"}>Register new application</a>
+  </section>
+</div>

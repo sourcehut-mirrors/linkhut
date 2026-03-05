@@ -4,11 +4,11 @@
   <p>
     Be sure to review the <a class="doc" href="https://docs.linkhut.org/overview.html#authentication">API docs</a> to understand how this works.
   </p>
-  <%= form_for @changeset, Routes.oauth_path(@conn, :create_application), fn f -> %>
+  <.form :let={f} for={@changeset} action={~p"/_/oauth/register"}>
     <fieldset>
-      {input(f, :name)}
-      {input(f, :redirect_uri)}
+      <.input field={f[:name]} label="Name" />
+      <.input field={f[:redirect_uri]} label="Redirect uri" />
     </fieldset>
-    {submit("Register")}
-  <% end %>
+    <.button type="submit">Register</.button>
+  </.form>
 </section>

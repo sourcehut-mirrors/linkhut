@@ -4,10 +4,10 @@
   <p>
     This will generate a valid OAuth token with complete access to your linkhut account. It will expire in one year, or when you manually revoke it.
   </p>
-  <%= form_for @conn, Routes.oauth_path(@conn, :create_personal_token), fn f -> %>
+  <.form for={%{}} action={~p"/_/oauth/personal-token"}>
     <fieldset>
-      {input(f, :comment, placeholder: "Arbitrary comment for personal reference only", maxlength: 128)}
+      <.input name="comment" value="" label="Comment" placeholder="Arbitrary comment for personal reference only" maxlength="128" />
     </fieldset>
-    {submit("Generate token")}
-  <% end %>
+    <.button type="submit">Generate token</.button>
+  </.form>
 </section>

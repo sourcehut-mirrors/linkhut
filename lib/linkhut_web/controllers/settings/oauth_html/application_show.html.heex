@@ -1,8 +1,8 @@
 <.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
 <section class="settings">
-  <h4>OAuth application registered</h4>
+  <h4>{@heading}</h4>
   <p>
-    Your OAuth application has been successfully registered. Write down this information:
+    {@description}
   </p>
   <dl>
     <dt>Application ID</dt>
@@ -12,6 +12,6 @@
   </dl>
   Your application secret <strong>will never be shown to you again</strong>, though you can reset it later if necessary. As the name implies, you should keep it secret.
   <p>
-    <a class="button" href={Routes.oauth_path(@conn, :show)}>Continue</a>
+    <a class="button" href={~p"/_/oauth"}>Continue</a>
   </p>
 </section>

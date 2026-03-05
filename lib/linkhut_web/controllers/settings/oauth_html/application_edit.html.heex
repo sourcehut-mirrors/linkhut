@@ -1,0 +1,38 @@
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
+<section class="settings">
+  <h4>OAuth application settings</h4>
+  <.form :let={f} for={@changeset} action={~p"/_/oauth/application/#{@changeset.data.uid}/settings"}>
+    <fieldset>
+      <.input field={f[:name]} label="Name" />
+      <.input field={f[:redirect_uri]} label="Redirect uri" />
+    </fieldset>
+    <.button type="submit">Update</.button>
+  </.form>
+</section>
+<section class="settings">
+  <h4>Reset application secret</h4>
+  <p>
+    If your application secret is compromised, regenerate it here.
+  </p>
+  <.form for={%{}} action={~p"/_/oauth/reset-secret/#{@application.uid}"}>
+    <.button type="submit">Reset application secret</.button>
+  </.form>
+</section>
+<section class="settings">
+  <h4>Revoke all tokens</h4>
+  <p>
+    You can revoke all issued OAuth tokens at once here.
+  </p>
+  <.form for={%{}} action={~p"/_/oauth/revoke-tokens/#{@application.uid}"}>
+    <.button type="submit">Revoke all tokens</.button>
+  </.form>
+</section>
+<section class="settings">
+  <h4>Delete application</h4>
+  <p>
+    This will permanently delete your OAuth application, <strong>{@application.name}</strong>, and revoke all OAuth tokens you have been issued.
+  </p>
+  <.form for={%{}} action={~p"/_/oauth/application/delete/#{@application.uid}"}>
+    <.button type="submit">Delete</.button>
+  </.form>
+</section>
