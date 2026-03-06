@@ -11,7 +11,7 @@ defmodule LinkhutWeb.LinkHTML do
   alias LinkhutWeb.Controllers.Utils
   alias LinkhutWeb.Controllers.Utils.Tags
 
-  embed_templates "../templates/link/*"
+  embed_templates "link_html/*"
 
   defp tags_value(tags) when is_list(tags), do: Enum.join(tags, " ")
   defp tags_value(value), do: value

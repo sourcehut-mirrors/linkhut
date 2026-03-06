@@ -1,8 +1,7 @@
-defmodule LinkhutWeb.Api.IFTTT.ActionsView do
+defmodule LinkhutWeb.Api.IFTTT.ActionsJSON do
   @moduledoc false
-  use LinkhutWeb, :view
 
-  def render("success.json", %{id: id, url: url}) do
+  def success(%{id: id, url: url}) do
     %{
       data: [
         %{

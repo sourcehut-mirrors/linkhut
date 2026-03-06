@@ -1,8 +1,7 @@
-defmodule LinkhutWeb.Api.IFTTT.TestView do
+defmodule LinkhutWeb.Api.IFTTT.TestJSON do
   @moduledoc false
-  use LinkhutWeb, :view
 
-  def render("setup.json", %{
+  def setup(%{
         token: token,
         public_url: public_url,
         private_url: private_url,

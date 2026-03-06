@@ -1,14 +1,14 @@
 defmodule LinkhutWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
-  as controllers, views, channels and so on.
+  as controllers, components, channels and so on.
 
   This can be used in your application as:
 
       use LinkhutWeb, :controller
-      use LinkhutWeb, :view
+      use LinkhutWeb, :html
 
-  The definitions below will be executed for every view,
+  The definitions below will be executed for every
   controller, etc, so keep them short and clean, focused
   on imports, uses and aliases.
 
@@ -37,10 +37,8 @@ defmodule LinkhutWeb do
     quote do
       use Phoenix.Component
 
-      import Phoenix.View
-
       # Import convenience functions from controllers
-      import Phoenix.Controller, only: [get_csrf_token: 0, view_module: 1, view_template: 1]
+      import Phoenix.Controller, only: [get_csrf_token: 0]
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())
@@ -83,28 +81,6 @@ defmodule LinkhutWeb do
     end
   end
 
-  def view do
-    quote do
-      use Phoenix.View,
-        root: "lib/linkhut_web/templates",
-        pattern: "**/*",
-        namespace: LinkhutWeb
-
-      # Import convenience functions from controllers
-      import Phoenix.Controller, only: [get_flash: 1, get_flash: 2, view_module: 1]
-
-      # Use all HTML functionality (forms, tags, etc)
-      import Phoenix.HTML
-      use PhoenixHtmlSanitizer, :basic_html
-      use Gettext, backend: LinkhutWeb.Gettext
-
-      import LinkhutWeb.Helpers
-      alias LinkhutWeb.Router.Helpers, as: Routes
-
-      unquote(verified_routes())
-    end
-  end
-
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
@@ -123,7 +99,7 @@ defmodule LinkhutWeb do
   end
 
   @doc """
-  When used, dispatch to the appropriate controller/view/etc.
+  When used, dispatch to the appropriate controller/html/json/xml/etc.
   """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])

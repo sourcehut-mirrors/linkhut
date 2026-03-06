@@ -4,7 +4,7 @@ defmodule LinkhutWeb.Api.IFTTT.TestController do
   alias Linkhut.Accounts
   alias Linkhut.Oauth
 
-  plug :put_view, LinkhutWeb.Api.IFTTT.TestView
+  plug :put_view, json: LinkhutWeb.Api.IFTTT.TestJSON
 
   def setup(conn, _params) do
     ifttt_user = Accounts.get_user!(Linkhut.Config.ifttt(:user_id))
@@ -20,7 +20,7 @@ defmodule LinkhutWeb.Api.IFTTT.TestController do
     public_url = "https://example.com##{:crypto.strong_rand_bytes(3) |> Base.encode64()}"
     private_url = "https://example.com##{:crypto.strong_rand_bytes(3) |> Base.encode64()}"
 
-    render(conn, "setup.json",
+    render(conn, :setup,
       token: access_token.token,
       public_url: public_url,
       private_url: private_url,

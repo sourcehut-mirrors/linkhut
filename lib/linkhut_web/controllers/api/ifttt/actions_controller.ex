@@ -1,7 +1,7 @@
 defmodule LinkhutWeb.Api.IFTTT.ActionsController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.Api.IFTTT.ActionsView
+  plug :put_view, json: LinkhutWeb.Api.IFTTT.ActionsJSON
 
   plug ExOauth2Provider.Plug.EnsureScopes,
     scopes: ~w(ifttt),
@@ -47,8 +47,7 @@ defmodule LinkhutWeb.Api.IFTTT.ActionsController do
 
     case Links.update_link(link, params) do
       {:ok, link} ->
-        conn
-        |> render("success.json",
+        render(conn, :success,
           id: link.url,
           url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
         )
@@ -65,8 +64,7 @@ defmodule LinkhutWeb.Api.IFTTT.ActionsController do
 
     case Links.create_link(user, params) do
       {:ok, link} ->
-        conn
-        |> render("success.json",
+        render(conn, :success,
           id: link.url,
           url: Routes.user_bookmark_url(conn, :show, user.username, link.url)
         )

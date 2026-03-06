@@ -1,7 +1,7 @@
 defmodule LinkhutWeb.Api.IFTTT.TriggersController do
   use LinkhutWeb, :controller
 
-  plug :put_view, LinkhutWeb.Api.IFTTT.TriggersView
+  plug :put_view, json: LinkhutWeb.Api.IFTTT.TriggersJSON
 
   plug ExOauth2Provider.Plug.EnsureScopes,
     scopes: ~w(ifttt),
@@ -14,8 +14,7 @@ defmodule LinkhutWeb.Api.IFTTT.TriggersController do
     user = conn.assigns[:current_user]
     links = Links.all(user, count: limit, is_private: false, is_unread: false)
 
-    conn
-    |> render("links.json", links: links)
+    render(conn, :links, links: links)
   end
 
   def new_public_link_tagged(conn, %{"triggerFields" => %{"tag" => tag}} = params)
@@ -24,8 +23,7 @@ defmodule LinkhutWeb.Api.IFTTT.TriggersController do
     user = conn.assigns[:current_user]
     links = Links.all(user, count: limit, is_private: false, is_unread: false, tags: [tag])
 
-    conn
-    |> render("links.json", links: links)
+    render(conn, :links, links: links)
   end
 
   def new_public_link_tagged(_conn, _params) do

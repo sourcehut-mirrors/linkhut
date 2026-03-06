@@ -1,12 +1,11 @@
-defmodule LinkhutWeb.Api.IFTTT.TriggersView do
+defmodule LinkhutWeb.Api.IFTTT.TriggersJSON do
   @moduledoc false
-  use LinkhutWeb, :view
 
-  def render("links.json", %{links: links}) do
-    %{data: render_many(links, LinkhutWeb.Api.IFTTT.TriggersView, "link.json", as: :link)}
+  def links(%{links: links}) do
+    %{data: Enum.map(links, &link/1)}
   end
 
-  def render("link.json", %{link: link}) do
+  defp link(link) do
     %{
       time: DateTime.to_iso8601(link.inserted_at),
       url: link.url,

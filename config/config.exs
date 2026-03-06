@@ -16,7 +16,7 @@ config :linkhut, LinkhutWeb.Endpoint,
   static_url: [path: "/_"],
   secret_key_base: "mlPw70YW1sAUSrz5sF/LPkteFQ7Q75zutsNjXVNNDOpTag5Opi0WjVGIESGmddDd",
   render_errors: [
-    formats: [html: LinkhutWeb.ErrorView, json: LinkhutWeb.ErrorView, xml: LinkhutWeb.ErrorView],
+    formats: [html: LinkhutWeb.ErrorHTML, json: LinkhutWeb.ErrorJSON, xml: LinkhutWeb.ErrorXML],
     layout: false
   ],
   pubsub_server: Linkhut.PubSub,

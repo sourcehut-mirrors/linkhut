@@ -73,7 +73,6 @@ defmodule Linkhut.MixProject do
       {:phoenix_live_reload, "~> 1.5"},
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix_pubsub, "~> 2.1"},
-      {:phoenix_view, "~> 2.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:prom_ex, "~> 1.11"},

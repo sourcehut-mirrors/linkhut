@@ -8,7 +8,7 @@ defmodule LinkhutWeb.LinkXML do
   @doc """
   Renders a feed of links
   """
-  def render("index.xml", %{
+  def index(%{
         conn: conn,
         links: links,
         scope: scope
