@@ -27,6 +27,7 @@ defmodule LinkhutWeb.ConnCase do
       alias LinkhutWeb.Router.Helpers, as: Routes
 
       import Linkhut.Factory
+      import LinkhutWeb.ConnCase, only: [unauthenticated_api_conn: 0]
 
       # The default endpoint for testing
       @endpoint LinkhutWeb.Endpoint
@@ -101,6 +102,15 @@ defmodule LinkhutWeb.ConnCase do
 
   defp maybe_set_token_inserted_at(token, inserted_at) do
     Linkhut.AccountsFixtures.override_token_inserted_at(token, inserted_at)
+  end
+
+  @doc """
+  Builds an unauthenticated connection with JSON accept header.
+  Useful for testing 401 responses on API endpoints.
+  """
+  def unauthenticated_api_conn do
+    Phoenix.ConnTest.build_conn()
+    |> Plug.Conn.put_req_header("accept", "application/json")
   end
 
   @doc """

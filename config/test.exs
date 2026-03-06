@@ -41,6 +41,10 @@ config :linkhut, Linkhut,
     ]
   ]
 
+# Disable SSL requirement for redirect URIs in tests
+config :linkhut, ExOauth2Provider,
+  force_ssl_in_redirect_uri: false
+
 # Oban configuration
 config :linkhut, Oban, testing: :manual
 
