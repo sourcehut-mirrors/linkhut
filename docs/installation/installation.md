@@ -71,15 +71,19 @@ cat << EOF > /var/lib/linkhut.env
 SECRET_KEY_BASE="<secret_key>"
 DATABASE_URL="ecto://<db_user>:<db_pass>@localhost/linkhut"
 LINKHUT_HOST="<service_host>"
-SMTP_HOST="<smtp_host>"
-SMTP_PORT="<smtp_port>"
-SMTP_USERNAME="<smtp_user>"
-SMTP_PASSWORD="<smtp_pass>"
-SMTP_DKIM_SELECTOR="<dkim_selector>"
-SMTP_DKIM_DOMAIN="<dkim_domain>"
-SMTP_DKIM_PRIVATE_KEY="<dkim_pkey>"
-EMAIL_FROM_NAME="<email_from_name>"
-EMAIL_FROM_ADDRESS="<email_from_mail>"
+
+# Email delivery (optional — omit SMTP_HOST to disable)
+# SMTP_HOST="<smtp_host>"
+# SMTP_PORT="<smtp_port>"
+# EMAIL_FROM_NAME="<email_from_name>"
+# EMAIL_FROM_ADDRESS="<email_from_mail>"
+# SMTP authentication (optional — omit for unauthenticated SMTP)
+# SMTP_USERNAME="<smtp_user>"
+# SMTP_PASSWORD="<smtp_pass>"
+# DKIM signing (optional)
+# SMTP_DKIM_SELECTOR="<dkim_selector>"
+# SMTP_DKIM_DOMAIN="<dkim_domain>"
+# SMTP_DKIM_PRIVATE_KEY="<dkim_pkey>"
 EOF
 ```
 

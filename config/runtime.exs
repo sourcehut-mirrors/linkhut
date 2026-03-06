@@ -68,35 +68,75 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 
   # Mailer config:
-  maybe_dkim_config =
-    if (dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")) != nil do
-      [
-        dkim: [
-          s: dkim_selector,
-          d: System.get_env("SMTP_DKIM_DOMAIN"),
-          private_key:
-            {:pem_plain, File.read!(System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null")}
-        ]
-      ]
-    else
-      []
-    end
+  if smtp_host = System.get_env("SMTP_HOST") do
+    smtp_username = System.get_env("SMTP_USERNAME")
+    smtp_password = System.get_env("SMTP_PASSWORD")
 
-  config :linkhut,
-         Linkhut.Mailer,
-         [
-           adapter: Swoosh.Adapters.SMTP,
-           relay: System.get_env("SMTP_HOST"),
-           username: System.get_env("SMTP_USERNAME"),
-           password: System.get_env("SMTP_PASSWORD"),
-           ssl: false,
-           tls: :always,
-           tls_options: [verify: :verify_none],
-           auth: :always,
-           port: System.get_env("SMTP_PORT"),
-           retries: 2,
-           no_mx_lookups: false
-         ] ++ maybe_dkim_config
+    maybe_auth_config =
+      cond do
+        smtp_username && smtp_password ->
+          [username: smtp_username, password: smtp_password, auth: :always]
+
+        smtp_username || smtp_password ->
+          import Logger
+
+          warning(
+            "Both SMTP_USERNAME and SMTP_PASSWORD must be set for SMTP authentication; falling back to unauthenticated mode"
+          )
+
+          [auth: :never]
+
+        true ->
+          [auth: :never]
+      end
+
+    smtp_tls =
+      case System.get_env("SMTP_TLS") do
+        "always" ->
+          :always
+
+        "never" ->
+          :never
+
+        "if_available" ->
+          :if_available
+
+        nil ->
+          :if_available
+
+        other ->
+          raise "Invalid SMTP_TLS value: #{inspect(other)}. Expected \"always\", \"never\", or \"if_available\"."
+      end
+
+    maybe_dkim_config =
+      if (dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")) != nil do
+        [
+          dkim: [
+            s: dkim_selector,
+            d: System.get_env("SMTP_DKIM_DOMAIN"),
+            private_key:
+              {:pem_plain, File.read!(System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null")}
+          ]
+        ]
+      else
+        []
+      end
+
+    config :linkhut,
+           Linkhut.Mailer,
+           [
+             adapter: Swoosh.Adapters.SMTP,
+             relay: smtp_host,
+             ssl: System.get_env("SMTP_SSL") == "true",
+             tls: smtp_tls,
+             # verify: :verify_none for compatibility with self-signed certificates
+             # on internal SMTP servers common in self-hosted setups
+             tls_options: [verify: :verify_none],
+             port: System.get_env("SMTP_PORT"),
+             retries: 2,
+             no_mx_lookups: false
+           ] ++ maybe_auth_config ++ maybe_dkim_config
+  end
 
   config :linkhut, Linkhut,
     mail: [
