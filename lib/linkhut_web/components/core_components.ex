@@ -94,14 +94,24 @@ defmodule LinkhutWeb.CoreComponents do
   attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
+
+  attr :error_translator, :any,
+    default: nil,
+    doc: "custom error translator function, defaults to translate_error/1"
+
   attr :rest, :global, include: ~w(autocomplete cols disabled form max maxlength min minlength
                                    pattern placeholder readonly required rows size step)
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    translator = assigns[:error_translator] || (&translate_error/1)
+
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+    |> assign(
+      :errors,
+      field.errors |> Enum.map(&enrich_error(&1, field.value)) |> Enum.map(translator)
+    )
     |> assign_new(:name, fn -> if assigns.multiple, do: field.name <> "[]", else: field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
@@ -304,5 +314,13 @@ defmodule LinkhutWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  defp enrich_error({msg, opts}, field_value) do
+    if opts[:constraint] == :unique do
+      {msg, Keyword.put(opts, :field_value, field_value)}
+    else
+      {msg, opts}
+    end
   end
 end

@@ -4,7 +4,9 @@ defmodule LinkhutWeb.ErrorHTMLTest do
   test "404 template is embedded" do
     # embed_templates generates internal functions dispatched by phoenix_template;
     # verify the template is reachable through the module's __phoenix_render__
-    result = LinkhutWeb.ErrorHTML."404"(%{}) |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+    result =
+      LinkhutWeb.ErrorHTML."404"(%{}) |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+
     assert result =~ "<h1>404 Not Found</h1>"
     assert result =~ "Take me home"
   end

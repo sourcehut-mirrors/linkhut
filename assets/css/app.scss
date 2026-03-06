@@ -349,6 +349,17 @@ fieldset {
             list-style: none;
             margin: 0 0 $spacing-small;
             padding: 0;
+
+            & a {
+                all: unset;
+                cursor: pointer;
+                text-decoration: underline;
+                color: $blue;
+
+                @media (prefers-color-scheme: dark) {
+                    color: $bright-blue;
+                }
+            }
         }
     }
 

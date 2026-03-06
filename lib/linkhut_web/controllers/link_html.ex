@@ -3,6 +3,7 @@ defmodule LinkhutWeb.LinkHTML do
 
   import LinkhutWeb.Helpers
   import LinkhutWeb.Controllers.Utils
+  import LinkhutWeb.LinkComponents
 
   use PhoenixHtmlSanitizer, :basic_html
 

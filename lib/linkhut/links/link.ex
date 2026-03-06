@@ -55,7 +55,10 @@ defmodule Linkhut.Links.Link do
     |> validate_required([:user_id, :title, :is_private])
     |> validate_length(:title, max: 255)
     |> validate_length(:notes, max: 1024)
-    |> unique_constraint(:url, name: :links_url_user_id_index, message: "has already been saved")
+    |> unique_constraint(:url,
+      name: :links_url_user_id_index,
+      message: "This URL is already in your bookmarks."
+    )
     |> update_unread_status()
     |> update_tags()
     |> dedupe_tags()
