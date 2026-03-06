@@ -49,7 +49,7 @@ defmodule Linkhut.Config do
 
   @spec ifttt() :: keyword()
   def ifttt() do
-    get([Linkhut, :ifttt])
+    get([Linkhut, :ifttt]) || []
   end
 
   @spec ifttt(atom(), any()) :: any()
@@ -60,7 +60,7 @@ defmodule Linkhut.Config do
 
   @spec mail() :: keyword()
   def mail() do
-    get([Linkhut, :mail])
+    get([Linkhut, :mail]) || []
   end
 
   @spec mail(atom(), any()) :: any()

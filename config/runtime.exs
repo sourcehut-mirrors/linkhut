@@ -78,9 +78,7 @@ if config_env() == :prod do
           [username: smtp_username, password: smtp_password, auth: :always]
 
         smtp_username || smtp_password ->
-          import Logger
-
-          warning(
+          Logger.warning(
             "Both SMTP_USERNAME and SMTP_PASSWORD must be set for SMTP authentication; falling back to unauthenticated mode"
           )
 
@@ -108,14 +106,34 @@ if config_env() == :prod do
           raise "Invalid SMTP_TLS value: #{inspect(other)}. Expected \"always\", \"never\", or \"if_available\"."
       end
 
+    unless System.get_env("EMAIL_FROM_ADDRESS") do
+      raise "EMAIL_FROM_ADDRESS must be set when SMTP_HOST is configured"
+    end
+
     maybe_dkim_config =
       if (dkim_selector = System.get_env("SMTP_DKIM_SELECTOR")) != nil do
+        dkim_domain =
+          System.get_env("SMTP_DKIM_DOMAIN") ||
+            raise "SMTP_DKIM_DOMAIN must be set when SMTP_DKIM_SELECTOR is configured"
+
+        dkim_private_key_path =
+          System.get_env("SMTP_DKIM_PRIVATE_KEY") ||
+            raise "SMTP_DKIM_PRIVATE_KEY must be set when SMTP_DKIM_SELECTOR is configured"
+
+        dkim_private_key_pem =
+          case File.read(dkim_private_key_path) do
+            {:ok, contents} ->
+              contents
+
+            {:error, reason} ->
+              raise "Cannot read DKIM private key at #{dkim_private_key_path}: #{:file.format_error(reason)}"
+          end
+
         [
           dkim: [
             s: dkim_selector,
-            d: System.get_env("SMTP_DKIM_DOMAIN"),
-            private_key:
-              {:pem_plain, File.read!(System.get_env("SMTP_DKIM_PRIVATE_KEY") || "/dev/null")}
+            d: dkim_domain,
+            private_key: {:pem_plain, dkim_private_key_pem}
           ]
         ]
       else
@@ -123,7 +141,7 @@ if config_env() == :prod do
       end
 
     config :linkhut,
-           Linkhut.Mailer,
+           Linkhut.Mail.Mailer,
            [
              adapter: Swoosh.Adapters.SMTP,
              relay: smtp_host,
@@ -132,7 +150,7 @@ if config_env() == :prod do
              # verify: :verify_none for compatibility with self-signed certificates
              # on internal SMTP servers common in self-hosted setups
              tls_options: [verify: :verify_none],
-             port: System.get_env("SMTP_PORT"),
+             port: String.to_integer(System.get_env("SMTP_PORT") || "587"),
              retries: 2,
              no_mx_lookups: false
            ] ++ maybe_auth_config ++ maybe_dkim_config

@@ -46,7 +46,10 @@ defmodule Linkhut.AccountsFixtures do
 
   def extract_user_token(fun) do
     {:ok, captured_email} = fun.(&"[TOKEN]#{&1}[TOKEN]")
-    [_, token | _] = String.split(captured_email.body, "[TOKEN]")
+    # In Oban manual test mode, args retain atom keys. In production, they're string keys
+    # after JSON round-tripping. Support both for robustness.
+    body = captured_email[:body] || captured_email["body"]
+    [_, token | _] = String.split(body, "[TOKEN]")
     token
   end
 

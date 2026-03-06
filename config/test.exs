@@ -44,6 +44,9 @@ config :linkhut, Linkhut,
 # Disable SSL requirement for redirect URIs in tests
 config :linkhut, ExOauth2Provider, force_ssl_in_redirect_uri: false
 
+# Mailer configuration
+config :linkhut, Linkhut.Mail.Mailer, adapter: Swoosh.Adapters.Test
+
 # Oban configuration
 config :linkhut, Oban, testing: :manual
 

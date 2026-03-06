@@ -1,12 +1,13 @@
-defmodule Linkhut.Workers.MailerWorker do
-  use Oban.Worker, queue: :mailer
+defmodule Linkhut.Mail.Worker do
+  @moduledoc false
+  use Oban.Worker, queue: :mailer, max_attempts: 5
   import Swoosh.Email
 
-  alias Linkhut.Mailer
+  alias Linkhut.Mail
 
-  def send(recipient, subject, body) do
+  def enqueue(recipient, subject, body) do
     %{recipient: recipient, subject: subject, body: body}
-    |> Linkhut.Workers.MailerWorker.new()
+    |> __MODULE__.new()
     |> Oban.insert()
   end
 
@@ -15,12 +16,13 @@ defmodule Linkhut.Workers.MailerWorker do
     email =
       new()
       |> to(recipient)
-      |> from(Keyword.get(Linkhut.Config.mail(), :sender))
+      |> from(Mail.sender())
       |> subject(subject)
       |> text_body(body)
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+    case Mail.Mailer.deliver(email) do
+      {:ok, _metadata} -> {:ok, email}
+      {:error, reason} -> {:error, reason}
     end
   end
 end
