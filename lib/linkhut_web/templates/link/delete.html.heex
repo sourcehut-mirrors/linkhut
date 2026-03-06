@@ -12,11 +12,11 @@
     </div>
   </div>
   <hr />
-  <%= form_for @changeset, Routes.link_path(@conn, :delete), fn f -> %>
+  <.form :let={f} for={@changeset} action={Routes.link_path(@conn, :delete)}>
     <fieldset>
-      {hidden_input(f, :url)}
-      {input(f, :are_you_sure?, type: :checkbox)}
-      {submit("Delete")}
+      <input type="hidden" name={f[:url].name} value={f[:url].value} />
+      <.input field={f[:are_you_sure?]} label="Are you sure?" type="checkbox" />
+      <.button type="submit">Delete</.button>
     </fieldset>
-  <% end %>
+  </.form>
 </div>

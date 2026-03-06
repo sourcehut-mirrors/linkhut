@@ -8,7 +8,7 @@ defmodule LinkhutWeb.Api.IFTTT.ActionsController do
     handler: LinkhutWeb.Plugs.AuthErrorHandler
 
   alias Linkhut.Links
-  alias LinkhutWeb.ErrorHelpers
+  alias LinkhutWeb.CoreComponents
 
   def add_public_link(conn, %{"actionFields" => %{"url" => url} = params}) do
     user = conn.assigns[:current_user]
@@ -55,7 +55,7 @@ defmodule LinkhutWeb.Api.IFTTT.ActionsController do
 
       {:error, changeset} ->
         raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
-              Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
+              Ecto.Changeset.traverse_errors(changeset, &CoreComponents.translate_error/1)
     end
   end
 
@@ -73,7 +73,7 @@ defmodule LinkhutWeb.Api.IFTTT.ActionsController do
 
       {:error, changeset} ->
         raise LinkhutWeb.Api.IFTTT.Errors.BadRequestError,
-              Ecto.Changeset.traverse_errors(changeset, &ErrorHelpers.translate_error/1)
+              Ecto.Changeset.traverse_errors(changeset, &CoreComponents.translate_error/1)
     end
   end
 end

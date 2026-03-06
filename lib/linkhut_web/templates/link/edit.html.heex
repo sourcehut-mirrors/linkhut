@@ -1,15 +1,17 @@
 <div>
   <h3>Edit link</h3>
-  <%= form_for @changeset, Routes.link_path(@conn, :update), fn f -> %>
+  <.form :let={f} for={@changeset} action={Routes.link_path(@conn, :update)}>
     <fieldset>
-      {hidden_input(f, :url)}
-      {input(f, :url, disabled: true, id: "_url")}
-      {input(f, :title)}
-      {input(f, :notes, type: :textarea, maxlength: 1024)}
-      {input(f, :tags)}
-      {input(f, :is_private, type: :checkbox)}
-      {input(f, :is_unread, type: :checkbox, label: "read later")}
+      <input type="hidden" name={f[:url].name} value={f[:url].value} />
+      <.input field={f[:url]} label="Url" disabled id="_url" />
+      <.input field={f[:title]} label="Title" />
+      <.input field={f[:notes]} label="Notes" type="textarea" maxlength={1024} />
+      <.input field={f[:tags]} label="Tags" value={tags_value(f[:tags].value)} />
+      <div class="options">
+        <.input field={f[:is_private]} label="Is private" type="checkbox" />
+        <.input field={f[:is_unread]} label="read later" type="checkbox" />
+      </div>
     </fieldset>
-    {submit("Submit")}
-  <% end %>
+    <.button type="submit">Submit</.button>
+  </.form>
 </div>

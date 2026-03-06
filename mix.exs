@@ -67,7 +67,7 @@ defmodule Linkhut.MixProject do
       {:phoenix, "~> 1.8"},
       {:phoenix_copy, "~> 0.1.1", runtime: Mix.env() == :dev},
       {:phoenix_ecto, "~> 4.4"},
-      {:phoenix_html, "~> 3.2"},
+      {:phoenix_html, "~> 4.0"},
       {:phoenix_html_sanitizer, "~> 1.2"},
       {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.5"},

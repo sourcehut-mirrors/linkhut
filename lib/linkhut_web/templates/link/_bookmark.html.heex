@@ -50,11 +50,11 @@
                 </li>
                 <%= if @link.is_unread do %>
                   <li>
-                    <%= form_for :mark_as_read, Routes.link_path(@conn, :update), [method: :put], fn _ -> %>
-                      {hidden_input(:link, :url, value: @link.url)}
-                      {hidden_input(:link, :is_unread, value: false)}
-                      {submit(gettext("mark as read"))}
-                    <% end %>
+                    <.form for={%{}} action={Routes.link_path(@conn, :update)} method="put">
+                      <input type="hidden" name="link[url]" value={@link.url} />
+                      <input type="hidden" name="link[is_unread]" value="false" />
+                      <button type="submit">{gettext("mark as read")}</button>
+                    </.form>
                   </li>
                 <% end %>
                 <%= if @archiving_enabled? && @link.has_archive? do %>

@@ -65,9 +65,7 @@ defmodule LinkhutWeb.Settings.OauthController do
   end
 
   def new_application(conn, _) do
-    render(conn, :application_new,
-      changeset: Oauth.change_application(%Application{})
-    )
+    render(conn, :application_new, changeset: Oauth.change_application(%Application{}))
   end
 
   def create_application(conn, %{"application" => application_params}) do
@@ -82,7 +80,8 @@ defmodule LinkhutWeb.Settings.OauthController do
         |> render(:application_show,
           application: application,
           heading: "OAuth application registered",
-          description: "Your OAuth application has been successfully registered. Write down this information:"
+          description:
+            "Your OAuth application has been successfully registered. Write down this information:"
         )
 
       {:error, %Ecto.Changeset{} = changeset} ->

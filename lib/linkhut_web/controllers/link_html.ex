@@ -2,10 +2,8 @@ defmodule LinkhutWeb.LinkHTML do
   use LinkhutWeb, :html
 
   import LinkhutWeb.Helpers
-  import LinkhutWeb.FormHelpers
   import LinkhutWeb.Controllers.Utils
 
-  use Phoenix.HTML
   use PhoenixHtmlSanitizer, :basic_html
 
   alias LinkhutWeb.Router.Helpers, as: Routes
@@ -14,6 +12,9 @@ defmodule LinkhutWeb.LinkHTML do
   alias LinkhutWeb.Controllers.Utils.Tags
 
   embed_templates "../templates/link/*"
+
+  defp tags_value(tags) when is_list(tags), do: Enum.join(tags, " ")
+  defp tags_value(value), do: value
 
   attr :link, Linkhut.Links.Link, required: true
   attr :scope, Utils.Scope, required: true

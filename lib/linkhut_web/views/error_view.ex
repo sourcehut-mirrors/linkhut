@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.ErrorView do
   use LinkhutWeb, :view
 
-  use Phoenix.HTML
-
   alias LinkhutWeb.Api.IFTTT.Errors.BadRequestError
 
   # If you want to customize a particular status code

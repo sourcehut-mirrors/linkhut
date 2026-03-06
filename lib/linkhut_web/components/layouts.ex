@@ -3,7 +3,6 @@ defmodule LinkhutWeb.Layouts do
   This module holds layouts and related functionality.
   """
   use LinkhutWeb, :html
-  use Phoenix.HTML
   use PhoenixHtmlSanitizer, :basic_html
   use Gettext, backend: LinkhutWeb.Gettext
 
