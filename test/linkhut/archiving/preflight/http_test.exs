@@ -13,13 +13,14 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      assert {:ok, %PreflightMeta{} = meta} =
+      assert {:ok, %PreflightMeta{} = meta, []} =
                Preflight.HTTP.execute("https://example.com/page")
 
       assert meta.scheme == "https"
       assert meta.content_type == "text/html"
       assert meta.content_length == 1234
       assert meta.status == 200
+      assert meta.method == "HEAD"
       assert meta.final_url =~ "example.com"
     end
 
@@ -33,7 +34,7 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com")
       assert meta.content_type == "text/html"
     end
 
@@ -45,7 +46,7 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com/doc.pdf")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com/doc.pdf")
       assert meta.content_length == 99_999
     end
 
@@ -56,7 +57,7 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com")
       assert meta.content_length == nil
     end
 
@@ -68,7 +69,7 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com")
       assert meta.content_length == nil
     end
 
@@ -87,18 +88,82 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         end
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com/page")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com/page")
       assert meta.final_url =~ "/final-page"
       assert meta.status == 200
     end
 
-    test "HTTP error status codes are still {:ok, meta}" do
+    test "HTTP error status codes are still {:ok, meta, events}" do
       Req.Test.stub(Linkhut.Links.Link, fn conn ->
         Plug.Conn.send_resp(conn, 404, "Not Found")
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com/missing")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com/missing")
       assert meta.status == 404
+    end
+
+    test "falls back to GET on 405 and returns metadata from GET response" do
+      Req.Test.stub(Linkhut.Links.Link, fn conn ->
+        case conn.method do
+          "HEAD" ->
+            Plug.Conn.send_resp(conn, 405, "Method Not Allowed")
+
+          "GET" ->
+            conn
+            |> Plug.Conn.put_resp_header("content-type", "text/html; charset=utf-8")
+            |> Plug.Conn.put_resp_header("content-length", "5000")
+            |> Plug.Conn.send_resp(200, "<html>body</html>")
+        end
+      end)
+
+      assert {:ok, meta, events} = Preflight.HTTP.execute("https://example.com/page")
+      assert meta.status == 200
+      assert meta.content_type == "text/html"
+      assert meta.content_length == 5000
+      assert meta.method == "GET"
+
+      assert [{"preflight_fallback", %{"msg" => "preflight_head_failed", "status" => 405}}] =
+               events
+    end
+
+    test "GET fallback follows redirects" do
+      Req.Test.stub(Linkhut.Links.Link, fn conn ->
+        case {conn.method, conn.request_path} do
+          {"HEAD", _} ->
+            Plug.Conn.send_resp(conn, 405, "Method Not Allowed")
+
+          {"GET", "/page"} ->
+            conn
+            |> Plug.Conn.put_resp_header("location", "/final")
+            |> Plug.Conn.send_resp(301, "")
+
+          {"GET", "/final"} ->
+            conn
+            |> Plug.Conn.put_resp_header("content-type", "text/html")
+            |> Plug.Conn.send_resp(200, "<html></html>")
+        end
+      end)
+
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com/page")
+      assert meta.status == 200
+      assert meta.method == "GET"
+      assert meta.final_url =~ "/final"
+    end
+
+    test "GET fallback propagates transport errors" do
+      call_count = :counters.new(1, [:atomics])
+
+      Req.Test.stub(Linkhut.Links.Link, fn conn ->
+        :counters.add(call_count, 1, 1)
+
+        case :counters.get(call_count, 1) do
+          1 -> Plug.Conn.send_resp(conn, 405, "Method Not Allowed")
+          _ -> Req.Test.transport_error(conn, :nxdomain)
+        end
+      end)
+
+      assert {:error, %Req.TransportError{reason: :nxdomain}} =
+               Preflight.HTTP.execute("https://example.com")
     end
 
     test "transport failure returns {:error, reason}" do
@@ -114,7 +179,7 @@ defmodule Linkhut.Archiving.Preflight.HTTPTest do
         Plug.Conn.send_resp(conn, 200, "")
       end)
 
-      assert {:ok, meta} = Preflight.HTTP.execute("https://example.com")
+      assert {:ok, meta, _events} = Preflight.HTTP.execute("https://example.com")
       assert meta.content_type == nil
     end
   end

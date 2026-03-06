@@ -89,6 +89,30 @@ defmodule Linkhut.Archiving.Pipeline.PreflightTest do
 
       assert {:error, :preflight_failed, _archive} = Preflight.run(archive)
     end
+
+    test "records preflight_fallback step when HEAD returns 405 and GET succeeds" do
+      {_user, _link, archive} = create_archive()
+
+      Req.Test.stub(Linkhut.Links.Link, fn conn ->
+        case conn.method do
+          "HEAD" ->
+            Plug.Conn.send_resp(conn, 405, "Method Not Allowed")
+
+          "GET" ->
+            conn
+            |> Plug.Conn.put_resp_header("content-type", "text/html; charset=utf-8")
+            |> Plug.Conn.send_resp(200, "<html>ok</html>")
+        end
+      end)
+
+      assert {:ok, %PreflightMeta{} = meta, updated} = Preflight.run(archive)
+      assert meta.method == "GET"
+      assert meta.status == 200
+
+      step_names = Enum.map(updated.steps, & &1["step"])
+      assert "preflight_fallback" in step_names
+      assert "preflight" in step_names
+    end
   end
 
   defp create_archive do

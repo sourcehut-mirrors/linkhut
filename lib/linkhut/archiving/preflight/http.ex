@@ -9,10 +9,13 @@ defmodule Linkhut.Archiving.Preflight.HTTP do
   @doc """
   Sends a HEAD request to `url` and returns parsed preflight metadata.
 
-  On a successful HTTP response (any status), returns `{:ok, %PreflightMeta{}}`.
+  Falls back to GET if the server returns 405 (Method Not Allowed).
+
+  On a successful HTTP response (any status), returns `{:ok, %PreflightMeta{}, events}`
+  where `events` is a list of step maps recording notable occurrences (e.g. HEAD failure).
   On a transport-level failure, returns `{:error, reason}`.
   """
-  @spec execute(String.t()) :: {:ok, PreflightMeta.t()} | {:error, term()}
+  @spec execute(String.t()) :: {:ok, PreflightMeta.t(), [{String.t(), map()}]} | {:error, term()}
   def execute(url) do
     req_opts =
       [
@@ -29,28 +32,55 @@ defmodule Linkhut.Archiving.Preflight.HTTP do
       |> Req.Request.append_response_steps(capture_url: &capture_final_url/1)
 
     case Req.request(req) do
-      {:ok, %Req.Response{status: status, headers: headers} = response} ->
-        content_type =
-          headers
-          |> get_header("content-type")
-          |> normalize_content_type()
+      {:ok, %Req.Response{status: 405}} ->
+        execute_get(req_opts)
 
-        final_url = get_final_url(response, url)
-        content_length = get_content_length(headers)
-        scheme = URI.parse(final_url).scheme || URI.parse(url).scheme
-
-        {:ok,
-         %PreflightMeta{
-           scheme: scheme,
-           content_type: content_type,
-           final_url: final_url,
-           status: status,
-           content_length: content_length
-         }}
+      {:ok, %Req.Response{} = response} ->
+        {:ok, build_meta(response, url, "HEAD"), []}
 
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp execute_get(req_opts) do
+    req =
+      req_opts
+      |> Keyword.merge(method: :get, raw: true, into: fn {:data, _}, acc -> {:halt, acc} end)
+      |> Req.new()
+      |> Req.Request.append_response_steps(capture_url: &capture_final_url/1)
+
+    head_failed_event =
+      {"preflight_fallback", %{"msg" => "preflight_head_failed", "status" => 405}}
+
+    case Req.request(req) do
+      {:ok, %Req.Response{} = response} ->
+        url = Keyword.fetch!(req_opts, :url)
+        {:ok, build_meta(response, url, "GET"), [head_failed_event]}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp build_meta(%Req.Response{status: status, headers: headers} = response, url, method) do
+    content_type =
+      headers
+      |> get_header("content-type")
+      |> normalize_content_type()
+
+    final_url = get_final_url(response, url)
+    content_length = get_content_length(headers)
+    scheme = URI.parse(final_url).scheme || URI.parse(url).scheme
+
+    %PreflightMeta{
+      scheme: scheme,
+      content_type: content_type,
+      final_url: final_url,
+      status: status,
+      content_length: content_length,
+      method: method
+    }
   end
 
   defp get_header(headers, key) do

@@ -35,8 +35,8 @@ defmodule Linkhut.Archiving.Pipeline.Preflight do
 
   defp http_preflight(archive, url) do
     case PreflightSchemes.HTTP.execute(url) do
-      {:ok, %PreflightMeta{} = meta} ->
-        case persist_preflight(archive, meta, url) do
+      {:ok, %PreflightMeta{} = meta, events} ->
+        case persist_preflight(archive, meta, url, events) do
           {:ok, archive} -> check_content_length(meta, archive)
           error -> error
         end
@@ -46,13 +46,18 @@ defmodule Linkhut.Archiving.Pipeline.Preflight do
     end
   end
 
-  defp persist_preflight(archive, %PreflightMeta{} = meta, original_url) do
+  defp persist_preflight(archive, %PreflightMeta{} = meta, original_url, events) do
     detail = build_http_preflight_detail(meta, original_url)
+
+    steps =
+      Enum.reduce(events, archive.steps, fn {event_step, event_detail}, acc ->
+        Steps.append_step(acc, event_step, event_detail)
+      end)
 
     case Archiving.update_archive(archive, %{
            preflight_meta: meta,
            final_url: meta.final_url,
-           steps: Steps.append_step(archive.steps, "preflight", detail)
+           steps: Steps.append_step(steps, "preflight", detail)
          }) do
       {:ok, archive} ->
         {:ok, archive}
@@ -92,6 +97,7 @@ defmodule Linkhut.Archiving.Pipeline.Preflight do
   defp build_http_preflight_detail(%PreflightMeta{} = meta, original_url) do
     detail = %{
       "msg" => "preflight_http",
+      "method" => meta.method,
       "scheme" => meta.scheme,
       "content_type" => meta.content_type,
       "status" => meta.status

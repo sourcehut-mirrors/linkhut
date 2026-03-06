@@ -14,7 +14,8 @@ defmodule Linkhut.Archiving.PreflightMetaTest do
         content_type: "text/html",
         content_length: 1234,
         final_url: "https://example.com",
-        status: 200
+        status: 200,
+        method: "HEAD"
       }
 
       result = PreflightMeta.to_map(meta)
@@ -24,7 +25,8 @@ defmodule Linkhut.Archiving.PreflightMetaTest do
                "content_type" => "text/html",
                "content_length" => 1234,
                "final_url" => "https://example.com",
-               "status" => 200
+               "status" => 200,
+               "method" => "HEAD"
              }
     end
   end
@@ -87,7 +89,8 @@ defmodule Linkhut.Archiving.PreflightMetaTest do
         content_type: "application/pdf",
         content_length: 5678,
         final_url: "https://example.com/doc.pdf",
-        status: 200
+        status: 200,
+        method: "HEAD"
       }
 
       assert original == original |> PreflightMeta.to_map() |> PreflightMeta.from_map()

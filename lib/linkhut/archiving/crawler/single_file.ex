@@ -18,8 +18,11 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   @impl true
   def queue, do: :crawler
 
+  @html_content_types ~w(text/html application/xhtml+xml)
+
   @impl true
-  def can_handle?(_url, %{content_type: "text/html", status: status}) when status < 400 do
+  def can_handle?(_url, %{content_type: content_type, status: status})
+      when content_type in @html_content_types and status < 400 do
     true
   end
 

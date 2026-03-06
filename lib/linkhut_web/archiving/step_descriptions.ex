@@ -17,6 +17,10 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
 
   # Scheme-specific preflight messages
 
+  def render(%{"msg" => "preflight_head_failed", "status" => status}) do
+    gettext("HEAD returned %{status}, retrying with GET", status: status)
+  end
+
   def render(%{"msg" => "preflight_http"} = detail) do
     parts =
       [detail["content_type"], to_string(detail["status"])]

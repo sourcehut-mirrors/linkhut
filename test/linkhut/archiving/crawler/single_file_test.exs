@@ -17,6 +17,13 @@ defmodule Linkhut.Archiving.Crawler.SingleFileTest do
              })
     end
 
+    test "returns true for application/xhtml+xml content type" do
+      assert SingleFile.can_handle?("https://example.com", %{
+               content_type: "application/xhtml+xml",
+               status: 200
+             })
+    end
+
     test "returns false for error status codes" do
       refute SingleFile.can_handle?("https://example.com", %{
                content_type: "text/html",

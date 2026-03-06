@@ -7,7 +7,7 @@ defmodule Linkhut.Archiving.PreflightMeta do
   schemes require additional metadata.
   """
 
-  @fields [:scheme, :content_type, :content_length, :final_url, :status]
+  @fields [:scheme, :content_type, :content_length, :final_url, :status, :method]
 
   defstruct @fields
 
@@ -16,7 +16,8 @@ defmodule Linkhut.Archiving.PreflightMeta do
           content_type: String.t() | nil,
           content_length: integer() | nil,
           final_url: String.t() | nil,
-          status: integer() | nil
+          status: integer() | nil,
+          method: String.t() | nil
         }
 
   @doc """
