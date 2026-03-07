@@ -84,6 +84,11 @@ LINKHUT_HOST="<service_host>"
 # SMTP_DKIM_SELECTOR="<dkim_selector>"
 # SMTP_DKIM_DOMAIN="<dkim_domain>"
 # SMTP_DKIM_PRIVATE_KEY="<dkim_pkey>"
+
+# Optional archiving (page snapshots)
+# ARCHIVING_MODE="disabled"
+# ARCHIVING_DATA_DIR="/var/lib/linkhut/archives"
+# ARCHIVING_SERVE_HOST="archive.example.com"
 EOF
 ```
 

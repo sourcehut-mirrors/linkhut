@@ -11,8 +11,8 @@ defmodule LinkhutWeb.Plugs.PromEx do
   end
 
   def call(%Plug.Conn{request_path: metrics_path} = conn, %{metrics_path: metrics_path} = opts) do
-    username = Linkhut.Config.get!([Linkhut, :prometheus, :username])
-    password = Linkhut.Config.get!([Linkhut, :prometheus, :password])
+    username = Linkhut.Config.prometheus(:username) || raise "missing config :linkhut, Linkhut.Prometheus, :username"
+    password = Linkhut.Config.prometheus(:password) || raise "missing config :linkhut, Linkhut.Prometheus, :password"
 
     Plug.BasicAuth.basic_auth(conn, username: username, password: password)
     |> maybe_call_prom_ex(opts)

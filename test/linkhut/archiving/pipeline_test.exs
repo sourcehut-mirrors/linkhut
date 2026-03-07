@@ -289,12 +289,11 @@ defmodule Linkhut.Archiving.PipelineTest do
   end
 
   defp set_crawlers(crawlers) do
-    config = Application.get_env(:linkhut, Linkhut)
-    archiving = Keyword.put(config[:archiving], :crawlers, crawlers)
-    Application.put_env(:linkhut, Linkhut, Keyword.put(config, :archiving, archiving))
+    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
+    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :crawlers, crawlers))
 
     on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut, config)
+      Application.put_env(:linkhut, Linkhut.Archiving, original)
     end)
   end
 end

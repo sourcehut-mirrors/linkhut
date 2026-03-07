@@ -6,12 +6,11 @@ defmodule Linkhut.Archiving.SchedulerTest do
   alias Linkhut.Archiving.Scheduler
 
   defp set_archiving_mode(mode) do
-    config = Application.get_env(:linkhut, Linkhut)
-    archiving = Keyword.put(config[:archiving], :mode, mode)
-    Application.put_env(:linkhut, Linkhut, Keyword.put(config, :archiving, archiving))
+    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
+    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :mode, mode))
 
     on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut, config)
+      Application.put_env(:linkhut, Linkhut.Archiving, original)
     end)
   end
 

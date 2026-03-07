@@ -6,7 +6,7 @@ locally and can be viewed, downloaded, or listed per bookmark.
 
 ## Configuration
 
-Archiving is configured under `config :linkhut, Linkhut, archiving: [...]`.
+Archiving is configured under `config :linkhut, Linkhut.Archiving, [...]`.
 
 | Key                | Type       | Default    | Description |
 |--------------------|------------|------------|-------------|
@@ -25,9 +25,15 @@ Archiving is configured under `config :linkhut, Linkhut, archiving: [...]`.
 
 ### Environment variables
 
-In `runtime.exs`, the following environment variable is read:
+In `runtime.exs`, the following environment variables are read:
 
-- `ARCHIVING_DATA_DIR` — maps to the `data_dir` config key.
+| Variable | Config key | Type | Default | Description |
+|---|---|---|---|---|
+| `ARCHIVING_MODE` | `:mode` | `"enabled"`, `"limited"`, or `"disabled"` | `"disabled"` | Controls who can use archiving. |
+| `ARCHIVING_DATA_DIR` | `:data_dir` | path string | (none) | Directory where snapshot files are stored. |
+| `ARCHIVING_SERVE_HOST` | `:serve_host` | hostname string | (none) | Dedicated hostname for serving archived HTML. |
+| `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
+| `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
 
 ## Security considerations
 

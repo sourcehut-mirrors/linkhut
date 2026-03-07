@@ -25,13 +25,11 @@ defmodule Linkhut.Archiving.CrawlerTest do
   end
 
   defp put_suffix(value) do
-    original = Application.get_env(:linkhut, Linkhut)
-    archiving = Keyword.get(original, :archiving, [])
-    updated_archiving = Keyword.put(archiving, :user_agent_suffix, value)
-    Application.put_env(:linkhut, Linkhut, Keyword.put(original, :archiving, updated_archiving))
+    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
+    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :user_agent_suffix, value))
 
     on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut, original)
+      Application.put_env(:linkhut, Linkhut.Archiving, original)
     end)
   end
 end

@@ -240,10 +240,8 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   end
 
   defp allowed_types do
-    Linkhut.Config.get(
-      [Linkhut, :archiving, :direct_file, :allowed_types],
-      @allowed_types_default
-    )
+    Linkhut.Config.archiving(:direct_file, [])
+    |> Keyword.get(:allowed_types, @allowed_types_default)
   end
 
   defp max_bytes do

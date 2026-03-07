@@ -209,25 +209,12 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     setup do
       File.mkdir_p!(@legacy_dir)
 
-      archiving = Application.get_env(:linkhut, Linkhut)[:archiving]
-      updated = Keyword.put(archiving, :legacy_data_dirs, [@legacy_dir])
-
-      Application.put_env(
-        :linkhut,
-        Linkhut,
-        Keyword.put(Application.get_env(:linkhut, Linkhut), :archiving, updated)
-      )
+      original = Application.get_env(:linkhut, Linkhut.Archiving, [])
+      Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :legacy_data_dirs, [@legacy_dir]))
 
       on_exit(fn ->
         File.rm_rf(@legacy_dir)
-
-        restored = Keyword.delete(archiving, :legacy_data_dirs)
-
-        Application.put_env(
-          :linkhut,
-          Linkhut,
-          Keyword.put(Application.get_env(:linkhut, Linkhut), :archiving, restored)
-        )
+        Application.put_env(:linkhut, Linkhut.Archiving, original)
       end)
 
       :ok

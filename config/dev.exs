@@ -76,29 +76,14 @@ config :phoenix, :stacktrace_depth, 20
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
-config :linkhut, Linkhut,
-  mail: [
-    sender: {"linkhut", "no-reply@example.com"}
-  ],
-  prometheus: [
-    username: "prometheus",
-    password: "metrics"
-  ],
-  # IFTTT config
-  ifttt: [
-    user_id: 0,
-    application: "aaabbb",
-    service_key: "cccddd"
-  ],
-  archiving: [
-    mode: :enabled,
-    max_file_size: 70_000_000,
-    data_dir: "/tmp/store",
-    serve_host: nil,
-    storage: Linkhut.Archiving.Storage.Local,
-    crawlers: [
-      Linkhut.Archiving.Crawler.SingleFile,
-      Linkhut.Archiving.Crawler.HttpFetch,
-      Linkhut.Archiving.Crawler.WaybackMachine
-    ]
-  ]
+config :linkhut, Linkhut.Mail, sender: {"linkhut", "no-reply@example.com"}
+
+config :linkhut, Linkhut.Prometheus, username: "prometheus", password: "metrics"
+
+config :linkhut, Linkhut.IFTTT, user_id: 0, application: "aaabbb", service_key: "cccddd"
+
+config :linkhut, Linkhut.Archiving,
+  mode: :enabled,
+  data_dir: "/tmp/store",
+  serve_host: nil,
+  storage: Linkhut.Archiving.Storage.Local

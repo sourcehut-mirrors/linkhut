@@ -156,22 +156,63 @@ if config_env() == :prod do
            ] ++ maybe_auth_config ++ maybe_dkim_config
   end
 
-  config :linkhut, Linkhut,
-    mail: [
-      sender: {System.get_env("EMAIL_FROM_NAME"), System.get_env("EMAIL_FROM_ADDRESS")}
-    ],
-    prometheus: [
+  # Mail -- only override sender if EMAIL_FROM_ADDRESS is set.
+  if from_address = System.get_env("EMAIL_FROM_ADDRESS") do
+    config :linkhut, Linkhut.Mail,
+      sender: {System.get_env("EMAIL_FROM_NAME"), from_address}
+  end
+
+  # Prometheus
+  prometheus_overrides =
+    [
       username: System.get_env("PROMETHEUS_USERNAME"),
       password: System.get_env("PROMETHEUS_PASSWORD")
-    ],
-    # IFTTT config
-    ifttt: [
-      user_id: String.to_integer(System.get_env("IFTTT_USER_ID") || "0"),
-      application: System.get_env("IFTTT_APPLICATION") || "",
-      service_key: System.get_env("IFTTT_SERVICE_KEY") || ""
-    ],
-    # Archiving
-    archiving: [
-      data_dir: System.get_env("ARCHIVING_DATA_DIR") || ""
     ]
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+  if prometheus_overrides != [] do
+    config :linkhut, Linkhut.Prometheus, prometheus_overrides
+  end
+
+  # IFTTT
+  ifttt_overrides =
+    [
+      user_id:
+        case System.get_env("IFTTT_USER_ID") do
+          nil -> nil
+          val -> String.to_integer(val)
+        end,
+      application: System.get_env("IFTTT_APPLICATION"),
+      service_key: System.get_env("IFTTT_SERVICE_KEY")
+    ]
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+  if ifttt_overrides != [] do
+    config :linkhut, Linkhut.IFTTT, ifttt_overrides
+  end
+
+  # Archiving -- only override keys that have env var values.
+  archiving_overrides =
+    [
+      data_dir: System.get_env("ARCHIVING_DATA_DIR"),
+      serve_host: System.get_env("ARCHIVING_SERVE_HOST"),
+      user_agent_suffix: System.get_env("ARCHIVING_USER_AGENT_SUFFIX"),
+      mode:
+        case System.get_env("ARCHIVING_MODE") do
+          "enabled" -> :enabled
+          "limited" -> :limited
+          "disabled" -> :disabled
+          _ -> nil
+        end,
+      max_file_size:
+        case System.get_env("ARCHIVING_MAX_FILE_SIZE") do
+          nil -> nil
+          val -> String.to_integer(val)
+        end
+    ]
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+  if archiving_overrides != [] do
+    config :linkhut, Linkhut.Archiving, archiving_overrides
+  end
 end

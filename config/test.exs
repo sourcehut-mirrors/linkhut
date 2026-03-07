@@ -18,28 +18,18 @@ config :linkhut, LinkhutWeb.Endpoint,
 # Print only warnings and errors during test
 config :logger, level: :warning
 
-config :linkhut, Linkhut,
-  mail: [
-    sender: {"linkhut", "no-reply@example.com"}
-  ],
-  # IFTTT config
-  ifttt: [
-    user_id: 0,
-    application: "a2ac2720c90e458752257e5acdc5cace7c1667e835fd833df3268f5d5bc3067b",
-    service_key: "cccddd"
-  ],
-  archiving: [
-    mode: :limited,
-    max_file_size: 70_000_000,
-    data_dir: Path.join(System.tmp_dir!(), "linkhut_test_archives"),
-    serve_host: nil,
-    storage: Linkhut.Archiving.Storage.Local,
-    crawlers: [
-      Linkhut.Archiving.Crawler.SingleFile,
-      Linkhut.Archiving.Crawler.HttpFetch,
-      Linkhut.Archiving.Crawler.WaybackMachine
-    ]
-  ]
+config :linkhut, Linkhut.Mail, sender: {"linkhut", "no-reply@example.com"}
+
+config :linkhut, Linkhut.IFTTT,
+  user_id: 0,
+  application: "a2ac2720c90e458752257e5acdc5cace7c1667e835fd833df3268f5d5bc3067b",
+  service_key: "cccddd"
+
+config :linkhut, Linkhut.Archiving,
+  mode: :limited,
+  data_dir: Path.join(System.tmp_dir!(), "linkhut_test_archives"),
+  serve_host: nil,
+  storage: Linkhut.Archiving.Storage.Local
 
 # Disable SSL requirement for redirect URIs in tests
 config :linkhut, ExOauth2Provider, force_ssl_in_redirect_uri: false

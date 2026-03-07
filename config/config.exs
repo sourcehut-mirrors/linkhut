@@ -85,26 +85,39 @@ config :linkhut, Oban,
     {"*/15 * * * *", Linkhut.Archiving.Workers.StaleSnapshotSweeper}
   ]
 
-config :linkhut, Linkhut,
-  archiving: [
-    mode: :disabled,
-    max_file_size: 70_000_000,
-    # serve_host: Dedicated hostname for serving archived content (e.g. "archive.example.com").
-    # STRONGLY RECOMMENDED for self-hosters: without this, archived HTML is served
-    # from the same origin as the main application, requiring a restrictive CSP
-    # that may break archived page rendering. Set this to a separate subdomain.
-    crawlers: [
-      Linkhut.Archiving.Crawler.SingleFile,
-      Linkhut.Archiving.Crawler.HttpFetch,
-      Linkhut.Archiving.Crawler.WaybackMachine
-    ],
-    direct_file: [
-      allowed_types: ["application/pdf", "text/plain", "application/json"]
-    ],
-    # Appended to crawler User-Agent. Recommended: a URL where site owners
-    # can report issues or request opt-out, e.g. "+https://your-instance.com"
-    user_agent_suffix: nil
-  ]
+# Archiving configuration
+config :linkhut, Linkhut.Archiving,
+  mode: :disabled,
+  max_file_size: 70_000_000,
+  # serve_host: Dedicated hostname for serving archived content (e.g. "archive.example.com").
+  # STRONGLY RECOMMENDED for self-hosters: without this, archived HTML is served
+  # from the same origin as the main application, requiring a restrictive CSP
+  # that may break archived page rendering. Set this to a separate subdomain.
+  crawlers: [
+    Linkhut.Archiving.Crawler.SingleFile,
+    Linkhut.Archiving.Crawler.HttpFetch,
+    Linkhut.Archiving.Crawler.WaybackMachine
+  ],
+  direct_file: [
+    allowed_types: ["application/pdf", "text/plain", "application/json"]
+  ],
+  # Appended to crawler User-Agent. Recommended: a URL where site owners
+  # can report issues or request opt-out, e.g. "+https://your-instance.com"
+  user_agent_suffix: nil
+
+# Mail configuration
+config :linkhut, Linkhut.Mail, sender: nil
+
+# Prometheus metrics endpoint
+config :linkhut, Linkhut.Prometheus,
+  username: nil,
+  password: nil
+
+# IFTTT integration
+config :linkhut, Linkhut.IFTTT,
+  user_id: 0,
+  application: "",
+  service_key: ""
 
 # Single File configuration
 config :single_file,

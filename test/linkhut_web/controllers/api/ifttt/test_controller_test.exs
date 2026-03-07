@@ -15,15 +15,12 @@ defmodule LinkhutWeb.Api.IFTTT.TestControllerTest do
         "redirect_uri" => "http://example.com/callback"
       })
 
-    original_config = Application.get_env(:linkhut, Linkhut)
+    original_ifttt = Application.get_env(:linkhut, Linkhut.IFTTT, [])
 
-    updated =
-      Keyword.update!(original_config, :ifttt, fn ifttt ->
-        Keyword.merge(ifttt, user_id: user.id, application: app.uid)
-      end)
+    updated = Keyword.merge(original_ifttt, user_id: user.id, application: app.uid)
 
-    Application.put_env(:linkhut, Linkhut, updated)
-    on_exit(fn -> Application.put_env(:linkhut, Linkhut, original_config) end)
+    Application.put_env(:linkhut, Linkhut.IFTTT, updated)
+    on_exit(fn -> Application.put_env(:linkhut, Linkhut.IFTTT, original_ifttt) end)
 
     conn =
       conn

@@ -1,41 +1,45 @@
 defmodule Linkhut.ConfigTest do
   use Linkhut.DataCase
 
-  test "get/1 with an atom" do
-    assert Linkhut.Config.get(Linkhut) == Application.get_env(:linkhut, Linkhut)
-    assert Linkhut.Config.get(:qwertyuiop) == nil
-    assert Linkhut.Config.get(:qwertyuiop, true) == true
+  alias Linkhut.Config
+
+  describe "archiving/2" do
+    test "returns configured value" do
+      assert Config.archiving(:mode) == :limited
+    end
+
+    test "returns default when key is missing" do
+      assert Config.archiving(:nonexistent, :fallback) == :fallback
+    end
   end
 
-  test "get/1 with a list of keys" do
-    assert Linkhut.Config.get([Linkhut, :ifttt]) ==
-             Keyword.get(Application.get_env(:linkhut, Linkhut), :ifttt)
+  describe "mail/2" do
+    test "returns configured value" do
+      assert Config.mail(:sender) == {"linkhut", "no-reply@example.com"}
+    end
 
-    assert Linkhut.Config.get([Linkhut.Web.Endpoint, :render_errors, :formats]) ==
-             get_in(
-               Application.get_env(
-                 :linkhut,
-                 Linkhut.Web.Endpoint
-               ),
-               [:render_errors, :formats]
-             )
-
-    assert Linkhut.Config.get([:qwerty, :uiop]) == nil
-    assert Linkhut.Config.get([:qwerty, :uiop], true) == true
+    test "returns default when key is missing" do
+      assert Config.mail(:nonexistent) == nil
+    end
   end
 
-  test "get!/1" do
-    assert Linkhut.Config.get!(Linkhut) == Application.get_env(:linkhut, Linkhut)
+  describe "ifttt/2" do
+    test "returns configured value" do
+      assert Config.ifttt(:service_key) == "cccddd"
+    end
 
-    assert Linkhut.Config.get!([Linkhut, :ifttt]) ==
-             Keyword.get(Application.get_env(:linkhut, Linkhut), :ifttt)
+    test "returns default when key is missing" do
+      assert Config.ifttt(:nonexistent, :fallback) == :fallback
+    end
+  end
 
-    assert_raise(Linkhut.Config.Error, fn ->
-      Linkhut.Config.get!(:qwertyuiop)
-    end)
+  describe "prometheus/2" do
+    test "returns default when unconfigured" do
+      assert Config.prometheus(:username) == nil
+    end
 
-    assert_raise(Linkhut.Config.Error, fn ->
-      Linkhut.Config.get!([:qwerty, :uiop])
-    end)
+    test "returns default when key is missing" do
+      assert Config.prometheus(:nonexistent, :fallback) == :fallback
+    end
   end
 end
