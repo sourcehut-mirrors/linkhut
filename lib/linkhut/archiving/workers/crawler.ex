@@ -64,18 +64,29 @@ defmodule Linkhut.Archiving.Workers.Crawler do
           link_inserted_at: link_inserted_at
         }
 
-        case module.fetch(context) do
-          {:ok, {:file, result}} ->
-            handle_file_result(snapshot, job, result, url, args, start_time)
+        try do
+          case module.fetch(context) do
+            {:ok, {:file, result}} ->
+              handle_file_result(snapshot, job, result, url, args, start_time)
 
-          {:ok, {:external, result}} ->
-            handle_external_result(snapshot, job, result, url, args, start_time)
+            {:ok, {:external, result}} ->
+              handle_external_result(snapshot, job, result, url, args, start_time)
 
-          {:error, error, :noretry} ->
-            update_failed_final(snapshot, job, error, start_time)
+            {:error, error, :noretry} ->
+              update_failed_final(snapshot, job, error, start_time)
 
-          {:error, error} ->
-            update_failed(snapshot, job, error, start_time)
+            {:error, error} ->
+              update_failed(snapshot, job, error, start_time)
+          end
+        rescue
+          exception ->
+            Logger.error(
+              "Crawler #{inspect(module)} crashed for snapshot #{snapshot.id}: " <>
+                Exception.message(exception) <>
+                "\n" <> Exception.format_stacktrace(__STACKTRACE__)
+            )
+
+            update_failed(snapshot, job, Exception.message(exception), start_time)
         end
     end
   end

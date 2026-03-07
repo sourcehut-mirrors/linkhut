@@ -19,7 +19,7 @@ defmodule SingleFile do
 
     * `:version` - the expected SingleFile version.
 
-    * `:path` - the path to the SingleFile executable. By default
+    * `:path` - the path to the SingleFile executable. By default,
       it is automatically downloaded and placed inside the `priv/bin` directory
       of your current app.
 
@@ -91,7 +91,7 @@ defmodule SingleFile do
   def bin_path do
     cond do
       env_path = Application.get_env(:single_file, :path) ->
-        List.wrap(env_path)
+        env_path
 
       Code.ensure_loaded?(Mix.Project) ->
         dest_bin_path(platform(), Path.join(Mix.Project.app_path(), "priv/bin"))
@@ -119,17 +119,7 @@ defmodule SingleFile do
   end
 
   defp cmd(command_path, extra_args, opts \\ []) do
-    case System.cmd(command_path, extra_args, opts) do
-      {:error, reason} ->
-        Logger.error(
-          "SingleFile command failed: command=#{command_path} args=#{inspect(extra_args)} reason=#{inspect(reason)}"
-        )
-
-        {:error, reason}
-
-      {output, exit_code} ->
-        {output, exit_code}
-    end
+    System.cmd(command_path, extra_args, opts)
   end
 
   @doc """
@@ -144,6 +134,7 @@ defmodule SingleFile do
       SingleFile.run(:default, ["--version"])
 
   """
+  @spec run(atom(), [String.t()]) :: {String.t(), non_neg_integer()} | {:error, String.t()}
   def run(profile, extra_args) when is_atom(profile) and is_list(extra_args) do
     config = config_for!(profile)
     config_args = config[:args] || []
@@ -155,9 +146,13 @@ defmodule SingleFile do
     ]
 
     args = config_args ++ extra_args
+    path = bin_path()
 
-    bin_path()
-    |> cmd(args, system_opts)
+    try do
+      cmd(path, args, system_opts)
+    rescue
+      e in ErlangError -> {:error, Exception.message(e)}
+    end
   end
 
   @doc """
@@ -236,7 +231,9 @@ defmodule SingleFile do
     {:ok, _} = Application.ensure_all_started(:ssl)
 
     case System.get_env("HTTP_PROXY") || System.get_env("http_proxy") do
-      nil -> :ok
+      nil ->
+        :ok
+
       proxy ->
         Logger.debug("Using HTTP_PROXY: #{proxy}")
         %{host: host, port: port} = URI.parse(proxy)
@@ -244,7 +241,9 @@ defmodule SingleFile do
     end
 
     case System.get_env("HTTPS_PROXY") || System.get_env("https_proxy") do
-      nil -> :ok
+      nil ->
+        :ok
+
       proxy ->
         Logger.debug("Using HTTPS_PROXY: #{proxy}")
         %{host: host, port: port} = URI.parse(proxy)

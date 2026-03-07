@@ -80,7 +80,9 @@ config :linkhut, Oban,
     # Every 30 minutes
     {"*/30 * * * *", Linkhut.Archiving.Workers.ArchiveScheduler},
     # Hourly — clean up orphaned pending_deletion snapshots
-    {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner}
+    {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner},
+    # Every 15 minutes — mark stale snapshots as failed
+    {"*/15 * * * *", Linkhut.Archiving.Workers.StaleSnapshotSweeper}
   ]
 
 config :linkhut, Linkhut,

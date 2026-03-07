@@ -40,4 +40,16 @@ defmodule SingleFileTest do
                    assert SingleFile.run(:foobar, ["--version"])
                  end
   end
+
+  test "run returns {:error, reason} when binary is missing" do
+    Application.put_env(:single_file, :path, "/nonexistent/single-file")
+
+    try do
+      result = SingleFile.run(:default, ["--version"])
+      assert {:error, reason} = result
+      assert is_binary(reason)
+    after
+      Application.delete_env(:single_file, :path)
+    end
+  end
 end

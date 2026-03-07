@@ -9,6 +9,26 @@ defmodule Linkhut.Archiving.Crawler.SingleFileTest do
     end
   end
 
+  describe "fetch/1" do
+    test "returns {:error, ...} when SingleFile binary is missing" do
+      Application.put_env(:single_file, :path, "/nonexistent/single-file")
+
+      try do
+        context = %Linkhut.Archiving.Crawler.Context{
+          user_id: 1,
+          link_id: 1,
+          url: "https://example.com",
+          snapshot_id: 1
+        }
+
+        assert {:error, %{msg: reason}} = SingleFile.fetch(context)
+        assert is_binary(reason)
+      after
+        Application.delete_env(:single_file, :path)
+      end
+    end
+  end
+
   describe "can_handle?/2" do
     test "returns true for text/html content type" do
       assert SingleFile.can_handle?("https://example.com", %{

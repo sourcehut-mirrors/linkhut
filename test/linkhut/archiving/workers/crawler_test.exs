@@ -160,6 +160,39 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
     end
   end
 
+  describe "perform/1 — crawler exception" do
+    test "marks snapshot as retryable when crawler raises on non-final attempt" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      snapshot = create_pending_snapshot(user, link, "raising")
+
+      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler])
+
+      job = make_job(snapshot, user, link, type: "raising")
+
+      assert {:error, _} = Crawler.perform(job)
+
+      updated = Repo.get(Snapshot, snapshot.id)
+      assert updated.state == :retryable
+      assert updated.archive_metadata["error"] =~ "kaboom"
+    end
+
+    test "marks snapshot as failed when crawler raises on final attempt" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      snapshot = create_pending_snapshot(user, link, "raising")
+
+      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler])
+
+      job = %{make_job(snapshot, user, link, type: "raising") | attempt: 4, max_attempts: 4}
+
+      assert {:error, _} = Crawler.perform(job)
+
+      updated = Repo.get(Snapshot, snapshot.id)
+      assert updated.state == :failed
+    end
+  end
+
   describe "perform/1 — non-retryable error" do
     test "marks snapshot as failed immediately and returns :ok" do
       user = insert(:user, credential: build(:credential))
@@ -589,6 +622,28 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler do
 
   @impl true
   def fetch(_context), do: {:error, %{msg: "no snapshot available"}, :noretry}
+end
+
+defmodule Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler do
+  @behaviour Linkhut.Archiving.Crawler
+
+  @impl true
+  def type, do: "raising"
+
+  @impl true
+  def meta, do: %{tool_name: "RaisingCrawler", version: "0.0.1"}
+
+  @impl true
+  def network_access, do: :target_url
+
+  @impl true
+  def queue, do: :crawler
+
+  @impl true
+  def can_handle?(_url, _meta), do: true
+
+  @impl true
+  def fetch(_context), do: raise("kaboom!")
 end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler do

@@ -59,6 +59,10 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
             output: IO.iodata_to_binary(output)
           }}}
 
+      {:error, reason} ->
+        File.rm_rf(staging_dir)
+        {:error, %{msg: reason}}
+
       {error_msg, code} ->
         File.rm_rf(staging_dir)
         {:error, %{msg: error_msg, code: code}}
