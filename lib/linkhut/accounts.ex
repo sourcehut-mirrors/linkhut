@@ -192,11 +192,51 @@ defmodule Linkhut.Accounts do
       {:ok, %User{}}
 
   """
-  @spec set_admin_role(User.t()) :: {:ok, User.t()} | {:error, changeset(User.t())}
-  def set_admin_role(user) do
-    user
-    |> User.changeset_role(%{roles: [:admin]})
-    |> Repo.update()
+  @spec set_admin_role(User.t()) :: {:ok, User.t()}
+  def set_admin_role(%User{id: id}) do
+    now = DateTime.utc_now(:second)
+
+    {1, [user]} =
+      from(u in User,
+        where: u.id == ^id,
+        update: [
+          set: [
+            roles: fragment("array_append(array_remove(?, 'admin'), 'admin')", u.roles),
+            updated_at: ^now
+          ]
+        ],
+        select: u
+      )
+      |> Repo.update_all([])
+
+    {:ok, user}
+  end
+
+  @doc """
+  Removes admin role from a user.
+
+  ## Examples
+
+      iex> remove_admin_role(user)
+      {:ok, %User{}}
+
+  """
+  @spec remove_admin_role(User.t()) :: {:ok, User.t()}
+  def remove_admin_role(%User{id: id}) do
+    now = DateTime.utc_now(:second)
+
+    {1, [user]} =
+      from(u in User,
+        where: u.id == ^id,
+        update: [
+          pull: [roles: :admin],
+          set: [updated_at: ^now]
+        ],
+        select: u
+      )
+      |> Repo.update_all([])
+
+    {:ok, user}
   end
 
   @spec is_admin?(User.t()) :: boolean()

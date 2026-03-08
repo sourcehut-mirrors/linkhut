@@ -9,8 +9,8 @@ defmodule Mix.Tasks.Linkhut.UserTest do
   alias Linkhut.Repo
 
   @moduletag :mix_task
-  # Shared setup for shell mocking
-  def setup_shell(_context) do
+
+  defp setup_shell(_context) do
     Mix.shell(Mix.Shell.Process)
     on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
     :ok
@@ -41,12 +41,10 @@ defmodule Mix.Tasks.Linkhut.UserTest do
       insert(:user, username: "user1")
       insert(:user, username: "user2")
 
-      Mix.Tasks.Linkhut.User.run(["list"])
+      output = capture_io(fn -> Mix.Tasks.Linkhut.User.run(["list"]) end)
 
-      assert_shell_messages([
-        {:info, "user1"},
-        {:info, "user2"}
-      ])
+      assert output =~ "user1"
+      assert output =~ "user2"
     end
 
     test "shows error for invalid command" do
@@ -133,6 +131,29 @@ defmodule Mix.Tasks.Linkhut.UserTest do
       user = Accounts.get_user("confirmed") |> Repo.preload(:credential)
       assert user.credential.email_confirmed_at
     end
+
+    test "shows error for invalid email" do
+      Mix.Tasks.Linkhut.User.run(["new", "baduser", "not-an-email", "--assume-yes"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "Failed to create user"
+    end
+
+    test "shows error for duplicate username" do
+      insert(:user, username: "duplicate")
+
+      Mix.Tasks.Linkhut.User.run(["new", "duplicate", "dup@example.com", "--assume-yes"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "Failed to create user"
+    end
+
+    test "shows usage when called with insufficient arguments" do
+      Mix.Tasks.Linkhut.User.run(["new"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "Usage"
+    end
   end
 
   describe "reset_password command" do
@@ -164,7 +185,7 @@ defmodule Mix.Tasks.Linkhut.UserTest do
 
       Mix.Tasks.Linkhut.User.run(["set", "setuser", "--admin"])
 
-      assert_shell_info_contains("Admin status of setuser: true")
+      assert_shell_info_contains("setuser: admin=true")
       assert Accounts.get_user("setuser") |> Accounts.is_admin?()
     end
 
@@ -179,8 +200,116 @@ defmodule Mix.Tasks.Linkhut.UserTest do
 
       Mix.Tasks.Linkhut.User.run(["set", "nooptsuser"])
 
-      refute_received {:mix_shell, :info}
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "No attribute specified"
       refute Accounts.get_user("nooptsuser") |> Accounts.is_admin?()
+    end
+
+    test "removes admin role with --no-admin" do
+      user = insert(:user, username: "demoteuser")
+      {:ok, _} = Accounts.set_admin_role(user)
+      assert Accounts.get_user("demoteuser") |> Accounts.is_admin?()
+
+      Mix.Tasks.Linkhut.User.run(["set", "demoteuser", "--no-admin"])
+
+      assert_shell_info_contains("demoteuser: admin=false")
+      refute Accounts.get_user("demoteuser") |> Accounts.is_admin?()
+    end
+
+    test "shows usage when called without username" do
+      Mix.Tasks.Linkhut.User.run(["set"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "Usage"
+    end
+  end
+
+  describe "ban command" do
+    setup :setup_shell
+
+    test "bans a user" do
+      insert(:user, username: "banme")
+
+      Mix.Tasks.Linkhut.User.run(["ban", "banme"])
+
+      assert_shell_info_contains("banme has been banned")
+      assert Accounts.get_user("banme").is_banned
+    end
+
+    test "bans a user with reason" do
+      insert(:user, username: "banreason")
+
+      Mix.Tasks.Linkhut.User.run(["ban", "banreason", "--reason", "spamming"])
+
+      assert_received {:mix_shell, :info, [message]}
+      assert message =~ "banreason has been banned"
+      assert message =~ "Reason: spamming"
+      assert Accounts.get_user("banreason").is_banned
+    end
+
+    test "shows error when user is already banned" do
+      insert(:user, username: "alreadybanned", is_banned: true)
+
+      Mix.Tasks.Linkhut.User.run(["ban", "alreadybanned"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "already banned"
+    end
+
+    test "shows error for non-existent user" do
+      Mix.Tasks.Linkhut.User.run(["ban", "noone"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "No user matching this username"
+    end
+
+    test "shows usage when called without username" do
+      Mix.Tasks.Linkhut.User.run(["ban"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "Usage"
+    end
+  end
+
+  describe "unban command" do
+    setup :setup_shell
+
+    test "unbans a banned user" do
+      user = insert(:user, username: "unbanme")
+      {:ok, _} = Linkhut.Moderation.ban_user(user.username)
+
+      Mix.Tasks.Linkhut.User.run(["unban", "unbanme"])
+
+      assert_shell_info_contains("unbanme has been unbanned")
+      refute Accounts.get_user("unbanme").is_banned
+    end
+
+    test "unbans a user with reason" do
+      user = insert(:user, username: "unbanreason")
+      {:ok, _} = Linkhut.Moderation.ban_user(user.username)
+
+      Mix.Tasks.Linkhut.User.run(["unban", "unbanreason", "--reason", "appeal accepted"])
+
+      assert_received {:mix_shell, :info, [message]}
+      assert message =~ "unbanreason has been unbanned"
+      assert message =~ "Reason: appeal accepted"
+      refute Accounts.get_user("unbanreason").is_banned
+    end
+
+    test "shows error when user is not banned" do
+      insert(:user, username: "notbanned")
+
+      Mix.Tasks.Linkhut.User.run(["unban", "notbanned"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "already unbanned"
+    end
+
+    test "shows usage when called without username" do
+      Mix.Tasks.Linkhut.User.run(["unban"])
+
+      assert_received {:mix_shell, :error, [message]}
+      assert message =~ "Usage"
     end
   end
 
@@ -192,34 +321,19 @@ defmodule Mix.Tasks.Linkhut.UserTest do
 
       output = capture_io(fn -> Mix.Tasks.Linkhut.User.run(["list"]) end)
 
-      assert output =~ "listuser1 admin: true, banned: false"
-      assert output =~ "listuser2 admin: false, banned: true"
+      assert output =~ "listuser1"
+      assert output =~ "listuser2"
     end
 
-    test "handles empty user list" do
-      Repo.delete_all(User)
-      Mix.Tasks.Linkhut.User.run(["list"])
-      refute_received {:mix_shell, :info}
-    end
-  end
+    test "shows colored tags for admin and banned users" do
+      user1 = insert(:user, username: "coloradmin")
+      insert(:user, username: "colorbanned", is_banned: true)
+      {:ok, _} = Accounts.set_admin_role(user1)
 
-  describe "error handling" do
-    test "handles invalid email addresses" do
-      assert_raise MatchError, fn ->
-        capture_io(fn ->
-          Mix.Tasks.Linkhut.User.run(["new", "invaliduser", "invalid-email", "--assume-yes"])
-        end)
-      end
-    end
+      output = capture_io(fn -> Mix.Tasks.Linkhut.User.run(["list"]) end)
 
-    test "handles duplicate usernames" do
-      insert(:user, username: "duplicate")
-
-      assert_raise MatchError, fn ->
-        capture_io(fn ->
-          Mix.Tasks.Linkhut.User.run(["new", "duplicate", "dup@example.com", "--assume-yes"])
-        end)
-      end
+      assert output =~ "admin"
+      assert output =~ "banned"
     end
   end
 

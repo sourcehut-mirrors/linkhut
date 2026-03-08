@@ -83,7 +83,7 @@ config :linkhut, Linkhut.Prometheus, username: "prometheus", password: "metrics"
 config :linkhut, Linkhut.IFTTT, user_id: 0, application: "aaabbb", service_key: "cccddd"
 
 config :linkhut, Linkhut.Archiving,
-  mode: :enabled,
+  mode: :limited,
   data_dir: "/tmp/store",
   serve_host: nil,
   storage: Linkhut.Archiving.Storage.Local
