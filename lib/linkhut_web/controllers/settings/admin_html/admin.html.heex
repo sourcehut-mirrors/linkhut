@@ -5,17 +5,71 @@
     <a class="button" href={~p"/_/admin/dashboard/"} target="_blank">{gettext("Live Dashboard")}</a>
   </p>
 </section>
-<section :if={@archiving_mode != :disabled} class="settings">
-  <h4>Archiving</h4>
+<section :if={@archive_stats.mode != :disabled} class="settings">
+  <h4>Archiving Overview</h4>
   <dl>
     <dt>Mode</dt>
-    <dd>{@archiving_mode}</dd>
-    <dt>Storage (DB total)</dt>
-    <dd>{Linkhut.Formatting.format_bytes(@db_storage_used)}</dd>
+    <dd>{@archive_stats.mode}</dd>
+    <dt>Total storage</dt>
+    <dd>{format_bytes(@archive_stats.total_storage_bytes)}</dd>
   </dl>
-  <form method="post" action={~p"/_/admin/recompute_storage"}>
-    <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
-    <button type="submit" class="button">Recompute storage</button>
-  </form>
+  <div :if={@archive_stats.archives_by_state != []}>
+    <h4>Archives by State</h4>
+    <.state_table rows={@archive_stats.archives_by_state} />
+  </div>
+  <div :if={@archive_stats.snapshots_by_state != [] || @archive_stats.snapshots_by_type != []}>
+    <h4>Snapshots</h4>
+    <h5 :if={@archive_stats.snapshots_by_state != []}>By state</h5>
+    <.state_table :if={@archive_stats.snapshots_by_state != []} rows={@archive_stats.snapshots_by_state} />
+    <h5 :if={@archive_stats.snapshots_by_type != []}>By type</h5>
+    <.snapshot_type_table :if={@archive_stats.snapshots_by_type != []} rows={@archive_stats.snapshots_by_type} />
+  </div>
+  <div :if={@archive_stats.queue_depths != []}>
+    <h4>Queue Health</h4>
+    <.queue_table rows={@archive_stats.queue_depths} />
+  </div>
+  <div :if={@archive_stats.recent_failures != []}>
+    <h4>Recent Failures (24h)</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Error</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={row <- @archive_stats.recent_failures}>
+          <td>{row.error}</td>
+          <td>{row.count}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div :if={@archive_stats.top_users != []}>
+    <h4>Top Users by Storage</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Storage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={row <- @archive_stats.top_users}>
+          <td>{row.username}</td>
+          <td>{format_bytes(row.bytes)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h4>Stale Work</h4>
+    <dl>
+      <dt>Archives stuck processing (&gt; 1h)</dt>
+      <dd>{@archive_stats.stale_work.stale_archives}</dd>
+      <dt>Snapshots stuck crawling (&gt; 1h)</dt>
+      <dd>{@archive_stats.stale_work.stale_snapshots}</dd>
+    </dl>
+  </div>
 </section>
 <.moderation_dashboard form={@form} banned_users={@banned_users} />

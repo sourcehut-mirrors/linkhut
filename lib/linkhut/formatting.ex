@@ -30,4 +30,24 @@ defmodule Linkhut.Formatting do
       true -> "#{bytes} bytes"
     end
   end
+
+  @doc """
+  Returns the human-readable display name for a crawler type string.
+
+  ## Examples
+
+      iex> Linkhut.Formatting.crawler_display_name("singlefile")
+      "Web page"
+
+      iex> Linkhut.Formatting.crawler_display_name("httpfetch")
+      "File"
+
+      iex> Linkhut.Formatting.crawler_display_name("wayback")
+      "Wayback Machine"
+  """
+  def crawler_display_name("singlefile"), do: "Web page"
+  def crawler_display_name("httpfetch"), do: "File"
+  def crawler_display_name("wget"), do: "Wget"
+  def crawler_display_name("wayback"), do: "Wayback Machine"
+  def crawler_display_name(type), do: String.capitalize(type)
 end

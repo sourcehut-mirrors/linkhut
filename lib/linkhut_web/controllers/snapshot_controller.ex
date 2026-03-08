@@ -314,7 +314,7 @@ defmodule LinkhutWeb.SnapshotController do
 
   defp maybe_auto_refresh(conn, archives) do
     if Enum.any?(archives, &(&1.state in [:pending, :processing])) do
-      put_resp_header(conn, "refresh", "10")
+      put_resp_header(conn, "refresh", "30")
     else
       conn
     end

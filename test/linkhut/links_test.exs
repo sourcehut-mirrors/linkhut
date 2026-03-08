@@ -360,6 +360,47 @@ defmodule Linkhut.LinksTest do
     end
   end
 
+  describe "link_stats/1" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+      %{user: user}
+    end
+
+    test "returns zeroes for user with no links", %{user: user} do
+      stats = Links.link_stats(user)
+      assert stats.total == 0
+      assert stats.private == 0
+      assert stats.unread == 0
+    end
+
+    test "counts total, private, and unread links", %{user: user} do
+      Links.create_link(user, %{url: "https://a.com", title: "A", is_private: false})
+      Links.create_link(user, %{url: "https://b.com", title: "B", is_private: true})
+
+      Links.create_link(user, %{
+        url: "https://c.com",
+        title: "C",
+        is_private: false,
+        is_unread: true
+      })
+
+      stats = Links.link_stats(user)
+      assert stats.total == 3
+      assert stats.private == 1
+      assert stats.unread == 1
+    end
+
+    test "does not count other users' links", %{user: user} do
+      other = AccountsFixtures.user_fixture()
+      Links.create_link(other, %{url: "https://other.com", title: "Other", is_private: true})
+      Links.create_link(user, %{url: "https://mine.com", title: "Mine"})
+
+      stats = Links.link_stats(user)
+      assert stats.total == 1
+      assert stats.private == 0
+    end
+  end
+
   describe "delete_link/1" do
     setup do
       user = AccountsFixtures.user_fixture()

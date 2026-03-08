@@ -31,6 +31,123 @@ defmodule Linkhut.Archiving do
   def enabled_for_user?(%User{type: :active_free}), do: mode() == :enabled
   def enabled_for_user?(_), do: false
 
+  # --- User stats ---
+
+  @doc "Returns archive statistics for a user."
+  def archive_stats_for_user(%User{} = user) do
+    snapshots_by_type = snapshot_stats_by_type(user.id)
+
+    %{
+      archived_links: archived_links(user.id),
+      pending_links: pending_links(user.id),
+      snapshots_by_type: snapshots_by_type,
+      total_storage_bytes: snapshots_by_type |> Enum.map(& &1.size) |> Enum.sum()
+    }
+  end
+
+  defp archived_links(user_id) do
+    Snapshot
+    |> where(user_id: ^user_id, state: :complete)
+    |> select([s], count(s.link_id, :distinct))
+    |> Repo.one()
+  end
+
+  defp pending_links(user_id) do
+    Archive
+    |> where([a], a.user_id == ^user_id and a.state in [:pending, :processing])
+    |> select([a], count(a.link_id, :distinct))
+    |> Repo.one()
+  end
+
+  defp snapshot_stats_by_type(user_id \\ nil) do
+    Snapshot
+    |> where(state: :complete)
+    |> then(fn q -> if user_id, do: where(q, user_id: ^user_id), else: q end)
+    |> group_by(:type)
+    |> select([s], {s.type, count(s.id), coalesce(sum(s.file_size_bytes), 0)})
+    |> Repo.all()
+    |> Enum.map(fn {type, count, size} -> %{type: type, count: count, size: to_integer(size)} end)
+  end
+
+  # --- Admin stats ---
+
+  @doc "Returns comprehensive archive statistics for the admin dashboard."
+  def admin_archive_stats do
+    %{
+      mode: mode(),
+      total_storage_bytes: storage_used(),
+      archives_by_state: archives_by_state(),
+      snapshots_by_state: snapshots_by_state(),
+      snapshots_by_type: snapshot_stats_by_type(),
+      queue_depths: queue_depths(),
+      recent_failures: recent_failure_summary(),
+      top_users: top_users_by_storage(10),
+      stale_work: stale_work_counts()
+    }
+  end
+
+  defp archives_by_state do
+    Archive
+    |> group_by(:state)
+    |> select([a], {a.state, count(a.id)})
+    |> Repo.all()
+  end
+
+  defp snapshots_by_state do
+    Snapshot
+    |> group_by(:state)
+    |> select([s], {s.state, count(s.id)})
+    |> Repo.all()
+  end
+
+  defp queue_depths do
+    Oban.Job
+    |> where([j], j.queue in ["archiver", "crawler", "wayback"])
+    |> where([j], j.state in ["available", "scheduled", "executing", "retryable"])
+    |> group_by([j], [j.queue, j.state])
+    |> select([j], %{queue: j.queue, state: j.state, count: count()})
+    |> Repo.all()
+  end
+
+  defp recent_failure_summary do
+    Snapshot
+    |> where([s], s.state == :failed and s.failed_at > ago(24, "hour"))
+    |> group_by([s], fragment("coalesce(?->>'error', '(no message)')", s.archive_metadata))
+    |> select([s], %{
+      error: fragment("coalesce(?->>'error', '(no message)')", s.archive_metadata),
+      count: count()
+    })
+    |> order_by(desc: count())
+    |> limit(10)
+    |> Repo.all()
+  end
+
+  defp top_users_by_storage(n) do
+    Snapshot
+    |> where([s], s.state == :complete)
+    |> join(:inner, [s], u in User, on: s.user_id == u.id)
+    |> group_by([s, u], [u.id, u.username])
+    |> select([s, u], %{username: u.username, bytes: sum(s.file_size_bytes)})
+    |> order_by([s], desc: sum(s.file_size_bytes))
+    |> limit(^n)
+    |> Repo.all()
+    |> Enum.map(fn row -> %{row | bytes: to_integer(row.bytes)} end)
+  end
+
+  defp stale_work_counts do
+    stale_archives =
+      Archive
+      |> where([a], a.state == :processing and a.updated_at < ago(1, "hour"))
+      |> Repo.aggregate(:count)
+
+    stale_snapshots =
+      Snapshot
+      |> where([s], s.state == :crawling and s.updated_at < ago(1, "hour"))
+      |> Repo.aggregate(:count)
+
+    %{stale_archives: stale_archives, stale_snapshots: stale_snapshots}
+  end
+
   @doc "Generates a short-lived token for serving a snapshot."
   def generate_token(snapshot_id), do: Tokens.generate_token(snapshot_id)
 
@@ -416,24 +533,6 @@ defmodule Linkhut.Archiving do
   end
 
   def maybe_complete_archive(_), do: :ok
-
-  @doc """
-  Atomically recomputes `total_size_bytes` for all archives
-  using a single correlated subquery UPDATE.
-  """
-  def recompute_all_archive_sizes do
-    Repo.query!("""
-    UPDATE archives
-    SET total_size_bytes = (
-      SELECT COALESCE(SUM(file_size_bytes), 0)
-      FROM snapshots
-      WHERE snapshots.archive_id = archives.id
-        AND snapshots.state = 'complete'
-    )
-    """)
-
-    :ok
-  end
 
   # --- Scheduler helpers ---
 

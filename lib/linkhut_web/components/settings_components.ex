@@ -6,6 +6,9 @@ defmodule LinkhutWeb.SettingsComponents do
 
   import LinkhutWeb.NavigationComponents, only: [nav_link: 1]
 
+  defdelegate format_bytes(bytes), to: Linkhut.Formatting
+  defdelegate crawler_display_name(type), to: Linkhut.Formatting
+
   attr :is_admin?, :boolean, required: true, doc: "flag for whether to show admin tabs"
   attr :request_path, :string, required: true, doc: "the current path"
 
@@ -22,6 +25,7 @@ defmodule LinkhutWeb.SettingsComponents do
               {~p"/_/import", gettext("Import / Export")},
               {~p"/_/misc", gettext("Misc")},
               {~p"/_/oauth", gettext("OAuth")},
+              {~p"/_/stats", gettext("Stats")},
               @is_admin? && {~p"/_/admin", gettext("Admin")}
             ]
           }
@@ -32,6 +36,29 @@ defmodule LinkhutWeb.SettingsComponents do
       </ul>
     </div>
     <hr />
+    """
+  end
+
+  attr :rows, :list, required: true
+
+  def snapshot_type_table(assigns) do
+    ~H"""
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Count</th>
+          <th>Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={row <- @rows}>
+          <td>{crawler_display_name(row.type)}</td>
+          <td>{row.count}</td>
+          <td>{format_bytes(row.size)}</td>
+        </tr>
+      </tbody>
+    </table>
     """
   end
 end

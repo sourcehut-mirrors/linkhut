@@ -519,52 +519,6 @@ defmodule Linkhut.ArchivingTest do
     end
   end
 
-  describe "recompute_all_archive_sizes/0" do
-    test "bulk updates multiple archives" do
-      user = insert(:user, credential: build(:credential))
-      link1 = insert(:link, user_id: user.id)
-      link2 = insert(:link, user_id: user.id)
-      archive1 = create_archive(user, link1)
-      archive2 = create_archive(user, link2)
-
-      {:ok, _} =
-        Archiving.create_snapshot(link1.id, user.id, %{
-          state: :complete,
-          file_size_bytes: 1000,
-          archive_id: archive1.id
-        })
-
-      {:ok, _} =
-        Archiving.create_snapshot(link2.id, user.id, %{
-          state: :complete,
-          file_size_bytes: 2000,
-          archive_id: archive2.id
-        })
-
-      assert :ok = Archiving.recompute_all_archive_sizes()
-
-      assert Repo.get(Archive, archive1.id).total_size_bytes == 1000
-      assert Repo.get(Archive, archive2.id).total_size_bytes == 2000
-    end
-
-    test "zeros stale values for archives with no complete snapshots" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      archive =
-        insert(:archive,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          total_size_bytes: 5000
-        )
-
-      assert :ok = Archiving.recompute_all_archive_sizes()
-
-      assert Repo.get(Archive, archive.id).total_size_bytes == 0
-    end
-  end
-
   describe "merge_timeline/2" do
     test "merges archive and crawler steps chronologically" do
       archive_steps = [
@@ -829,6 +783,181 @@ defmodule Linkhut.ArchivingTest do
 
       completed_steps = Enum.filter(updated.steps, &(&1["step"] == "completed"))
       assert length(completed_steps) == 1
+    end
+  end
+
+  describe "archive_stats_for_user/1" do
+    test "returns zeroes for user with no links" do
+      user = insert(:user, credential: build(:credential))
+      stats = Archiving.archive_stats_for_user(user)
+
+      assert stats.archived_links == 0
+      assert stats.pending_links == 0
+      assert stats.total_storage_bytes == 0
+      assert stats.snapshots_by_type == []
+    end
+
+    test "counts links and archived links correctly" do
+      user = insert(:user, credential: build(:credential))
+      link1 = insert(:link, user_id: user.id)
+      link2 = insert(:link, user_id: user.id)
+      _link3 = insert(:link, user_id: user.id)
+      archive1 = create_archive(user, link1)
+      archive2 = create_archive(user, link2)
+
+      {:ok, _} =
+        Archiving.create_snapshot(link1.id, user.id, %{
+          state: :complete,
+          file_size_bytes: 1000,
+          archive_id: archive1.id,
+          type: "singlefile"
+        })
+
+      {:ok, _} =
+        Archiving.create_snapshot(link2.id, user.id, %{
+          state: :complete,
+          file_size_bytes: 2000,
+          archive_id: archive2.id,
+          type: "singlefile"
+        })
+
+      stats = Archiving.archive_stats_for_user(user)
+
+      assert stats.archived_links == 2
+      assert stats.total_storage_bytes == 3000
+    end
+
+    test "counts pending links" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      insert(:archive,
+        user_id: user.id,
+        link_id: link.id,
+        url: link.url,
+        state: :pending
+      )
+
+      stats = Archiving.archive_stats_for_user(user)
+      assert stats.pending_links == 1
+    end
+
+    test "groups snapshots by type" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      archive = create_archive(user, link)
+
+      {:ok, _} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          state: :complete,
+          file_size_bytes: 1000,
+          archive_id: archive.id,
+          type: "singlefile"
+        })
+
+      {:ok, _} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          state: :complete,
+          file_size_bytes: 500,
+          archive_id: archive.id,
+          type: "wayback"
+        })
+
+      stats = Archiving.archive_stats_for_user(user)
+
+      assert length(stats.snapshots_by_type) == 2
+
+      sf = Enum.find(stats.snapshots_by_type, &(&1.type == "singlefile"))
+      assert sf.count == 1
+      assert sf.size == 1000
+
+      wb = Enum.find(stats.snapshots_by_type, &(&1.type == "wayback"))
+      assert wb.count == 1
+      assert wb.size == 500
+    end
+
+    test "does not count other users' data" do
+      user1 = insert(:user, credential: build(:credential))
+      user2 = insert(:user, credential: build(:credential))
+      insert(:link, user_id: user1.id)
+      link2 = insert(:link, user_id: user2.id)
+      archive2 = create_archive(user2, link2)
+
+      {:ok, _} =
+        Archiving.create_snapshot(link2.id, user2.id, %{
+          state: :complete,
+          file_size_bytes: 5000,
+          archive_id: archive2.id,
+          type: "singlefile"
+        })
+
+      stats = Archiving.archive_stats_for_user(user1)
+
+      assert stats.archived_links == 0
+      assert stats.total_storage_bytes == 0
+    end
+  end
+
+  describe "admin_archive_stats/0" do
+    test "returns all stat keys" do
+      stats = Archiving.admin_archive_stats()
+
+      assert Map.has_key?(stats, :mode)
+      assert Map.has_key?(stats, :total_storage_bytes)
+      assert Map.has_key?(stats, :archives_by_state)
+      assert Map.has_key?(stats, :snapshots_by_state)
+      assert Map.has_key?(stats, :snapshots_by_type)
+      assert Map.has_key?(stats, :queue_depths)
+      assert Map.has_key?(stats, :recent_failures)
+      assert Map.has_key?(stats, :top_users)
+      assert Map.has_key?(stats, :stale_work)
+    end
+
+    test "includes archive and snapshot state counts" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      archive = create_archive(user, link)
+
+      {:ok, _} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          state: :complete,
+          file_size_bytes: 1000,
+          archive_id: archive.id,
+          type: "singlefile"
+        })
+
+      stats = Archiving.admin_archive_stats()
+
+      assert Enum.any?(stats.archives_by_state, fn {state, count} ->
+               state == :processing and count >= 1
+             end)
+
+      assert Enum.any?(stats.snapshots_by_state, fn {state, count} ->
+               state == :complete and count >= 1
+             end)
+    end
+
+    test "includes top users by storage" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      archive = create_archive(user, link)
+
+      {:ok, _} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          state: :complete,
+          file_size_bytes: 5000,
+          archive_id: archive.id,
+          type: "singlefile"
+        })
+
+      stats = Archiving.admin_archive_stats()
+      assert Enum.any?(stats.top_users, &(&1.username == user.username))
+    end
+
+    test "stale_work returns counts" do
+      stats = Archiving.admin_archive_stats()
+      assert stats.stale_work.stale_archives == 0
+      assert stats.stale_work.stale_snapshots == 0
     end
   end
 

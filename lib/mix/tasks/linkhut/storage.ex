@@ -7,32 +7,21 @@ defmodule Mix.Tasks.Linkhut.Storage do
   alias Linkhut.Archiving.Storage
 
   @moduledoc """
-  Shows and manages archiving storage statistics.
+  Shows archiving storage statistics.
 
   ## Usage
 
       mix linkhut.storage              # Show storage stats
-      mix linkhut.storage recompute    # Recompute all archive sizes, then show stats
   """
 
   @shortdoc "Shows archiving storage statistics"
-
-  def run(["recompute"]) do
-    start_linkhut()
-
-    shell_info("Recomputing all archive sizes...")
-    Archiving.recompute_all_archive_sizes()
-    shell_info("Done.")
-
-    show_stats()
-  end
 
   def run([]) do
     start_linkhut()
     show_stats()
   end
 
-  def run(_), do: shell_error("Usage: mix linkhut.storage [recompute]")
+  def run(_), do: shell_error("Usage: mix linkhut.storage")
 
   defp show_stats do
     db_bytes = Archiving.storage_used()

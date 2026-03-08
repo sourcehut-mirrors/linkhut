@@ -46,6 +46,16 @@ defmodule Linkhut.Tags do
     |> Repo.all()
   end
 
+  @doc "Returns the number of distinct tags for a user."
+  def count_tags(%User{} = user) do
+    inner =
+      from l in Link,
+        where: l.user_id == ^user.id,
+        select: %{tag: fragment("unnest(?)", l.tags)}
+
+    Repo.one(from t in subquery(inner), select: count(fragment("distinct lower(?)", t.tag))) || 0
+  end
+
   def delete(%User{} = user, tag) do
     Link
     |> where([l], l.user_id == ^user.id)

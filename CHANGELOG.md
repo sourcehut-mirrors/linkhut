@@ -6,6 +6,7 @@ All notable changes to linkhut will be documented in this file.
 
 - Add ban/unban commands and improved error handling to the admin CLI.
 - Redesign archive scheduler as queue-filler with domain cooldown
+- Add user stats tab and admin archiving dashboard
 
 ## [0.1.0] - 2026-03-08
 

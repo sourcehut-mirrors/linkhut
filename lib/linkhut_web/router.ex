@@ -119,6 +119,7 @@ defmodule LinkhutWeb.Router do
 
     get "/download", ExportController, :download
 
+    get "/stats", StatsController, :show
     get "/misc", MiscController, :show
     get "/profile", ProfileController, :show
     put "/profile", ProfileController, :update
@@ -198,7 +199,6 @@ defmodule LinkhutWeb.Router do
     get "/", LinkhutWeb.Settings.AdminController, :show
     post "/ban", LinkhutWeb.Settings.AdminController, :ban
     post "/unban", LinkhutWeb.Settings.AdminController, :unban
-    post "/recompute_storage", LinkhutWeb.Settings.AdminController, :recompute_storage
 
     live_dashboard "/dashboard",
       metrics: LinkhutWeb.Telemetry,

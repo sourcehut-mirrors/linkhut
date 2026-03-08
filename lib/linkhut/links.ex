@@ -288,6 +288,20 @@ defmodule Linkhut.Links do
     |> Repo.aggregate(:count)
   end
 
+  @doc "Returns link counts for a user (total, private, unread)."
+  @spec link_stats(User.t()) :: %{total: integer(), private: integer(), unread: integer()}
+  def link_stats(%User{} = user) do
+    Repo.one(
+      from l in Link,
+        where: l.user_id == ^user.id,
+        select: %{
+          total: count(),
+          private: filter(count(), l.is_private == true),
+          unread: filter(count(), l.is_unread == true)
+        }
+    )
+  end
+
   def links(params \\ []) do
     from(l in Link,
       left_join: s in PublicLink,

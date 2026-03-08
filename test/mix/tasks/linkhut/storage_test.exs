@@ -3,8 +3,6 @@ defmodule Mix.Tasks.Linkhut.StorageTest do
 
   import Linkhut.Factory
 
-  alias Linkhut.Archiving.Archive
-
   @moduletag :mix_task
 
   defp setup_shell(_context) do
@@ -23,28 +21,6 @@ defmodule Mix.Tasks.Linkhut.StorageTest do
       assert db_msg =~ "Storage (DB total):"
       assert_received {:mix_shell, :info, [disk_msg]}
       assert disk_msg =~ "Storage (disk total):"
-    end
-
-    test "recompute updates archive sizes and shows stats" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      archive = insert(:archive, user_id: user.id, link_id: link.id, url: link.url)
-
-      insert(:snapshot,
-        user_id: user.id,
-        link_id: link.id,
-        archive_id: archive.id,
-        state: :complete,
-        file_size_bytes: 3000
-      )
-
-      Mix.Tasks.Linkhut.Storage.run(["recompute"])
-
-      updated = Repo.get(Archive, archive.id)
-      assert updated.total_size_bytes == 3000
-
-      assert_received {:mix_shell, :info, ["Recomputing all archive sizes..."]}
-      assert_received {:mix_shell, :info, ["Done."]}
     end
 
     test "shows error for invalid arguments" do
