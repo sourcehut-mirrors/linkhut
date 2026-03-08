@@ -2,7 +2,7 @@ submitter:
   git.sr.ht:
     enabled: true
     allow-refs:
-      - "refs/tags/*"
+      - "refs/tags/v*"
   hub.sr.ht:
     enabled: false
 image: ubuntu/24.04

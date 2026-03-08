@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
 
   linkhut:
-    image: matiaslb/linkhut:edge
+    image: matiaslb/linkhut:latest
     depends_on:
       postgres:
         condition: service_healthy
