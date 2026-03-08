@@ -207,7 +207,9 @@ defmodule Linkhut.Archiving.PipelineTest do
       archive =
         insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      set_crawlers([Linkhut.Archiving.PipelineTest.ThirdPartyCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
+      ])
 
       assert {:error, {:reserved_address, _}} = Pipeline.run(archive)
     end
@@ -219,7 +221,7 @@ defmodule Linkhut.Archiving.PipelineTest do
         Req.Test.transport_error(conn, :econnrefused)
       end)
 
-      set_crawlers([
+      put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Crawler.SingleFile,
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
@@ -232,7 +234,7 @@ defmodule Linkhut.Archiving.PipelineTest do
       {_user, _link, archive} = create_archive()
       stub_preflight(404, "text/html")
 
-      set_crawlers([
+      put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Crawler.SingleFile,
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
@@ -250,7 +252,7 @@ defmodule Linkhut.Archiving.PipelineTest do
       archive =
         insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      set_crawlers([
+      put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Crawler.SingleFile,
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
@@ -268,7 +270,7 @@ defmodule Linkhut.Archiving.PipelineTest do
       archive =
         insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      set_crawlers([])
+      put_override(Linkhut.Archiving, :crawlers, [])
 
       assert {:error, {:dns_failed, "nonexistent.invalid"}} = Pipeline.run(archive)
     end
@@ -277,7 +279,7 @@ defmodule Linkhut.Archiving.PipelineTest do
       {_user, _link, archive} = create_archive()
       stub_preflight()
 
-      set_crawlers([
+      put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Crawler.SingleFile,
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
@@ -286,15 +288,6 @@ defmodule Linkhut.Archiving.PipelineTest do
       names = Enum.map(result.crawlers, & &1.name)
       assert names == ["singlefile"]
     end
-  end
-
-  defp set_crawlers(crawlers) do
-    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :crawlers, crawlers))
-
-    on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut.Archiving, original)
-    end)
   end
 end
 

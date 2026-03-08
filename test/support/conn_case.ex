@@ -33,6 +33,8 @@ defmodule LinkhutWeb.ConnCase do
       @endpoint LinkhutWeb.Endpoint
 
       use LinkhutWeb, :verified_routes
+
+      import Linkhut.Config, only: [put_override: 3]
     end
   end
 

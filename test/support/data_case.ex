@@ -23,6 +23,7 @@ defmodule Linkhut.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Linkhut.DataCase
+      import Linkhut.Config, only: [put_override: 3]
     end
   end
 

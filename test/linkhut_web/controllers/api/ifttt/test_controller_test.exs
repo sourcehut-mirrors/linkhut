@@ -1,6 +1,5 @@
 defmodule LinkhutWeb.Api.IFTTT.TestControllerTest do
-  # NOTE: Cannot be async: true — setup mutates global Application config
-  use LinkhutWeb.ConnCase
+  use LinkhutWeb.ConnCase, async: true
 
   alias Linkhut.Oauth
 
@@ -15,12 +14,8 @@ defmodule LinkhutWeb.Api.IFTTT.TestControllerTest do
         "redirect_uri" => "http://example.com/callback"
       })
 
-    original_ifttt = Application.get_env(:linkhut, Linkhut.IFTTT, [])
-
-    updated = Keyword.merge(original_ifttt, user_id: user.id, application: app.uid)
-
-    Application.put_env(:linkhut, Linkhut.IFTTT, updated)
-    on_exit(fn -> Application.put_env(:linkhut, Linkhut.IFTTT, original_ifttt) end)
+    put_override(Linkhut.IFTTT, :user_id, user.id)
+    put_override(Linkhut.IFTTT, :application, app.uid)
 
     conn =
       conn

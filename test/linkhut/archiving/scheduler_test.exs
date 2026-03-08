@@ -1,22 +1,13 @@
 defmodule Linkhut.Archiving.SchedulerTest do
-  use Linkhut.DataCase
+  use Linkhut.DataCase, async: true
 
   import Linkhut.Factory
 
   alias Linkhut.Archiving.Scheduler
 
-  defp set_archiving_mode(mode) do
-    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :mode, mode))
-
-    on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut.Archiving, original)
-    end)
-  end
-
   describe "schedule_pending_archives/0" do
     test "returns empty list when archiving is disabled" do
-      set_archiving_mode(:disabled)
+      put_override(Linkhut.Archiving, :mode, :disabled)
 
       user = insert(:user, credential: build(:credential), type: :active_paying)
       insert(:link, user_id: user.id)

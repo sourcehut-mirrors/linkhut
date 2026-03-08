@@ -158,8 +158,7 @@ if config_env() == :prod do
 
   # Mail -- only override sender if EMAIL_FROM_ADDRESS is set.
   if from_address = System.get_env("EMAIL_FROM_ADDRESS") do
-    config :linkhut, Linkhut.Mail,
-      sender: {System.get_env("EMAIL_FROM_NAME"), from_address}
+    config :linkhut, Linkhut.Mail, sender: {System.get_env("EMAIL_FROM_NAME"), from_address}
   end
 
   # Prometheus

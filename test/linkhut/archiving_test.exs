@@ -6,22 +6,13 @@ defmodule Linkhut.ArchivingTest do
   alias Linkhut.Archiving
   alias Linkhut.Archiving.{Archive, Snapshot}
 
-  defp set_archiving_mode(mode) do
-    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :mode, mode))
-
-    on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut.Archiving, original)
-    end)
-  end
-
   defp create_archive(user, link) do
     insert(:archive, user_id: user.id, link_id: link.id, url: link.url)
   end
 
   describe "enabled_for_user?/1" do
     test "returns false for all users when disabled" do
-      set_archiving_mode(:disabled)
+      put_override(Linkhut.Archiving, :mode, :disabled)
 
       assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_paying}) == false
       assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_free}) == false
@@ -29,7 +20,7 @@ defmodule Linkhut.ArchivingTest do
     end
 
     test "returns true only for paying users when limited" do
-      set_archiving_mode(:limited)
+      put_override(Linkhut.Archiving, :mode, :limited)
 
       assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_paying}) == true
       assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_free}) == false
@@ -37,7 +28,7 @@ defmodule Linkhut.ArchivingTest do
     end
 
     test "returns true for all active users when enabled" do
-      set_archiving_mode(:enabled)
+      put_override(Linkhut.Archiving, :mode, :enabled)
 
       assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_paying}) == true
       assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_free}) == true

@@ -1,6 +1,8 @@
 defmodule Linkhut.Archiving.Storage.LocalTest do
   use ExUnit.Case, async: false
 
+  import Linkhut.Config, only: [put_override: 3]
+
   alias Linkhut.Archiving.Snapshot
   alias Linkhut.Archiving.Storage.Local
 
@@ -209,12 +211,10 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     setup do
       File.mkdir_p!(@legacy_dir)
 
-      original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-      Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :legacy_data_dirs, [@legacy_dir]))
+      put_override(Linkhut.Archiving, :legacy_data_dirs, [@legacy_dir])
 
       on_exit(fn ->
         File.rm_rf(@legacy_dir)
-        Application.put_env(:linkhut, Linkhut.Archiving, original)
       end)
 
       :ok

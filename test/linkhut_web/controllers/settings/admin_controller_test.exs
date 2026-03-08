@@ -1,5 +1,5 @@
 defmodule LinkhutWeb.Settings.AdminControllerTest do
-  use LinkhutWeb.ConnCase
+  use LinkhutWeb.ConnCase, async: true
 
   alias Linkhut.Accounts
 
@@ -8,15 +8,6 @@ defmodule LinkhutWeb.Settings.AdminControllerTest do
     {:ok, user} = Accounts.set_admin_role(user)
     conn = LinkhutWeb.ConnCase.log_in_user(conn, user)
     %{conn: conn, user: user}
-  end
-
-  defp set_archiving_mode(mode) do
-    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :mode, mode))
-
-    on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut.Archiving, original)
-    end)
   end
 
   describe "GET /_/admin" do
@@ -30,7 +21,7 @@ defmodule LinkhutWeb.Settings.AdminControllerTest do
     end
 
     test "renders archiving section when mode is enabled", %{conn: conn} do
-      set_archiving_mode(:enabled)
+      put_override(Linkhut.Archiving, :mode, :enabled)
 
       response =
         conn

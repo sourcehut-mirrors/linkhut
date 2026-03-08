@@ -133,7 +133,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       snapshot = create_pending_snapshot(user, link)
 
       # Use a mock crawler that fails
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "failing")
 
@@ -149,7 +151,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link)
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
+      ])
 
       job = %{make_job(snapshot, user, link, type: "failing") | attempt: 4, max_attempts: 4}
 
@@ -166,7 +170,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "raising")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "raising")
 
@@ -182,7 +188,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "raising")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler
+      ])
 
       job = %{make_job(snapshot, user, link, type: "raising") | attempt: 4, max_attempts: 4}
 
@@ -199,7 +207,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "noretry")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler
+      ])
 
       job = %{make_job(snapshot, user, link, type: "noretry") | attempt: 1, max_attempts: 4}
 
@@ -215,7 +225,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "noretry")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "noretry")
 
@@ -232,7 +244,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link)
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "success")
 
@@ -251,7 +265,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link)
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "success")
 
@@ -266,7 +282,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link)
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
+      ])
 
       job = %{make_job(snapshot, user, link, type: "failing") | attempt: 1, max_attempts: 4}
 
@@ -284,7 +302,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link)
 
-      set_crawlers([
+      put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler,
         Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
       ])
@@ -327,7 +345,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
           archive_id: new_archive.id
         })
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
+      ])
 
       job =
         make_job(snapshot, user, link,
@@ -371,7 +391,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
           archive_id: archive.id
         })
 
-      set_crawlers([
+      put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler,
         Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
       ])
@@ -407,7 +427,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "external")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "external")
 
@@ -429,7 +451,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "external")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler])
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler
+      ])
 
       job = make_job(snapshot, user, link, type: "external")
 
@@ -446,8 +470,11 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "large")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler])
-      set_max_file_size(10)
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler
+      ])
+
+      put_override(Linkhut.Archiving, :max_file_size, 10)
 
       job = make_job(snapshot, user, link, type: "large")
 
@@ -463,8 +490,11 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "large")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler])
-      set_max_file_size(10)
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler
+      ])
+
+      put_override(Linkhut.Archiving, :max_file_size, 10)
 
       job = %{make_job(snapshot, user, link, type: "large") | attempt: 4, max_attempts: 4}
 
@@ -479,8 +509,11 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "large")
 
-      set_crawlers([Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler])
-      set_max_file_size(10)
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler
+      ])
+
+      put_override(Linkhut.Archiving, :max_file_size, 10)
 
       job = make_job(snapshot, user, link, type: "large")
       Crawler.perform(job)
@@ -490,26 +523,6 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       updated = Repo.get(Snapshot, snapshot.id)
       assert is_nil(updated.storage_key)
     end
-  end
-
-  # --- Helpers ---
-
-  defp set_max_file_size(size) do
-    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :max_file_size, size))
-
-    on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut.Archiving, original)
-    end)
-  end
-
-  defp set_crawlers(crawlers) do
-    original = Application.get_env(:linkhut, Linkhut.Archiving, [])
-    Application.put_env(:linkhut, Linkhut.Archiving, Keyword.put(original, :crawlers, crawlers))
-
-    on_exit(fn ->
-      Application.put_env(:linkhut, Linkhut.Archiving, original)
-    end)
   end
 end
 
