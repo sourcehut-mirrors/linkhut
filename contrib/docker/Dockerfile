@@ -78,7 +78,7 @@ LABEL maintainer="ops@linkhut.org" \
     org.opencontainers.image.created=$BUILD_DATE
 
 RUN apt-get update -y && \
-  apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates postgresql-client \
+  apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates curl postgresql-client \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale
