@@ -27,7 +27,7 @@ defmodule LinkhutWeb.SnapshotHTML do
         <.nav_link
           request_path={@request_path}
           to={~p"/_/archive/#{@link_id}/all"}
-          name="All snapshots"
+          name="Archive history"
         />
       </ul>
     </div>
