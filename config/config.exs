@@ -74,7 +74,8 @@ config :linkhut, Oban,
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-    {Oban.Plugins.Reindexer, schedule: "@weekly"}
+    {Oban.Plugins.Reindexer, schedule: "@weekly"},
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(60)}
   ],
   crontab: [
     # Every 2 minutes — fill archiver queue

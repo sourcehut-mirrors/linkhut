@@ -20,6 +20,9 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
   @html_content_types ~w(text/html application/xhtml+xml)
 
+  # 1 minute timeout
+  @timeout_ms 60_000
+
   @impl true
   def can_handle?(_url, %{content_type: content_type, status: status})
       when content_type in @html_content_types and status < 400 do
@@ -35,6 +38,23 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
     File.mkdir_p!(staging_dir)
 
+    task = Task.async(fn -> run_single_file(link_id, url, staging_dir) end)
+
+    case Task.yield(task, @timeout_ms) || Task.shutdown(task, 5_000) do
+      {:ok, result} ->
+        result
+
+      {:exit, reason} ->
+        File.rm_rf(staging_dir)
+        {:error, %{msg: "SingleFile crashed: #{inspect(reason)}"}}
+
+      nil ->
+        File.rm_rf(staging_dir)
+        {:error, %{msg: "SingleFile timed out after #{@timeout_ms}ms"}}
+    end
+  end
+
+  defp run_single_file(link_id, url, staging_dir) do
     args = [
       "--user-agent",
       Crawler.user_agent(),
