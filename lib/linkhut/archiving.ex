@@ -15,6 +15,8 @@ defmodule Linkhut.Archiving do
   alias Linkhut.Links.Link
   alias Linkhut.Repo
 
+  @domain_cooldown_seconds 120
+
   @doc """
   Returns the archiving mode.
 
@@ -431,6 +433,61 @@ defmodule Linkhut.Archiving do
     """)
 
     :ok
+  end
+
+  # --- Scheduler helpers ---
+
+  @doc """
+  Returns a `MapSet` of domain strings that have had an archive created
+  within the cooldown window. Used by the scheduler to skip domains that
+  were recently crawled.
+  """
+  def domains_on_cooldown(cooldown_seconds \\ @domain_cooldown_seconds) do
+    cutoff = DateTime.add(DateTime.utc_now(), -cooldown_seconds)
+
+    from(a in Archive,
+      where: a.inserted_at > ^cutoff and a.state != :pending_deletion,
+      select: a.url
+    )
+    |> Repo.all()
+    |> Enum.map(&extract_domain/1)
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  @doc """
+  Returns the number of available slots in the archiver queue.
+  Counts jobs in active states and subtracts from the queue limit.
+  """
+  def available_archiver_slots do
+    queue_limit = archiver_queue_limit()
+
+    active =
+      from(j in Oban.Job,
+        where: j.queue == "archiver",
+        where: j.state in ["available", "scheduled", "executing", "retryable"],
+        select: count(j.id)
+      )
+      |> Repo.one()
+
+    max(queue_limit - active, 0)
+  end
+
+  @doc false
+  def extract_domain(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{host: host} when is_binary(host) and host != "" -> host
+      _ -> nil
+    end
+  end
+
+  def extract_domain(_), do: nil
+
+  defp archiver_queue_limit do
+    case Application.get_env(:linkhut, Oban)[:queues] do
+      queues when is_list(queues) -> Keyword.get(queues, :archiver, 5)
+      _ -> 5
+    end
   end
 
   defp to_integer(nil), do: 0

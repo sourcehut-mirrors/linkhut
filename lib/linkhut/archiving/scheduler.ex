@@ -1,55 +1,83 @@
 defmodule Linkhut.Archiving.Scheduler do
-  @moduledoc "Manages fair distribution of archive jobs across users and domains"
+  @moduledoc """
+  Queue-filler scheduler: keeps the archiver queue full with user-fair
+  interleaving and domain-polite cooldown skipping.
+
+  Runs every 2 minutes via `ArchiveScheduler`, checks available archiver
+  queue capacity, and fills slots immediately. Domain politeness is achieved
+  by skipping domains on cooldown (not delaying), and user fairness by
+  round-robin interleaving and shuffling the user list.
+  """
 
   alias Linkhut.{Accounts, Archiving}
+  require Logger
 
   @doc """
   Schedules pending archives for eligible users based on the archiving mode.
-  Returns a list of scheduled job results, or an empty list when disabled.
+  Returns a list of scheduled job results, or an empty list when disabled
+  or when no work is available.
   """
   def schedule_pending_archives do
+    case eligible_users() do
+      [] -> []
+      users -> fill_queue(users)
+    end
+  end
+
+  defp eligible_users do
     case Archiving.mode() do
       :disabled -> []
       :limited -> Accounts.list_active_paying_users()
       :enabled -> Accounts.list_active_users()
     end
-    |> distribute_archive_jobs()
   end
 
-  defp distribute_archive_jobs(users) do
-    # Round-robin through users to ensure fairness
+  defp fill_queue(users) do
+    available_slots = Archiving.available_archiver_slots()
+
+    if available_slots <= 0 do
+      Logger.debug("Archive queues full, skipping scheduling")
+      []
+    else
+      schedule_candidates(users, available_slots)
+    end
+  end
+
+  defp schedule_candidates(users, available_slots) do
+    cooldown_domains = Archiving.domains_on_cooldown()
+    candidates_per_user = available_slots * 3
+
     users
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {user, index} ->
-      # Stagger job scheduling to prevent domain flooding
-      # 30 second intervals
-      delay_seconds = index * 30
-      schedule_user_archives(user, delay_seconds)
-    end)
-  end
-
-  defp schedule_user_archives(user, delay_seconds) do
-    # Limit per user per run
-    Archiving.list_unarchived_links_for_user(user, 5)
-    |> group_by_domain()
-    |> Enum.flat_map(fn {_domain, links} ->
-      # Space out same-domain requests by 60 seconds
-      links
-      |> Enum.with_index()
-      |> Enum.map(fn {link, domain_index} ->
-        total_delay = delay_seconds + domain_index * 60
-        schedule_archive_job(link, total_delay)
+    |> Enum.shuffle()
+    |> Enum.map(fn user ->
+      Archiving.list_unarchived_links_for_user(user, candidates_per_user)
+      |> Enum.reject(fn link ->
+        MapSet.member?(cooldown_domains, Archiving.extract_domain(link.url))
       end)
     end)
+    |> interleave()
+    |> Enum.take(available_slots)
+    |> Enum.map(&enqueue/1)
   end
 
-  defp group_by_domain(links) do
-    Enum.group_by(links, fn link ->
-      URI.parse(link.url).host || "unknown"
-    end)
+  @doc false
+  def interleave(lists) do
+    do_interleave(lists, [])
   end
 
-  defp schedule_archive_job(link, delay_seconds) do
-    Linkhut.Archiving.Workers.Archiver.enqueue(link, schedule_in: delay_seconds)
+  defp do_interleave(lists, acc) do
+    case Enum.reject(lists, &(&1 == [])) do
+      [] ->
+        Enum.reverse(acc)
+
+      non_empty ->
+        heads = Enum.map(non_empty, &hd/1)
+        tails = Enum.map(non_empty, &tl/1)
+        do_interleave(tails, Enum.reverse(heads) ++ acc)
+    end
+  end
+
+  defp enqueue(link) do
+    Linkhut.Archiving.Workers.Archiver.enqueue(link)
   end
 end
