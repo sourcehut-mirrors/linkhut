@@ -16,6 +16,12 @@ Archiving is configured under `config :linkhut, Linkhut.Archiving, [...]`.
 | `storage`          | module     | `Storage.Local` | Storage backend module. |
 | `legacy_data_dirs` | list       | `[]`       | Additional directories to accept when resolving or deleting existing snapshots (useful during data directory migrations). |
 
+Additional configuration under `config :linkhut, Linkhut.Archiving.Storage.Local, [...]`:
+
+| Key            | Type | Default | Description |
+|----------------|------|---------|-------------|
+| `compression`  | atom | `:none` | Compression algorithm for new snapshots (`:none` or `:gzip`). |
+
 ### Modes
 
 - **`:disabled`** — Archiving is completely off. No snapshots are created or
@@ -28,12 +34,24 @@ Archiving is configured under `config :linkhut, Linkhut.Archiving, [...]`.
 In `runtime.exs`, the following environment variables are read:
 
 | Variable | Config key | Type | Default | Description |
-|---|---|---|---|---|
+|---------------------------------|---|---|---|---|
 | `ARCHIVING_MODE` | `:mode` | `"enabled"`, `"limited"`, or `"disabled"` | `"disabled"` | Controls who can use archiving. |
 | `ARCHIVING_DATA_DIR` | `:data_dir` | path string | (none) | Directory where snapshot files are stored. |
 | `ARCHIVING_SERVE_HOST` | `:serve_host` | hostname string | (none) | Dedicated hostname for serving archived HTML. |
 | `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
 | `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
+| `ARCHIVING_STORAGE_COMPRESSION` | `compression` (under `Storage.Local`) | `"none"` or `"gzip"` | `"none"` | Compression for new local snapshots. |
+
+### Compression
+
+When `compression` is set to `:gzip`, new snapshots with compressible content
+types are gzip-compressed at rest.
+
+- Compressed files are served with `Content-Encoding: gzip`, so browsers
+  decompress them transparently.
+- Downloads are decompressed before sending.
+- Existing snapshots are not affected by the setting change. Use
+  `mix linkhut.storage local.compress` to compress them retroactively.
 
 ## Security considerations
 

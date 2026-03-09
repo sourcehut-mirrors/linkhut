@@ -32,3 +32,61 @@ mix linkhut.user new <username> <email> [option ...]
 - `--admin`/`--no-admin` - whether the user should be an admin
 - `-y`, `--assume-yes`/`--no-assume-yes` - whether to assume yes to all questions
 
+
+## Storage management
+
+
+### Show storage stats
+
+<!-- tabs-open -->
+### CLI
+
+```shell
+./bin/linkhut_ctl storage
+```
+
+### Mix
+
+```shell
+mix linkhut.storage
+```
+<!-- tabs-close -->
+
+
+### Compress local snapshots
+
+Gzip-compress uncompressed local snapshots.
+
+<!-- tabs-open -->
+### CLI
+
+```shell
+./bin/linkhut_ctl storage local.compress [--dry-run]
+```
+
+### Mix
+
+```shell
+mix linkhut.storage local.compress [--dry-run]
+```
+<!-- tabs-close -->
+
+
+### Decompress local snapshots
+
+Decompress gzip-compressed local snapshots.
+
+<!-- tabs-open -->
+### CLI
+
+```shell
+./bin/linkhut_ctl storage local.decompress [--dry-run]
+```
+
+### Mix
+
+```shell
+mix linkhut.storage local.decompress [--dry-run]
+```
+<!-- tabs-close -->
+

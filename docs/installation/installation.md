@@ -89,6 +89,9 @@ LINKHUT_HOST="<service_host>"
 # ARCHIVING_MODE="disabled"
 # ARCHIVING_DATA_DIR="/var/lib/linkhut/archives"
 # ARCHIVING_SERVE_HOST="archive.example.com"
+# ARCHIVING_MAX_FILE_SIZE="70000000"
+# ARCHIVING_USER_AGENT_SUFFIX="+https://your-instance.com"
+# ARCHIVING_STORAGE_COMPRESSION="none"
 EOF
 ```
 
