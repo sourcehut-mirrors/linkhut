@@ -317,6 +317,102 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
   end
 
+  describe "compressed snapshots" do
+    setup %{user: user} do
+      link = insert(:link, user_id: user.id)
+
+      archive =
+        insert(:archive,
+          link_id: link.id,
+          user_id: user.id,
+          url: link.url,
+          state: :complete
+        )
+
+      data_dir = Linkhut.Config.archiving(:data_dir)
+      file_path = Path.join(data_dir, "test_compressed_file.gz")
+      storage_key = StorageKey.local(file_path)
+
+      original_content = "<html>compressed archived content</html>"
+      compressed = :zlib.gzip(original_content)
+
+      {:ok, snapshot} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          type: "singlefile",
+          state: :complete,
+          storage_key: storage_key,
+          file_size_bytes: byte_size(compressed),
+          encoding: "gzip",
+          original_file_size_bytes: byte_size(original_content),
+          processing_time_ms: 500,
+          response_code: 200,
+          archive_id: archive.id,
+          archive_metadata: %{
+            content_type: "text/html",
+            tool_name: "SingleFile",
+            crawler_version: "2.0.75"
+          }
+        })
+
+      File.mkdir_p!(data_dir)
+      File.write!(file_path, compressed)
+
+      on_exit(fn -> File.rm_rf(data_dir) end)
+
+      %{
+        link: link,
+        snapshot: snapshot,
+        archive: archive,
+        original_content: original_content
+      }
+    end
+
+    test "serves compressed file with content-encoding header", %{
+      conn: conn,
+      snapshot: snapshot
+    } do
+      token = Archiving.generate_token(snapshot.id)
+
+      conn =
+        conn
+        |> recycle()
+        |> put_req_header("accept-encoding", "gzip, deflate, br")
+        |> get(~p"/_/snapshot/#{token}/serve")
+
+      assert response(conn, 200)
+      assert get_resp_header(conn, "content-encoding") == ["gzip"]
+      assert get_resp_header(conn, "vary") == ["Accept-Encoding"]
+    end
+
+    test "returns 406 when client does not accept gzip", %{
+      conn: conn,
+      snapshot: snapshot
+    } do
+      token = Archiving.generate_token(snapshot.id)
+
+      conn =
+        conn
+        |> recycle()
+        |> put_req_header("accept-encoding", "identity")
+        |> get(~p"/_/snapshot/#{token}/serve")
+
+      assert json_response(conn, 406)["error"] =~ "gzip"
+    end
+
+    test "download returns decompressed HTML", %{
+      conn: conn,
+      link: link,
+      original_content: original_content
+    } do
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/download")
+      body = response(conn, 200)
+      assert body == original_content
+
+      [disposition] = get_resp_header(conn, "content-disposition")
+      assert disposition =~ "attachment"
+    end
+  end
+
   describe "external snapshots" do
     setup %{user: user} do
       link = insert(:link, user_id: user.id)

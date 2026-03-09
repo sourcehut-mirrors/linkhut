@@ -12,69 +12,94 @@ defmodule Linkhut.Archiving.Storage.Local do
 
   @behaviour Linkhut.Archiving.Storage
 
+  @compressible_types ~w(text/html application/xhtml+xml)
+  def compressible_types, do: @compressible_types
+
   @impl true
   def store(source, snapshot, opts \\ [])
 
   @impl true
-  def store({:file, source_path}, %Snapshot{} = snapshot, _opts) do
+  def store({:file, source_path}, %Snapshot{} = snapshot, opts) do
     dest_path = build_dest_path(snapshot)
     File.mkdir_p!(Path.dirname(dest_path))
 
-    case move_file(source_path, dest_path) do
-      :ok ->
-        size = File.stat!(dest_path).size
-        {:ok, StorageKey.local(dest_path), %{file_size_bytes: size, encoding: nil}}
+    if should_compress?(opts) do
+      content = File.read!(source_path)
 
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
+      case store_compressed(content, dest_path) do
+        {:ok, _, _} = result ->
+          File.rm(source_path)
+          result
 
-  @impl true
-  def store({:data, content}, %Snapshot{} = snapshot, _opts) do
-    dest_path = build_dest_path(snapshot)
-    File.mkdir_p!(Path.dirname(dest_path))
+        error ->
+          error
+      end
+    else
+      case move_file(source_path, dest_path) do
+        :ok ->
+          size = File.stat!(dest_path).size
+          {:ok, StorageKey.local(dest_path), %{file_size_bytes: size, encoding: nil}}
 
-    case File.write(dest_path, content) do
-      :ok ->
-        {:ok, StorageKey.local(dest_path), %{file_size_bytes: byte_size(content), encoding: nil}}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  @impl true
-  def store({:stream, stream}, %Snapshot{} = snapshot, _opts) do
-    dest_path = build_dest_path(snapshot)
-    File.mkdir_p!(Path.dirname(dest_path))
-
-    with {:ok, file} <- File.open(dest_path, [:write, :binary]) do
-      try do
-        Enum.each(stream, fn chunk ->
-          case :file.write(file, chunk) do
-            :ok -> :ok
-            {:error, reason} -> throw({:write_error, reason})
-          end
-        end)
-
-        size = File.stat!(dest_path).size
-        {:ok, StorageKey.local(dest_path), %{file_size_bytes: size, encoding: nil}}
-      rescue
-        e -> {:error, e}
-      catch
-        {:write_error, reason} -> {:error, reason}
-      after
-        File.close(file)
+        {:error, reason} ->
+          {:error, reason}
       end
     end
-    |> case do
-      {:ok, _, _} = ok ->
-        ok
+  end
 
-      {:error, _} = err ->
-        File.rm(dest_path)
-        err
+  @impl true
+  def store({:data, content}, %Snapshot{} = snapshot, opts) do
+    dest_path = build_dest_path(snapshot)
+    File.mkdir_p!(Path.dirname(dest_path))
+
+    if should_compress?(opts) do
+      store_compressed(content, dest_path)
+    else
+      case File.write(dest_path, content) do
+        :ok ->
+          {:ok, StorageKey.local(dest_path), %{file_size_bytes: byte_size(content), encoding: nil}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  @impl true
+  def store({:stream, stream}, %Snapshot{} = snapshot, opts) do
+    dest_path = build_dest_path(snapshot)
+    File.mkdir_p!(Path.dirname(dest_path))
+
+    if should_compress?(opts) do
+      content = Enum.into(stream, <<>>)
+      store_compressed(content, dest_path)
+    else
+      with {:ok, file} <- File.open(dest_path, [:write, :binary]) do
+        try do
+          Enum.each(stream, fn chunk ->
+            case :file.write(file, chunk) do
+              :ok -> :ok
+              {:error, reason} -> throw({:write_error, reason})
+            end
+          end)
+
+          size = File.stat!(dest_path).size
+          {:ok, StorageKey.local(dest_path), %{file_size_bytes: size, encoding: nil}}
+        rescue
+          e -> {:error, e}
+        catch
+          {:write_error, reason} -> {:error, reason}
+        after
+          File.close(file)
+        end
+      end
+      |> case do
+        {:ok, _, _} = ok ->
+          ok
+
+        {:error, _} = err ->
+          File.rm(dest_path)
+          err
+      end
     end
   end
 
@@ -144,6 +169,42 @@ defmodule Linkhut.Archiving.Storage.Local do
         _ -> acc
       end
     end)
+  end
+
+  defp should_compress?(opts) do
+    compression_algo() != :none and
+      Keyword.get(opts, :content_type) in @compressible_types
+  end
+
+  defp compression_algo do
+    Application.get_env(:linkhut, __MODULE__, [])
+    |> Keyword.get(:compression, :none)
+  end
+
+  defp store_compressed(content, dest_path) do
+    compressed = :zlib.gzip(content)
+
+    if byte_size(compressed) >= byte_size(content) do
+      case File.write(dest_path, content) do
+        :ok ->
+          {:ok, StorageKey.local(dest_path),
+           %{file_size_bytes: byte_size(content), encoding: nil}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    else
+      dest_gz = dest_path <> ".gz"
+
+      case File.write(dest_gz, compressed) do
+        :ok ->
+          {:ok, StorageKey.local(dest_gz),
+           %{file_size_bytes: byte_size(compressed), encoding: "gzip"}}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
   end
 
   defp move_file(source, dest) do

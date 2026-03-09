@@ -214,4 +214,24 @@ if config_env() == :prod do
   if archiving_overrides != [] do
     config :linkhut, Linkhut.Archiving, archiving_overrides
   end
+
+  local_storage_overrides =
+    [
+      compression:
+        case System.get_env("ARCHIVING_STORAGE_COMPRESSION") do
+          "none" -> :none
+          "gzip" -> :gzip
+          _ -> nil
+        end
+    ]
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+  if local_storage_overrides != [] do
+    config :linkhut,
+      Linkhut.Archiving.Storage.Local,
+      Keyword.merge(
+        Application.get_env(:linkhut, Linkhut.Archiving.Storage.Local, []),
+        local_storage_overrides
+      )
+  end
 end

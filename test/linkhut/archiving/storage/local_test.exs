@@ -246,6 +246,129 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
   end
 
+  describe "store/3 with compression" do
+    setup do
+      Application.put_env(:linkhut, Linkhut.Archiving.Storage.Local, compression: :gzip)
+
+      on_exit(fn ->
+        Application.put_env(:linkhut, Linkhut.Archiving.Storage.Local, compression: :none)
+      end)
+
+      :ok
+    end
+
+    test "compresses {:file, path} with compressible content_type" do
+      original = "<html><body>#{String.duplicate("hello world ", 100)}</body></html>"
+      source = create_temp_file(original)
+      snapshot = build_snapshot()
+
+      assert {:ok, "local:" <> dest, meta} =
+               Local.store({:file, source}, snapshot, content_type: "text/html")
+
+      assert String.ends_with?(dest, ".gz")
+      assert meta.encoding == "gzip"
+      assert meta.file_size_bytes < byte_size(original)
+      assert :zlib.gunzip(File.read!(dest)) == original
+    end
+
+    test "does not compress {:file, path} with non-compressible content_type" do
+      source = create_temp_file("binary data")
+      snapshot = build_snapshot()
+
+      assert {:ok, "local:" <> dest, meta} =
+               Local.store({:file, source}, snapshot, content_type: "application/pdf")
+
+      refute String.ends_with?(dest, ".gz")
+      assert meta.encoding == nil
+      assert File.read!(dest) == "binary data"
+    end
+
+    test "removes source file after successful compression" do
+      source = create_temp_file("<html>test</html>")
+      snapshot = build_snapshot()
+
+      assert {:ok, _key, _meta} =
+               Local.store({:file, source}, snapshot, content_type: "text/html")
+
+      refute File.exists?(source)
+    end
+
+    test "compresses {:data, binary} with compressible content_type" do
+      original = "<html><body>#{String.duplicate("data content ", 100)}</body></html>"
+      snapshot = build_snapshot()
+
+      assert {:ok, "local:" <> dest, meta} =
+               Local.store({:data, original}, snapshot, content_type: "text/html")
+
+      assert String.ends_with?(dest, ".gz")
+      assert meta.encoding == "gzip"
+      assert :zlib.gunzip(File.read!(dest)) == original
+    end
+
+    test "compresses {:stream, enumerable} with compressible content_type" do
+      chunks = ["<html><body>", String.duplicate("stream content ", 100), "</body></html>"]
+      original = Enum.join(chunks)
+      stream = Stream.map(chunks, & &1)
+      snapshot = build_snapshot()
+
+      assert {:ok, "local:" <> dest, meta} =
+               Local.store({:stream, stream}, snapshot, content_type: "text/html")
+
+      assert String.ends_with?(dest, ".gz")
+      assert meta.encoding == "gzip"
+      assert :zlib.gunzip(File.read!(dest)) == original
+    end
+
+    test "does not compress when compression config is :none" do
+      Application.put_env(:linkhut, Linkhut.Archiving.Storage.Local, compression: :none)
+
+      source = create_temp_file("<html>test</html>")
+      snapshot = build_snapshot()
+
+      assert {:ok, "local:" <> dest, meta} =
+               Local.store({:file, source}, snapshot, content_type: "text/html")
+
+      refute String.ends_with?(dest, ".gz")
+      assert meta.encoding == nil
+    end
+
+    test "compresses application/xhtml+xml content" do
+      original = "<html xmlns='http://www.w3.org/1999/xhtml'>#{String.duplicate("x", 100)}</html>"
+      snapshot = build_snapshot()
+
+      assert {:ok, _key, meta} =
+               Local.store({:data, original}, snapshot, content_type: "application/xhtml+xml")
+
+      assert meta.encoding == "gzip"
+    end
+
+    test "does not delete source file if compressed write fails" do
+      source = create_temp_file("<html>test</html>")
+      snapshot = build_snapshot()
+
+      # Make dest dir read-only to cause write failure
+      dest_dir =
+        Path.join([
+          @data_dir,
+          "#{snapshot.user_id}",
+          "#{snapshot.link_id}",
+          "#{snapshot.archive_id}"
+        ])
+
+      File.mkdir_p!(dest_dir)
+      File.chmod!(dest_dir, 0o444)
+
+      assert {:error, _} =
+               Local.store({:file, source}, snapshot, content_type: "text/html")
+
+      # Source file should still exist
+      assert File.exists?(source)
+
+      # Cleanup: restore permissions
+      File.chmod!(dest_dir, 0o755)
+    end
+  end
+
   defp create_temp_file(content) do
     dir = Path.join(System.tmp_dir!(), "linkhut_test_#{:erlang.unique_integer([:positive])}")
     File.mkdir_p!(dir)

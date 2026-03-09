@@ -123,7 +123,7 @@ defmodule LinkhutWeb.SnapshotController do
           |> put_resp_header("x-content-type-options", "nosniff")
           |> put_resp_header("cache-control", "no-cache, no-store, must-revalidate")
           |> put_resp_header("content-security-policy", csp_for_content_type(content_type))
-          |> send_file(200, path)
+          |> serve_file(path, snapshot.encoding)
       end
     else
       {:error, :invalid_token} ->
@@ -290,8 +290,12 @@ defmodule LinkhutWeb.SnapshotController do
       {:ok, {:file, path}} ->
         filename = download_filename(link.title, snapshot.inserted_at, snapshot)
 
-        conn
-        |> send_download({:file, path}, filename: filename, charset: "utf-8")
+        if snapshot.encoding do
+          send_decompressed_download(conn, path, snapshot.encoding, filename)
+        else
+          conn
+          |> send_download({:file, path}, filename: filename, charset: "utf-8")
+        end
 
       {:ok, {:redirect, _url}} ->
         conn
@@ -318,6 +322,39 @@ defmodule LinkhutWeb.SnapshotController do
     else
       conn
     end
+  end
+
+  defp serve_file(conn, path, "gzip") do
+    if accepts_encoding?(conn, "gzip") do
+      conn
+      |> put_resp_header("content-encoding", "gzip")
+      |> put_resp_header("vary", "Accept-Encoding")
+      |> send_file(200, path)
+    else
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(406, Jason.encode!(%{error: "Snapshot requires gzip support"}))
+    end
+  end
+
+  defp serve_file(conn, path, _encoding) do
+    send_file(conn, 200, path)
+  end
+
+  defp accepts_encoding?(conn, encoding) do
+    conn
+    |> get_req_header("accept-encoding")
+    |> Enum.any?(&String.contains?(&1, encoding))
+  end
+
+  defp send_decompressed_download(conn, path, "gzip", filename) do
+    decompressed = path |> File.read!() |> :zlib.gunzip()
+
+    send_download(conn, {:binary, decompressed}, filename: filename, charset: "utf-8")
+  end
+
+  defp send_decompressed_download(conn, path, _encoding, filename) do
+    send_download(conn, {:file, path}, filename: filename, charset: "utf-8")
   end
 
   defp serve_url(conn, token) do
