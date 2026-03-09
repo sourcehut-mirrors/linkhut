@@ -14,14 +14,14 @@ defmodule Linkhut.Archiving.StorageTest do
     :ok
   end
 
-  describe "store/2" do
+  describe "store/3" do
     test "delegates to the configured storage backend" do
       source = create_temp_file("test content")
 
       snapshot =
         build_snapshot(id: 1, user_id: 1, link_id: 100, archive_id: 10, type: "singlefile")
 
-      assert {:ok, "local:" <> _} = Storage.store({:file, source}, snapshot)
+      assert {:ok, "local:" <> _, _meta} = Storage.store({:file, source}, snapshot)
     end
   end
 

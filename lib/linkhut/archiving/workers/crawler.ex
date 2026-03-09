@@ -107,15 +107,21 @@ defmodule Linkhut.Archiving.Workers.Crawler do
         start_time
       )
     else
-      case Archiving.Storage.store({:file, result[:path]}, snapshot) do
-        {:ok, storage_key} ->
+      content_type = result[:content_type] || "application/octet-stream"
+
+      if is_nil(result[:content_type]) do
+        Logger.warning("Crawler result for snapshot #{snapshot.id} missing content_type")
+      end
+
+      case Archiving.Storage.store({:file, result[:path]}, snapshot, content_type: content_type) do
+        {:ok, storage_key, store_meta} ->
           File.rm_rf(staging_dir)
 
           Archiving.update_snapshot(snapshot, %{
             state: :complete,
             storage_key: storage_key,
             processing_time_ms: processing_time,
-            file_size_bytes: file_size,
+            file_size_bytes: store_meta.file_size_bytes,
             response_code: result[:response_code] || 200,
             crawl_info:
               Steps.add_crawl_step(

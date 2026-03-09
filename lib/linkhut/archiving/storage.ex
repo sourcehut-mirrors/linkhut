@@ -2,9 +2,9 @@ defmodule Linkhut.Archiving.Storage do
   @moduledoc """
   Behaviour and abstraction layer for archive storage backends.
 
-  Crawlers produce content in various forms. `store/2` persists it to the
+  Crawlers produce content in various forms. `store/3` persists it to the
   configured backend (local filesystem, S3, etc.) and returns a `storage_key`
-  that identifies the stored content.
+  and metadata that identifies the stored content.
   """
 
   alias Linkhut.Archiving.{Snapshot, StorageKey}
@@ -19,13 +19,21 @@ defmodule Linkhut.Archiving.Storage do
   """
   @type source :: {:file, Path.t()} | {:data, binary()} | {:stream, Enumerable.t()}
 
+  @typedoc """
+  Metadata returned by the storage backend after storing content.
+
+  - `file_size_bytes` — size of the stored file on disk (may differ from original if compressed)
+  - `encoding` — content encoding applied during storage (e.g. `"gzip"`), or `nil` if none
+  """
+  @type store_meta :: %{file_size_bytes: non_neg_integer(), encoding: String.t() | nil}
+
   @doc """
   Persists archive content to the storage backend.
 
-  Returns a `storage_key` that can later be used to retrieve the content.
+  Returns a `storage_key` and metadata that can later be used to retrieve the content.
   """
-  @callback store(source(), snapshot :: Snapshot.t()) ::
-              {:ok, storage_key :: String.t()} | {:error, term()}
+  @callback store(source(), snapshot :: Snapshot.t(), opts :: keyword()) ::
+              {:ok, storage_key :: String.t(), store_meta()} | {:error, term()}
 
   @typedoc """
   How the stored content should be served to the client.
@@ -47,8 +55,8 @@ defmodule Linkhut.Archiving.Storage do
   @doc "Returns the total bytes stored on the backend, optionally scoped to a user."
   @callback storage_used(opts :: keyword()) :: {:ok, non_neg_integer()} | {:error, term()}
 
-  def store(source, %Snapshot{} = snapshot) do
-    storage_module().store(source, snapshot)
+  def store(source, %Snapshot{} = snapshot, opts \\ []) do
+    storage_module().store(source, snapshot, opts)
   end
 
   @doc """

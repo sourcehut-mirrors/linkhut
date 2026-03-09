@@ -578,7 +578,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler do
     # Write 1000 bytes — will exceed a 10-byte max_file_size in tests
     File.write!(path, String.duplicate("x", 1000))
 
-    {:ok, {:file, %{path: path, response_code: 200}}}
+    {:ok, {:file, %{path: path, response_code: 200, content_type: "application/octet-stream"}}}
   end
 end
 
@@ -609,7 +609,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler do
     path = Path.join(staging_dir, "result")
     File.write!(path, "<html>test content</html>")
 
-    {:ok, {:file, %{path: path, response_code: 200}}}
+    {:ok, {:file, %{path: path, response_code: 200, content_type: "text/html"}}}
   end
 end
 

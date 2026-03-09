@@ -23,22 +23,24 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     struct!(Snapshot, Keyword.merge(defaults, overrides))
   end
 
-  describe "store/2 with {:file, path}" do
-    test "stores a file and returns a local: storage key" do
+  describe "store/3 with {:file, path}" do
+    test "stores a file and returns a local: storage key with meta" do
       source = create_temp_file("hello world")
       snapshot = build_snapshot()
 
-      assert {:ok, "local:" <> dest} = Local.store({:file, source}, snapshot)
+      assert {:ok, "local:" <> dest, meta} = Local.store({:file, source}, snapshot)
       assert String.starts_with?(dest, @data_dir)
       assert File.exists?(dest)
       assert File.read!(dest) == "hello world"
+      assert meta.file_size_bytes == byte_size("hello world")
+      assert meta.encoding == nil
     end
 
     test "removes the source file after storing" do
       source = create_temp_file("test content")
       snapshot = build_snapshot()
 
-      assert {:ok, _key} = Local.store({:file, source}, snapshot)
+      assert {:ok, _key, _meta} = Local.store({:file, source}, snapshot)
       refute File.exists?(source)
     end
 
@@ -48,31 +50,35 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
       snapshot =
         build_snapshot(id: 1, user_id: 42, link_id: 999, archive_id: 10, type: "singlefile")
 
-      assert {:ok, "local:" <> dest} = Local.store({:file, source}, snapshot)
+      assert {:ok, "local:" <> dest, _meta} = Local.store({:file, source}, snapshot)
       assert dest =~ "/42/999/10/1.singlefile"
     end
   end
 
-  describe "store/2 with {:data, binary}" do
-    test "stores binary data and returns a local: storage key" do
+  describe "store/3 with {:data, binary}" do
+    test "stores binary data and returns a local: storage key with meta" do
       snapshot = build_snapshot()
 
-      assert {:ok, "local:" <> dest} =
+      assert {:ok, "local:" <> dest, meta} =
                Local.store({:data, "binary content"}, snapshot)
 
       assert File.exists?(dest)
       assert File.read!(dest) == "binary content"
+      assert meta.file_size_bytes == byte_size("binary content")
+      assert meta.encoding == nil
     end
   end
 
-  describe "store/2 with {:stream, enumerable}" do
-    test "stores streamed data and returns a local: storage key" do
+  describe "store/3 with {:stream, enumerable}" do
+    test "stores streamed data and returns a local: storage key with meta" do
       stream = Stream.map(["chunk1", "chunk2", "chunk3"], & &1)
       snapshot = build_snapshot()
 
-      assert {:ok, "local:" <> dest} = Local.store({:stream, stream}, snapshot)
+      assert {:ok, "local:" <> dest, meta} = Local.store({:stream, stream}, snapshot)
       assert File.exists?(dest)
       assert File.read!(dest) == "chunk1chunk2chunk3"
+      assert meta.file_size_bytes == byte_size("chunk1chunk2chunk3")
+      assert meta.encoding == nil
     end
   end
 

@@ -28,6 +28,8 @@ defmodule Linkhut.Archiving.Snapshot do
     field :failed_at, :utc_datetime
     field :storage_key, :string
     field :archive_metadata, :map
+    field :encoding, :string
+    field :original_file_size_bytes, :integer
     field :crawler_meta, :map, default: %{}
 
     belongs_to :link, Link, define_field: false
@@ -48,7 +50,9 @@ defmodule Linkhut.Archiving.Snapshot do
     :retry_count,
     :failed_at,
     :storage_key,
-    :archive_metadata
+    :archive_metadata,
+    :encoding,
+    :original_file_size_bytes
   ]
 
   @doc false

@@ -13,35 +13,39 @@ defmodule Linkhut.Archiving.Storage.Local do
   @behaviour Linkhut.Archiving.Storage
 
   @impl true
-  def store({:file, source_path}, %Snapshot{} = snapshot) do
+  def store(source, snapshot, opts \\ [])
+
+  @impl true
+  def store({:file, source_path}, %Snapshot{} = snapshot, _opts) do
     dest_path = build_dest_path(snapshot)
     File.mkdir_p!(Path.dirname(dest_path))
 
-    case File.rename(source_path, dest_path) do
+    case move_file(source_path, dest_path) do
       :ok ->
-        {:ok, StorageKey.local(dest_path)}
+        size = File.stat!(dest_path).size
+        {:ok, StorageKey.local(dest_path), %{file_size_bytes: size, encoding: nil}}
 
-      {:error, :exdev} ->
-        with {:ok, _} <- File.copy(source_path, dest_path),
-             :ok <- File.rm(source_path) do
-          {:ok, StorageKey.local(dest_path)}
-        end
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @impl true
-  def store({:data, content}, %Snapshot{} = snapshot) do
+  def store({:data, content}, %Snapshot{} = snapshot, _opts) do
     dest_path = build_dest_path(snapshot)
     File.mkdir_p!(Path.dirname(dest_path))
 
     case File.write(dest_path, content) do
-      :ok -> {:ok, StorageKey.local(dest_path)}
-      {:error, reason} -> {:error, reason}
+      :ok ->
+        {:ok, StorageKey.local(dest_path), %{file_size_bytes: byte_size(content), encoding: nil}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   @impl true
-  def store({:stream, stream}, %Snapshot{} = snapshot) do
+  def store({:stream, stream}, %Snapshot{} = snapshot, _opts) do
     dest_path = build_dest_path(snapshot)
     File.mkdir_p!(Path.dirname(dest_path))
 
@@ -54,7 +58,8 @@ defmodule Linkhut.Archiving.Storage.Local do
           end
         end)
 
-        {:ok, StorageKey.local(dest_path)}
+        size = File.stat!(dest_path).size
+        {:ok, StorageKey.local(dest_path), %{file_size_bytes: size, encoding: nil}}
       rescue
         e -> {:error, e}
       catch
@@ -64,7 +69,7 @@ defmodule Linkhut.Archiving.Storage.Local do
       end
     end
     |> case do
-      {:ok, _} = ok ->
+      {:ok, _, _} = ok ->
         ok
 
       {:error, _} = err ->
@@ -139,6 +144,21 @@ defmodule Linkhut.Archiving.Storage.Local do
         _ -> acc
       end
     end)
+  end
+
+  defp move_file(source, dest) do
+    case File.rename(source, dest) do
+      :ok ->
+        :ok
+
+      {:error, :exdev} ->
+        with {:ok, _} <- File.copy(source, dest),
+             :ok <- File.rm(source),
+             do: :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   defp valid_path?(path) do
