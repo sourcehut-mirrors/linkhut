@@ -562,7 +562,7 @@ defmodule Linkhut.Accounts do
   """
   def list_active_users do
     User
-    |> where([u], u.type in [:active, :active_free, :active_paying])
+    |> where([u], u.type == :active)
     |> where([u], u.is_banned == false)
     |> order_by([u], asc: u.id)
     |> Repo.all()

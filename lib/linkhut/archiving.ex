@@ -28,8 +28,7 @@ defmodule Linkhut.Archiving do
 
   @doc "Returns true if the user can create new archives."
   @spec can_create_archives?(User.t()) :: boolean()
-  def can_create_archives?(%User{type: type} = user)
-      when type in [:active, :active_free, :active_paying] do
+  def can_create_archives?(%User{type: :active} = user) do
     case mode() do
       :disabled -> false
       :enabled -> true
@@ -44,8 +43,7 @@ defmodule Linkhut.Archiving do
   Any active user can view when archiving isn't disabled.
   """
   @spec can_view_archives?(User.t()) :: boolean()
-  def can_view_archives?(%User{type: type})
-      when type in [:active, :active_free, :active_paying] do
+  def can_view_archives?(%User{type: :active}) do
     mode() != :disabled
   end
 

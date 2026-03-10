@@ -34,14 +34,14 @@ defmodule Linkhut.AccountsFixtures do
     user
   end
 
-  def activate_user(%Accounts.User{id: id} = user, type \\ :active) do
+  def activate_user(%Accounts.User{id: id} = user) do
     {1, _} =
       Linkhut.Repo.update_all(
         from(u in Accounts.User, where: u.id == ^id),
-        set: [type: type]
+        set: [type: :active]
       )
 
-    %{user | type: type}
+    %{user | type: :active}
   end
 
   def extract_user_token(fun) do

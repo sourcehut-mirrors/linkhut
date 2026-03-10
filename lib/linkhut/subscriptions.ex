@@ -52,7 +52,7 @@ defmodule Linkhut.Subscriptions do
     Subscription
     |> where([s], s.status == :active and s.plan in ^plans)
     |> join(:inner, [s], u in User, on: s.user_id == u.id)
-    |> where([s, u], u.type in [:active, :active_free, :active_paying] and u.is_banned == false)
+    |> where([s, u], u.type == :active and u.is_banned == false)
     |> select([s, u], u)
     |> order_by([s, u], asc: u.id)
     |> Repo.all()

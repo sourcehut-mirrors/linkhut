@@ -53,7 +53,7 @@ defmodule Linkhut.Accounts.User do
     field :is_banned, :boolean, default: false
 
     field :type, Ecto.Enum,
-      values: [:unconfirmed, :active_free, :active_paying, :active],
+      values: [:unconfirmed, :active],
       default: :unconfirmed
 
     field :roles, {:array, Ecto.Enum}, values: [:admin], default: []
