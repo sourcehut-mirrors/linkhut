@@ -5,11 +5,17 @@ defmodule Linkhut.Archiving.SchedulerTest do
 
   alias Linkhut.Archiving.Scheduler
 
+  defp create_paying_user do
+    user = insert(:user, credential: build(:credential), type: :active_paying)
+    insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
+    user
+  end
+
   describe "schedule_pending_archives/0" do
     test "returns empty list when archiving is disabled" do
       put_override(Linkhut.Archiving, :mode, :disabled)
 
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
       insert(:link, user_id: user.id)
 
       assert [] = Scheduler.schedule_pending_archives()
@@ -20,15 +26,28 @@ defmodule Linkhut.Archiving.SchedulerTest do
     end
 
     test "schedules jobs for unarchived links" do
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
       insert(:link, user_id: user.id)
 
       results = Scheduler.schedule_pending_archives()
       assert length(results) == 1
     end
 
+    test "in limited mode, only schedules for users with active supporter subscription" do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      subscribed_user = create_paying_user()
+      insert(:link, user_id: subscribed_user.id)
+
+      free_user = insert(:user, credential: build(:credential), type: :active_free)
+      insert(:link, user_id: free_user.id)
+
+      results = Scheduler.schedule_pending_archives()
+      assert length(results) == 1
+    end
+
     test "does not schedule jobs for links that already have snapshots" do
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
       link = insert(:link, user_id: user.id)
 
       insert(:snapshot, link_id: link.id, user_id: user.id, state: :complete)
@@ -37,7 +56,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
     end
 
     test "does not schedule jobs for links with active archives" do
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
       link = insert(:link, user_id: user.id)
 
       insert(:archive, link_id: link.id, user_id: user.id, url: link.url, state: :processing)
@@ -46,7 +65,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
     end
 
     test "skips links whose domain is on cooldown" do
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
 
       # Create a link on example.com
       link = insert(:link, user_id: user.id, url: "http://example.com/page1")
@@ -74,7 +93,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
     end
 
     test "schedules links on different domains even when one domain is on cooldown" do
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
 
       insert(:link, user_id: user.id, url: "http://cooldown-domain.com/page")
       insert(:link, user_id: user.id, url: "http://available-domain.com/page")
@@ -91,8 +110,8 @@ defmodule Linkhut.Archiving.SchedulerTest do
     end
 
     test "interleaves across multiple users" do
-      user1 = insert(:user, credential: build(:credential), type: :active_paying)
-      user2 = insert(:user, credential: build(:credential), type: :active_paying)
+      user1 = create_paying_user()
+      user2 = create_paying_user()
 
       insert(:link, user_id: user1.id, url: "http://a.com/1")
       insert(:link, user_id: user1.id, url: "http://b.com/1")
@@ -106,7 +125,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
     test "respects available queue capacity" do
       # In test mode, Oban config has no queues key, so archiver_queue_limit
       # defaults to 5. We insert 10 links but should only get up to 5.
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
 
       for i <- 1..10 do
         insert(:link, user_id: user.id, url: "http://domain-#{i}.com/page")
@@ -117,7 +136,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
     end
 
     test "returns empty list when all candidate domains are on cooldown" do
-      user = insert(:user, credential: build(:credential), type: :active_paying)
+      user = create_paying_user()
 
       insert(:link, user_id: user.id, url: "http://cooldown1.com/page")
       insert(:link, user_id: user.id, url: "http://cooldown2.com/page")

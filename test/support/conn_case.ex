@@ -77,6 +77,8 @@ defmodule LinkhutWeb.ConnCase do
       Linkhut.AccountsFixtures.user_fixture()
       |> Linkhut.AccountsFixtures.activate_user(:active_paying)
 
+    insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
+
     opts =
       context
       |> Map.take([:token_inserted_at])

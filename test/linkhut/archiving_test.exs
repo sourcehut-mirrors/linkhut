@@ -10,33 +10,73 @@ defmodule Linkhut.ArchivingTest do
     insert(:archive, user_id: user.id, link_id: link.id, url: link.url)
   end
 
-  describe "enabled_for_user?/1" do
+  describe "can_create_archives?/1" do
     test "returns false for all users when disabled" do
       put_override(Linkhut.Archiving, :mode, :disabled)
 
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_paying}) == false
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_free}) == false
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :unconfirmed}) == false
-    end
+      user = insert(:user, type: :active_paying)
+      assert Archiving.can_create_archives?(user) == false
 
-    test "returns true only for paying users when limited" do
-      put_override(Linkhut.Archiving, :mode, :limited)
-
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_paying}) == true
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_free}) == false
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :unconfirmed}) == false
+      free_user = insert(:user, type: :active_free)
+      assert Archiving.can_create_archives?(free_user) == false
     end
 
     test "returns true for all active users when enabled" do
       put_override(Linkhut.Archiving, :mode, :enabled)
 
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_paying}) == true
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :active_free}) == true
-      assert Archiving.enabled_for_user?(%Linkhut.Accounts.User{type: :unconfirmed}) == false
+      user = insert(:user, type: :active_paying)
+      assert Archiving.can_create_archives?(user) == true
+
+      free_user = insert(:user, type: :active_free)
+      assert Archiving.can_create_archives?(free_user) == true
     end
 
-    test "returns false for nil" do
-      assert Archiving.enabled_for_user?(nil) == false
+    test "returns true only for users with active supporter subscription when limited" do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      user_with_sub = insert(:user, type: :active_paying)
+      insert(:subscription, user_id: user_with_sub.id, plan: :supporter, status: :active)
+      assert Archiving.can_create_archives?(user_with_sub) == true
+
+      user_without_sub = insert(:user, type: :active_free)
+      assert Archiving.can_create_archives?(user_without_sub) == false
+    end
+
+    test "returns false for non-active users regardless of mode" do
+      put_override(Linkhut.Archiving, :mode, :enabled)
+
+      assert Archiving.can_create_archives?(%Linkhut.Accounts.User{type: :unconfirmed}) == false
+      assert Archiving.can_create_archives?(nil) == false
+    end
+  end
+
+  describe "can_view_archives?/1" do
+    test "returns false for all users when disabled" do
+      put_override(Linkhut.Archiving, :mode, :disabled)
+
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_paying}) == false
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_free}) == false
+    end
+
+    test "returns true for all active users when enabled" do
+      put_override(Linkhut.Archiving, :mode, :enabled)
+
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_paying}) == true
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_free}) == true
+    end
+
+    test "returns true for all active users when limited" do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_paying}) == true
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_free}) == true
+    end
+
+    test "returns false for non-active users regardless of mode" do
+      put_override(Linkhut.Archiving, :mode, :enabled)
+
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :unconfirmed}) == false
+      assert Archiving.can_view_archives?(nil) == false
     end
   end
 

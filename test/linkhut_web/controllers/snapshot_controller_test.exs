@@ -492,7 +492,9 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert redirected_to(conn) =~ "login"
     end
 
-    test "redirects when archiving not available for user", %{conn: conn} do
+    test "redirects when archiving is disabled for user", %{conn: conn} do
+      put_override(Linkhut.Archiving, :mode, :disabled)
+
       free_user =
         Linkhut.AccountsFixtures.user_fixture()
         |> Linkhut.AccountsFixtures.activate_user(:active_free)
@@ -505,6 +507,126 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       assert redirected_to(conn) == ~p"/~#{free_user.username}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available"
+    end
+  end
+
+  describe "view/create access split" do
+    test "free user can view archives in limited mode", %{conn: conn} do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      free_user =
+        Linkhut.AccountsFixtures.user_fixture()
+        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+
+      link = insert(:link, user_id: free_user.id)
+
+      archive =
+        insert(:archive,
+          link_id: link.id,
+          user_id: free_user.id,
+          url: link.url,
+          state: :complete
+        )
+
+      data_dir = Linkhut.Config.archiving(:data_dir)
+      file_path = Path.join(data_dir, "test_free_user_file")
+      storage_key = StorageKey.local(file_path)
+
+      {:ok, _snapshot} =
+        Archiving.create_snapshot(link.id, free_user.id, %{
+          type: "singlefile",
+          state: :complete,
+          storage_key: storage_key,
+          file_size_bytes: 1024,
+          archive_id: archive.id,
+          archive_metadata: %{content_type: "text/html"}
+        })
+
+      File.mkdir_p!(data_dir)
+      File.write!(file_path, "<html>content</html>")
+      on_exit(fn -> File.rm_rf(data_dir) end)
+
+      conn =
+        conn
+        |> recycle()
+        |> LinkhutWeb.ConnCase.log_in_user(free_user)
+        |> get(~p"/_/archive/#{link.id}/type/singlefile")
+
+      assert html_response(conn, 200) =~ "snapshot"
+    end
+
+    test "free user cannot recrawl in limited mode", %{conn: conn} do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      free_user =
+        Linkhut.AccountsFixtures.user_fixture()
+        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+
+      link = insert(:link, user_id: free_user.id)
+
+      conn =
+        conn
+        |> recycle()
+        |> LinkhutWeb.ConnCase.log_in_user(free_user)
+        |> post(~p"/_/archive/#{link.id}/recrawl")
+
+      assert redirected_to(conn) == ~p"/~#{free_user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available"
+    end
+
+    test "free user can view and recrawl in enabled mode", %{conn: conn} do
+      put_override(Linkhut.Archiving, :mode, :enabled)
+
+      free_user =
+        Linkhut.AccountsFixtures.user_fixture()
+        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+
+      link = insert(:link, user_id: free_user.id)
+
+      archive =
+        insert(:archive,
+          link_id: link.id,
+          user_id: free_user.id,
+          url: link.url,
+          state: :complete
+        )
+
+      data_dir = Linkhut.Config.archiving(:data_dir)
+      file_path = Path.join(data_dir, "test_free_enabled_file")
+      storage_key = StorageKey.local(file_path)
+
+      {:ok, _snapshot} =
+        Archiving.create_snapshot(link.id, free_user.id, %{
+          type: "singlefile",
+          state: :complete,
+          storage_key: storage_key,
+          file_size_bytes: 1024,
+          archive_id: archive.id,
+          archive_metadata: %{content_type: "text/html"}
+        })
+
+      File.mkdir_p!(data_dir)
+      File.write!(file_path, "<html>content</html>")
+      on_exit(fn -> File.rm_rf(data_dir) end)
+
+      # Can view
+      view_conn =
+        conn
+        |> recycle()
+        |> LinkhutWeb.ConnCase.log_in_user(free_user)
+        |> get(~p"/_/archive/#{link.id}/type/singlefile")
+
+      assert html_response(view_conn, 200) =~ "snapshot"
+
+      # Can recrawl
+      recrawl_conn =
+        conn
+        |> recycle()
+        |> LinkhutWeb.ConnCase.log_in_user(free_user)
+        |> post(~p"/_/archive/#{link.id}/recrawl")
+
+      assert redirected_to(recrawl_conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(recrawl_conn.assigns.flash, :info) == "Re-crawl scheduled"
     end
   end
 end

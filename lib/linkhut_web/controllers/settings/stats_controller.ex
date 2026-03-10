@@ -10,7 +10,7 @@ defmodule LinkhutWeb.Settings.StatsController do
     tag_count = Linkhut.Tags.count_tags(user)
 
     archive_stats =
-      if conn.assigns.archiving_enabled?,
+      if conn.assigns.can_view_archives?,
         do: Linkhut.Archiving.archive_stats_for_user(user),
         else: nil
 

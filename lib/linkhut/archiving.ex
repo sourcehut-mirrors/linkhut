@@ -13,7 +13,7 @@ defmodule Linkhut.Archiving do
   alias Linkhut.Accounts.User
   alias Linkhut.Archiving.{Archive, Snapshot, Steps, Storage, Tokens}
   alias Linkhut.Links.Link
-  alias Linkhut.Repo
+  alias Linkhut.{Repo, Subscriptions}
 
   @domain_cooldown_seconds 120
 
@@ -26,10 +26,29 @@ defmodule Linkhut.Archiving do
   """
   def mode, do: Linkhut.Config.archiving(:mode, :disabled)
 
-  @doc "Returns true if archiving features are available for the given user."
-  def enabled_for_user?(%User{type: :active_paying}), do: mode() in [:enabled, :limited]
-  def enabled_for_user?(%User{type: :active_free}), do: mode() == :enabled
-  def enabled_for_user?(_), do: false
+  @doc "Returns true if the user can create new archives."
+  @spec can_create_archives?(User.t()) :: boolean()
+  def can_create_archives?(%User{type: type} = user)
+      when type in [:active_free, :active_paying] do
+    case mode() do
+      :disabled -> false
+      :enabled -> true
+      :limited -> Subscriptions.active_plan(user) == :supporter
+    end
+  end
+
+  def can_create_archives?(_), do: false
+
+  @doc """
+  Returns true if the user can view/download existing archives.
+  Any active user can view when archiving isn't disabled.
+  """
+  @spec can_view_archives?(User.t()) :: boolean()
+  def can_view_archives?(%User{type: type}) when type in [:active_free, :active_paying] do
+    mode() != :disabled
+  end
+
+  def can_view_archives?(_), do: false
 
   # --- User stats ---
 

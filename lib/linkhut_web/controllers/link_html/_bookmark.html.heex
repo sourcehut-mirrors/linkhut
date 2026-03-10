@@ -57,7 +57,7 @@
                     </.form>
                   </li>
                 <% end %>
-                <%= if @archiving_enabled? && @link.has_archive? do %>
+                <%= if @can_view_archives? && @link.has_archive? do %>
                   <li>
                     <a href={~p"/_/archive/#{@link.id}"}>{gettext("view archive")}</a>
                   </li>

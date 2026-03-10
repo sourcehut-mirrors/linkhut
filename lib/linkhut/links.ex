@@ -383,7 +383,7 @@ defmodule Linkhut.Links do
   defp maybe_refresh_views(result), do: result
 
   defp maybe_schedule_archive({:ok, %Link{} = link} = result, %User{} = user) do
-    if Archiving.enabled_for_user?(user) do
+    if Archiving.can_create_archives?(user) do
       # Schedule with small random delay to avoid thundering herd
       # 0-5 minutes
       delay = :rand.uniform(300)

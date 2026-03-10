@@ -1,6 +1,8 @@
 defmodule Linkhut.Subscriptions do
   @moduledoc "Manages user subscriptions."
 
+  import Ecto.Query
+
   alias Linkhut.Accounts.User
   alias Linkhut.Repo
   alias Linkhut.Subscriptions.Subscription
@@ -42,5 +44,17 @@ defmodule Linkhut.Subscriptions do
       nil -> :free
       sub -> sub.plan
     end
+  end
+
+  @doc "Returns active, non-banned users who have an active subscription with one of the given plans."
+  @spec list_subscribed_users([atom()]) :: [User.t()]
+  def list_subscribed_users(plans) when is_list(plans) do
+    Subscription
+    |> where([s], s.status == :active and s.plan in ^plans)
+    |> join(:inner, [s], u in User, on: s.user_id == u.id)
+    |> where([s, u], u.type in [:active_free, :active_paying] and u.is_banned == false)
+    |> select([s, u], u)
+    |> order_by([s, u], asc: u.id)
+    |> Repo.all()
   end
 end

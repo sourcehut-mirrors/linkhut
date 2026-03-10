@@ -9,7 +9,7 @@ defmodule Linkhut.Archiving.Scheduler do
   round-robin interleaving and shuffling the user list.
   """
 
-  alias Linkhut.{Accounts, Archiving}
+  alias Linkhut.{Accounts, Archiving, Subscriptions}
   require Logger
 
   @doc """
@@ -27,7 +27,7 @@ defmodule Linkhut.Archiving.Scheduler do
   defp eligible_users do
     case Archiving.mode() do
       :disabled -> []
-      :limited -> Accounts.list_active_paying_users()
+      :limited -> Subscriptions.list_subscribed_users([:supporter])
       :enabled -> Accounts.list_active_users()
     end
   end

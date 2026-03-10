@@ -5,17 +5,27 @@ defmodule LinkhutWeb.SnapshotController do
   alias Linkhut.Archiving.StorageKey
   alias LinkhutWeb.Breadcrumb
 
-  plug :require_archiving when action in [:show, :full, :download, :index, :recrawl]
+  plug :require_can_view_archives when action in [:show, :full, :download, :index]
+  plug :require_can_create_archives when action in [:recrawl]
 
-  defp require_archiving(conn, _opts) do
-    user = conn.assigns.current_user
-
-    if Archiving.enabled_for_user?(user) do
+  defp require_can_view_archives(conn, _opts) do
+    if Archiving.can_view_archives?(conn.assigns.current_user) do
       conn
     else
       conn
       |> put_flash(:error, "Archiving is not available")
-      |> redirect(to: ~p"/~#{user.username}")
+      |> redirect(to: ~p"/~#{conn.assigns.current_user.username}")
+      |> halt()
+    end
+  end
+
+  defp require_can_create_archives(conn, _opts) do
+    if Archiving.can_create_archives?(conn.assigns.current_user) do
+      conn
+    else
+      conn
+      |> put_flash(:error, "Archiving is not available")
+      |> redirect(to: ~p"/~#{conn.assigns.current_user.username}")
       |> halt()
     end
   end
