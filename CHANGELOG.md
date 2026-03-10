@@ -4,6 +4,8 @@ All notable changes to linkhut will be documented in this file.
 
 ## [Unreleased]
 
+- Add more MIME types that can be compressed at-rest.
+
 ## [0.1.1] - 2026-03-10
 
 - Add ban/unban commands and improved error handling to the admin CLI.

@@ -12,7 +12,28 @@ defmodule Linkhut.Archiving.Storage.Local do
 
   @behaviour Linkhut.Archiving.Storage
 
-  @compressible_types ~w(text/html application/xhtml+xml)
+  @compressible_types [
+    # HTML / XML
+    "text/html",
+    "application/xhtml+xml",
+    "application/xml",
+    "text/xml",
+    "application/atom+xml",
+    "application/rss+xml",
+    # Text
+    "text/plain",
+    "text/markdown",
+    "text/css",
+    "text/csv",
+    # Script / data
+    "text/javascript",
+    "application/javascript",
+    "application/json",
+    "application/ld+json",
+    # Other
+    "application/rtf",
+    "image/svg+xml"
+  ]
   def compressible_types, do: @compressible_types
 
   @impl true

@@ -147,7 +147,14 @@ defmodule Mix.Tasks.Linkhut.Storage do
       if dry_run? do
         {:ok, saved_bytes}
       else
-        persist_compressed(snapshot, path, compressed, compressed_size, original_size, saved_bytes)
+        persist_compressed(
+          snapshot,
+          path,
+          compressed,
+          compressed_size,
+          original_size,
+          saved_bytes
+        )
       end
     end
   end
@@ -297,7 +304,9 @@ defmodule Mix.Tasks.Linkhut.Storage do
 
   defp parse_local_key(snapshot) do
     case StorageKey.parse(snapshot.storage_key) do
-      {:ok, {:local, path}} -> {:ok, path}
+      {:ok, {:local, path}} ->
+        {:ok, path}
+
       _ ->
         shell_error("  ##{snapshot.id}: Invalid storage key")
         :error
@@ -306,7 +315,8 @@ defmodule Mix.Tasks.Linkhut.Storage do
 
   defp read_file_size(snapshot, path) do
     case File.stat(path) do
-      {:ok, %{size: size}} -> {:ok, size}
+      {:ok, %{size: size}} ->
+        {:ok, size}
 
       {:error, reason} ->
         shell_error("  ##{snapshot.id}: File not found (#{inspect(reason)}): #{path}")
