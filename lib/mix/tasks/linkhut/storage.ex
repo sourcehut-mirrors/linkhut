@@ -97,13 +97,7 @@ defmodule Mix.Tasks.Linkhut.Storage do
     if snapshots == [] do
       {count, failures, saved}
     else
-      {batch_count, batch_failures, batch_saved} =
-        Enum.reduce(snapshots, {0, 0, 0}, fn snapshot, {c, f, s} ->
-          case compress_snapshot(snapshot, dry_run?) do
-            {:ok, saved_bytes} -> {c + 1, f, s + saved_bytes}
-            :error -> {c, f + 1, s}
-          end
-        end)
+      {batch_count, batch_failures, batch_saved} = compress_batch(snapshots, dry_run?)
 
       new_last_id = List.last(snapshots).id
 
@@ -118,70 +112,68 @@ defmodule Mix.Tasks.Linkhut.Storage do
     end
   end
 
+  defp compress_batch(snapshots, dry_run?) do
+    Enum.reduce(snapshots, {0, 0, 0}, fn snapshot, {c, f, s} ->
+      case compress_snapshot(snapshot, dry_run?) do
+        {:ok, saved_bytes} -> {c + 1, f, s + saved_bytes}
+        :error -> {c, f + 1, s}
+      end
+    end)
+  end
+
   defp compress_snapshot(snapshot, dry_run?) do
-    case StorageKey.parse(snapshot.storage_key) do
-      {:ok, {:local, path}} ->
-        case File.stat(path) do
-          {:ok, %{size: original_size}} ->
-            compressed = :zlib.gzip(File.read!(path))
-            compressed_size = byte_size(compressed)
+    with {:ok, path} <- parse_local_key(snapshot),
+         {:ok, original_size} <- read_file_size(snapshot, path) do
+      compress_local_file(snapshot, path, original_size, dry_run?)
+    end
+  end
 
-            if compressed_size >= original_size do
-              shell_info("  ##{snapshot.id}: skipped (compressed not smaller)")
-              {:ok, 0}
-            else
-              saved_bytes = original_size - compressed_size
-              ratio = Float.round(compressed_size / max(original_size, 1) * 100, 1)
+  defp compress_local_file(snapshot, path, original_size, dry_run?) do
+    compressed = :zlib.gzip(File.read!(path))
+    compressed_size = byte_size(compressed)
 
-              shell_info(
-                "  ##{snapshot.id}: #{Linkhut.Formatting.format_bytes(original_size)} -> " <>
-                  "#{Linkhut.Formatting.format_bytes(compressed_size)} (#{ratio}%)"
-              )
+    if compressed_size >= original_size do
+      shell_info("  ##{snapshot.id}: skipped (compressed not smaller)")
+      {:ok, 0}
+    else
+      saved_bytes = original_size - compressed_size
+      ratio = Float.round(compressed_size / max(original_size, 1) * 100, 1)
 
-              if dry_run? do
-                {:ok, saved_bytes}
-              else
-                dest_gz = path <> ".gz"
+      shell_info(
+        "  ##{snapshot.id}: #{Linkhut.Formatting.format_bytes(original_size)} -> " <>
+          "#{Linkhut.Formatting.format_bytes(compressed_size)} (#{ratio}%)"
+      )
 
-                case File.write(dest_gz, compressed) do
-                  :ok ->
-                    new_key = StorageKey.local(dest_gz)
+      if dry_run? do
+        {:ok, saved_bytes}
+      else
+        persist_compressed(snapshot, path, compressed, compressed_size, original_size, saved_bytes)
+      end
+    end
+  end
 
-                    case Archiving.update_snapshot(snapshot, %{
-                           storage_key: new_key,
-                           encoding: "gzip",
-                           file_size_bytes: compressed_size,
-                           original_file_size_bytes: original_size
-                         }) do
-                      {:ok, _} ->
-                        File.rm(path)
-                        Archiving.recompute_archive_size_by_id(snapshot.archive_id)
-                        {:ok, saved_bytes}
+  defp persist_compressed(snapshot, path, compressed, compressed_size, original_size, saved_bytes) do
+    dest_gz = path <> ".gz"
 
-                      {:error, changeset} ->
-                        File.rm(dest_gz)
+    with :ok <- File.write(dest_gz, compressed),
+         {:ok, _} <-
+           Archiving.update_snapshot(snapshot, %{
+             storage_key: StorageKey.local(dest_gz),
+             encoding: "gzip",
+             file_size_bytes: compressed_size,
+             original_file_size_bytes: original_size
+           }) do
+      File.rm(path)
+      Archiving.recompute_archive_size_by_id(snapshot.archive_id)
+      {:ok, saved_bytes}
+    else
+      {:error, reason} when is_atom(reason) ->
+        shell_error("  ##{snapshot.id}: Write failed: #{inspect(reason)}")
+        :error
 
-                        shell_error(
-                          "  ##{snapshot.id}: DB update failed: #{inspect(changeset.errors)}"
-                        )
-
-                        :error
-                    end
-
-                  {:error, reason} ->
-                    shell_error("  ##{snapshot.id}: Write failed: #{inspect(reason)}")
-                    :error
-                end
-              end
-            end
-
-          {:error, reason} ->
-            shell_error("  ##{snapshot.id}: File not found (#{inspect(reason)}): #{path}")
-            :error
-        end
-
-      _ ->
-        shell_error("  ##{snapshot.id}: Invalid storage key")
+      {:error, changeset} ->
+        File.rm(dest_gz)
+        shell_error("  ##{snapshot.id}: DB update failed: #{inspect(changeset.errors)}")
         :error
     end
   end
@@ -214,13 +206,7 @@ defmodule Mix.Tasks.Linkhut.Storage do
     if snapshots == [] do
       {count, failures}
     else
-      {batch_count, batch_failures} =
-        Enum.reduce(snapshots, {0, 0}, fn snapshot, {c, f} ->
-          case decompress_snapshot(snapshot, dry_run?) do
-            :ok -> {c + 1, f}
-            :error -> {c, f + 1}
-          end
-        end)
+      {batch_count, batch_failures} = decompress_batch(snapshots, dry_run?)
 
       new_last_id = List.last(snapshots).id
 
@@ -234,66 +220,96 @@ defmodule Mix.Tasks.Linkhut.Storage do
     end
   end
 
+  defp decompress_batch(snapshots, dry_run?) do
+    Enum.reduce(snapshots, {0, 0}, fn snapshot, {c, f} ->
+      case decompress_snapshot(snapshot, dry_run?) do
+        :ok -> {c + 1, f}
+        :error -> {c, f + 1}
+      end
+    end)
+  end
+
   defp decompress_snapshot(snapshot, dry_run?) do
+    with {:ok, path} <- parse_local_key(snapshot),
+         {:ok, compressed} <- read_gzip_file(snapshot, path) do
+      decompress_local_file(snapshot, path, compressed, dry_run?)
+    end
+  end
+
+  defp read_gzip_file(snapshot, path) do
+    case File.read(path) do
+      {:ok, <<0x1F, 0x8B, _::binary>>} = ok ->
+        ok
+
+      {:ok, _} ->
+        shell_error("  ##{snapshot.id}: File is not gzip (bad magic bytes), skipping")
+        :error
+
+      {:error, reason} ->
+        shell_error("  ##{snapshot.id}: File not found (#{inspect(reason)}): #{path}")
+        :error
+    end
+  end
+
+  defp decompress_local_file(snapshot, path, compressed, dry_run?) do
+    decompressed = :zlib.gunzip(compressed)
+    decompressed_size = byte_size(decompressed)
+
+    shell_info(
+      "  ##{snapshot.id}: #{Linkhut.Formatting.format_bytes(File.stat!(path).size)} -> " <>
+        "#{Linkhut.Formatting.format_bytes(decompressed_size)}"
+    )
+
+    if dry_run? do
+      :ok
+    else
+      persist_decompressed(snapshot, path, decompressed, decompressed_size)
+    end
+  end
+
+  defp persist_decompressed(snapshot, path, decompressed, decompressed_size) do
+    dest_path = String.replace_suffix(path, ".gz", "")
+
+    with :ok <- File.write(dest_path, decompressed),
+         {:ok, _} <-
+           Archiving.update_snapshot(snapshot, %{
+             storage_key: StorageKey.local(dest_path),
+             encoding: nil,
+             file_size_bytes: decompressed_size,
+             original_file_size_bytes: nil
+           }) do
+      File.rm(path)
+      Archiving.recompute_archive_size_by_id(snapshot.archive_id)
+      :ok
+    else
+      {:error, reason} when is_atom(reason) ->
+        shell_error("  ##{snapshot.id}: Write failed: #{inspect(reason)}")
+        :error
+
+      {:error, changeset} ->
+        File.rm(dest_path)
+        shell_error("  ##{snapshot.id}: DB update failed: #{inspect(changeset.errors)}")
+        :error
+    end
+  end
+
+  # -- shared helpers --
+
+  defp parse_local_key(snapshot) do
     case StorageKey.parse(snapshot.storage_key) do
-      {:ok, {:local, path}} ->
-        case File.read(path) do
-          {:ok, <<0x1F, 0x8B, _::binary>> = compressed} ->
-            decompressed = :zlib.gunzip(compressed)
-            decompressed_size = byte_size(decompressed)
-
-            shell_info(
-              "  ##{snapshot.id}: #{Linkhut.Formatting.format_bytes(File.stat!(path).size)} -> " <>
-                "#{Linkhut.Formatting.format_bytes(decompressed_size)}"
-            )
-
-            if dry_run? do
-              :ok
-            else
-              dest_path = String.replace_suffix(path, ".gz", "")
-
-              case File.write(dest_path, decompressed) do
-                :ok ->
-                  new_key = StorageKey.local(dest_path)
-
-                  case Archiving.update_snapshot(snapshot, %{
-                         storage_key: new_key,
-                         encoding: nil,
-                         file_size_bytes: decompressed_size,
-                         original_file_size_bytes: nil
-                       }) do
-                    {:ok, _} ->
-                      File.rm(path)
-                      Archiving.recompute_archive_size_by_id(snapshot.archive_id)
-                      :ok
-
-                    {:error, changeset} ->
-                      File.rm(dest_path)
-
-                      shell_error(
-                        "  ##{snapshot.id}: DB update failed: #{inspect(changeset.errors)}"
-                      )
-
-                      :error
-                  end
-
-                {:error, reason} ->
-                  shell_error("  ##{snapshot.id}: Write failed: #{inspect(reason)}")
-                  :error
-              end
-            end
-
-          {:ok, _not_gzip} ->
-            shell_error("  ##{snapshot.id}: File is not gzip (bad magic bytes), skipping")
-            :error
-
-          {:error, reason} ->
-            shell_error("  ##{snapshot.id}: File not found (#{inspect(reason)}): #{path}")
-            :error
-        end
-
+      {:ok, {:local, path}} -> {:ok, path}
       _ ->
         shell_error("  ##{snapshot.id}: Invalid storage key")
+        :error
+    end
+  end
+
+  defp read_file_size(snapshot, path) do
+    case File.stat(path) do
+      {:ok, %{size: size}} -> {:ok, size}
+
+      {:error, reason} ->
+        shell_error("  ##{snapshot.id}: File not found (#{inspect(reason)}): #{path}")
         :error
     end
   end
