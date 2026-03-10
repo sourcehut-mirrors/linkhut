@@ -108,26 +108,11 @@ defmodule Linkhut.Archiving.Workers.Crawler do
       )
     else
       content_type = result[:content_type] || "application/octet-stream"
-
-      if is_nil(result[:content_type]) do
-        Logger.warning("Crawler result for snapshot #{snapshot.id} missing content_type")
-      end
+      warn_on_missing_content_type(snapshot, result[:content_type])
 
       case Archiving.Storage.store({:file, result[:path]}, snapshot, content_type: content_type) do
         {:ok, storage_key, store_meta} ->
           File.rm_rf(staging_dir)
-
-          stored_msg =
-            if store_meta.encoding do
-              %{
-                "msg" => "stored",
-                "size" => Linkhut.Formatting.format_bytes(file_size),
-                "compressed_size" => Linkhut.Formatting.format_bytes(store_meta.file_size_bytes),
-                "encoding" => store_meta.encoding
-              }
-            else
-              %{"msg" => "stored", "size" => Linkhut.Formatting.format_bytes(file_size)}
-            end
 
           Archiving.update_snapshot(snapshot, %{
             state: :complete,
@@ -137,7 +122,12 @@ defmodule Linkhut.Archiving.Workers.Crawler do
             encoding: store_meta.encoding,
             original_file_size_bytes: if(store_meta.encoding, do: file_size, else: nil),
             response_code: result[:response_code] || 200,
-            crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "complete", stored_msg),
+            crawl_info:
+              Steps.add_crawl_step(
+                snapshot.crawl_info,
+                "complete",
+                build_stored_msg(store_meta, file_size)
+              ),
             archive_metadata: %{
               content_type: result[:content_type],
               original_url: url,
@@ -193,6 +183,24 @@ defmodule Linkhut.Archiving.Workers.Crawler do
         )
 
         {:error, changeset}
+    end
+  end
+
+  defp warn_on_missing_content_type(snapshot, nil),
+    do: Logger.warning("Crawler result for snapshot #{snapshot.id} missing content_type")
+
+  defp warn_on_missing_content_type(_, _), do: :ok
+
+  defp build_stored_msg(store_meta, file_size) do
+    base = %{"msg" => "stored", "size" => Linkhut.Formatting.format_bytes(file_size)}
+
+    if store_meta.encoding do
+      Map.merge(base, %{
+        "compressed_size" => Linkhut.Formatting.format_bytes(store_meta.file_size_bytes),
+        "encoding" => store_meta.encoding
+      })
+    else
+      base
     end
   end
 

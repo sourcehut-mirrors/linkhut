@@ -15,7 +15,7 @@ defmodule Linkhut.Dump.HTMLParser do
         [],
         fn
           {"dt", _, _} = elem, acc ->
-            if length(acc) == 0 do
+            if acc == [] do
               {:cont, [elem | acc]}
             else
               {:cont, Enum.reverse(acc), [elem]}

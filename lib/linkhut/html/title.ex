@@ -15,9 +15,8 @@ defmodule Linkhut.Html.Title do
   """
   @spec title(html_tree | String.t()) :: binary()
   def title(html) when is_binary(html) do
-    with {:ok, tree} <- Floki.parse_document(html) do
-      title(tree)
-    else
+    case Floki.parse_document(html) do
+      {:ok, tree} -> title(tree)
       _ -> ""
     end
   end

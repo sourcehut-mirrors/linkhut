@@ -214,9 +214,9 @@ defmodule Linkhut.Archiving.Storage.Local do
         :ok
 
       {:error, :exdev} ->
-        with {:ok, _} <- File.copy(source, dest),
-             :ok <- File.rm(source),
-             do: :ok
+        with {:ok, _} <- File.copy(source, dest) do
+          File.rm(source)
+        end
 
       {:error, reason} ->
         {:error, reason}
