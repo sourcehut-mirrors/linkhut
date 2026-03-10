@@ -6,7 +6,7 @@
         <span class="no-css-label">{gettext("Private")}</span>
       <% end %>
       <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.saves > 1 do %>
-        <a class="savers" data-count={@link.saves} data-label={gettext("people")} href={html_path(@scope, url: @link.url)}></a>
+        <a class="savers" data-count={@link.saves} data-label={gettext("people")} href={~p"/-#{@link.url}"}></a>
       <% end %>
     </div>
     <div class="full-url">
@@ -26,11 +26,13 @@
         </span>
       <% end %>
       <span>
-        {Timex.format!(@link.inserted_at, "{relative}", :relative)}
+        <a href={~p"/~#{@link.user.username}/-#{@link.url}"} title={Calendar.strftime(@link.inserted_at, "%Y-%m-%d %H:%M UTC")}>
+          {Timex.format!(@link.inserted_at, "{relative}", :relative)}
+        </a>
       </span>
       <%= if @context.url == nil and not (@link.is_private) and @link.saves > 1 do %>
         <span class="savers">
-          {gettext("saved")} <a href={html_path(@scope, url: @link.url)}>{@link.saves}</a> {ngettext("time", "times", @link.saves)}
+          {gettext("saved")} <a href={~p"/-#{@link.url}"}>{@link.saves}</a> {ngettext("time", "times", @link.saves)}
         </span>
       <% end %>
     </div>
