@@ -97,9 +97,7 @@ defmodule LinkhutWeb.Controllers.Utils do
 
   defp html_route(%{view: :unread, tags: t, params: p}), do: ~p"/_/unread/#{t}?#{p}"
   defp html_route(%{view: :unread, params: p}), do: ~p"/_/unread?#{p}"
-  defp html_route(%{user: u, url: l, tags: t, params: p}), do: ~p"/~#{u}/-#{l}/#{t}?#{p}"
   defp html_route(%{user: u, url: l, params: p}), do: ~p"/~#{u}/-#{l}?#{p}"
-  defp html_route(%{url: l, tags: t, params: p}), do: ~p"/-#{l}/#{t}?#{p}"
   defp html_route(%{url: l, params: p}), do: ~p"/-#{l}?#{p}"
   defp html_route(%{user: u, tags: t, params: p}), do: ~p"/~#{u}/#{t}?#{p}"
   defp html_route(%{user: u, params: p}), do: ~p"/~#{u}?#{p}"
@@ -108,9 +106,7 @@ defmodule LinkhutWeb.Controllers.Utils do
 
   defp feed_route(%{view: :unread, tags: t, params: p}), do: ~p"/_/feed/unread/#{t}?#{p}"
   defp feed_route(%{view: :unread, params: p}), do: ~p"/_/feed/unread?#{p}"
-  defp feed_route(%{user: u, url: l, tags: t, params: p}), do: ~p"/_/feed/~#{u}/-#{l}/#{t}?#{p}"
   defp feed_route(%{user: u, url: l, params: p}), do: ~p"/_/feed/~#{u}/-#{l}?#{p}"
-  defp feed_route(%{url: l, tags: t, params: p}), do: ~p"/_/feed/-#{l}/#{t}?#{p}"
   defp feed_route(%{url: l, params: p}), do: ~p"/_/feed/-#{l}?#{p}"
   defp feed_route(%{user: u, tags: t, params: p}), do: ~p"/_/feed/~#{u}/#{t}?#{p}"
   defp feed_route(%{user: u, params: p}), do: ~p"/_/feed/~#{u}?#{p}"
