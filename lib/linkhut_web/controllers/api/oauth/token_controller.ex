@@ -4,7 +4,7 @@ defmodule LinkhutWeb.Api.OAuth.TokenController do
 
   alias ExOauth2Provider.Token
 
-  @spec create(Conn.t(), map()) :: Conn.t()
+  @spec create(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def create(conn, params) do
     params
     |> Token.grant(otp_app: :linkhut)
@@ -19,7 +19,7 @@ defmodule LinkhutWeb.Api.OAuth.TokenController do
     end
   end
 
-  @spec revoke(Conn.t(), map()) :: Conn.t()
+  @spec revoke(Plug.Conn.t(), map()) :: Plug.Conn.t()
   def revoke(conn, params) do
     params
     |> Token.revoke(otp_app: :linkhut)

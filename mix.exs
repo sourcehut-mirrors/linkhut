@@ -12,6 +12,7 @@ defmodule Linkhut.MixProject do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
+      dialyzer: [plt_add_apps: [:mix, :owl]],
       # Docs
       name: "linkhut",
       source_url: "https://git.sr.ht/~mlb/linkhut",

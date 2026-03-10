@@ -14,7 +14,7 @@ defmodule LinkhutWeb.LinkXML do
         scope: scope
       }) do
     title = title(scope)
-    uri = %URI{scheme: conn.scheme |> to_string, host: conn.host, port: conn.port}
+    uri = URI.new!("#{conn.scheme}://#{conn.host}:#{conn.port}")
     feed_url = URI.merge(uri, feed_path(conn)) |> URI.to_string()
     html_url = URI.merge(uri, html_path(conn)) |> URI.to_string()
 

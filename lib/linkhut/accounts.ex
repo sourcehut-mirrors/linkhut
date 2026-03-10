@@ -148,7 +148,7 @@ defmodule Linkhut.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_user(changeset(User.t()), %{any() => any()}) ::
+  @spec delete_user(User.t(), %{any() => any()}) ::
           {:ok, User.t()} | {:error, changeset(User.t())}
   def delete_user(%User{} = user, attrs) do
     user

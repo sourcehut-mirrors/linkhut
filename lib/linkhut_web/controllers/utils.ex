@@ -40,7 +40,7 @@ defmodule LinkhutWeb.Controllers.Utils do
       iex> html_path(conn, tag: "bar")
       "/foo/bar"
   """
-  @spec html_path([Plug.Conn.t() | Scope.t()], Keyword.t()) :: String.t()
+  @spec html_path(Plug.Conn.t() | Scope.t(), Keyword.t()) :: String.t()
   def html_path(conn_or_scope, opts \\ [])
 
   def html_path(%Plug.Conn{} = conn, opts) do
@@ -79,7 +79,7 @@ defmodule LinkhutWeb.Controllers.Utils do
       iex> feed_path(conn, tag: "bar")
       "/_/feed/foo/bar"
   """
-  @spec feed_path([Plug.Conn.t() | Scope.t()], Keyword.t()) :: String.t()
+  @spec feed_path(Plug.Conn.t() | Scope.t(), Keyword.t()) :: String.t()
   def feed_path(conn_or_scope, opts \\ [])
 
   def feed_path(%Plug.Conn{} = conn, opts) do
