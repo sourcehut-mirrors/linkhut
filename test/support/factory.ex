@@ -41,6 +41,13 @@ defmodule Linkhut.Factory do
     }
   end
 
+  def subscription_factory do
+    %Linkhut.Subscriptions.Subscription{
+      plan: :supporter,
+      status: :active
+    }
+  end
+
   def snapshot_factory(attrs) do
     {user_id, attrs} =
       Map.pop_lazy(attrs, :user_id, fn -> insert(:user, credential: build(:credential)).id end)
