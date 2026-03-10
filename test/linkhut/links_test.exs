@@ -5,6 +5,7 @@ defmodule Linkhut.LinksTest do
 
   alias Linkhut.Links
   alias Linkhut.Links.Link
+  alias Linkhut.Links.UrlDetail
   alias Linkhut.AccountsFixtures
 
   describe "create_link/2" do
@@ -398,6 +399,300 @@ defmodule Linkhut.LinksTest do
       stats = Links.link_stats(user)
       assert stats.total == 1
       assert stats.private == 0
+    end
+  end
+
+  describe "url_detail/2" do
+    setup do
+      alice = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      bob = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+
+      url = "https://example.com/shared"
+      alice_saved_at = DateTime.add(DateTime.utc_now(), -90, :day)
+      bob_saved_at = DateTime.add(DateTime.utc_now(), -30, :day)
+
+      {:ok, alice_link} =
+        Links.create_link(alice, %{
+          url: url,
+          title: "Original Title",
+          tags: ["elixir", "tutorial"],
+          is_private: false,
+          inserted_at: alice_saved_at
+        })
+
+      {:ok, bob_link} =
+        Links.create_link(bob, %{
+          url: url,
+          title: "Updated Title",
+          tags: ["elixir", "programming"],
+          is_private: false,
+          inserted_at: bob_saved_at
+        })
+
+      %{
+        alice: alice,
+        bob: bob,
+        url: url,
+        alice_link: alice_link,
+        bob_link: bob_link,
+        alice_saved_at: alice_saved_at,
+        bob_saved_at: bob_saved_at
+      }
+    end
+
+    test "returns a UrlDetail struct", %{url: url} do
+      assert %UrlDetail{} = Links.url_detail(url)
+    end
+
+    test "returns nil for URL with no bookmarks" do
+      assert Links.url_detail("https://nonexistent.example.com") == nil
+    end
+
+    test "returns nil when only private bookmarks exist" do
+      user = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      url = "https://private-only.example.com"
+
+      Links.create_link(user, %{
+        url: url,
+        title: "Private",
+        is_private: true
+      })
+
+      assert Links.url_detail(url) == nil
+    end
+
+    test "returns correct total_saves count", %{url: url} do
+      detail = Links.url_detail(url)
+      assert detail.total_saves == 2
+    end
+
+    test "returns first_save with correct username and timestamp", %{
+      url: url,
+      alice: alice,
+      alice_saved_at: alice_saved_at
+    } do
+      detail = Links.url_detail(url)
+      assert detail.first_save.username == alice.username
+
+      assert DateTime.truncate(detail.first_save.saved_at, :second) ==
+               DateTime.truncate(alice_saved_at, :second)
+    end
+
+    test "returns latest_save with correct username and timestamp", %{
+      url: url,
+      bob: bob,
+      bob_saved_at: bob_saved_at
+    } do
+      detail = Links.url_detail(url)
+      assert detail.latest_save.username == bob.username
+
+      assert DateTime.truncate(detail.latest_save.saved_at, :second) ==
+               DateTime.truncate(bob_saved_at, :second)
+    end
+
+    test "returns title from most recent bookmark", %{url: url} do
+      detail = Links.url_detail(url)
+      assert detail.title == "Updated Title"
+    end
+
+    test "returns current_user_bookmark when option provided", %{url: url, alice: alice} do
+      detail = Links.url_detail(url, current_user_id: alice.id)
+      assert detail.current_user_bookmark != nil
+      assert detail.current_user_bookmark.url == url
+    end
+
+    test "returns nil for current_user_bookmark when user hasn't saved", %{url: url} do
+      other = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      detail = Links.url_detail(url, current_user_id: other.id)
+      assert detail.current_user_bookmark == nil
+    end
+
+    test "includes current user's private bookmark in current_user_bookmark", %{alice: alice} do
+      priv_url = "https://private-test.example.com"
+
+      Links.create_link(alice, %{
+        url: priv_url,
+        title: "My Private",
+        is_private: true
+      })
+
+      # Another user has a public bookmark so url_detail returns non-nil
+      bob = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+
+      Links.create_link(bob, %{
+        url: priv_url,
+        title: "Bob's Public",
+        is_private: false
+      })
+
+      detail = Links.url_detail(priv_url, current_user_id: alice.id)
+      assert detail.current_user_bookmark != nil
+      assert detail.current_user_bookmark.is_private == true
+    end
+
+    test "returns only tags used by multiple users", %{url: url} do
+      detail = Links.url_detail(url)
+      tags = detail.common_tags
+
+      # "elixir" appears in both bookmarks (count 2); "tutorial" and
+      # "programming" appear once each and are excluded
+      assert tags == [%{tag: "elixir", count: 2}]
+    end
+
+    test "excludes private and single-use tags from common_tags" do
+      user = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      other = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      url = "https://tag-test.example.com"
+
+      Links.create_link(user, %{
+        url: url,
+        title: "Private",
+        tags: ["secret-tag", "shared-tag"],
+        is_private: true
+      })
+
+      Links.create_link(other, %{
+        url: url,
+        title: "Public A",
+        tags: ["public-tag", "shared-tag"],
+        is_private: false
+      })
+
+      third = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+
+      Links.create_link(third, %{
+        url: url,
+        title: "Public B",
+        tags: ["shared-tag"],
+        is_private: false
+      })
+
+      detail = Links.url_detail(url)
+      tag_names = Enum.map(detail.common_tags, & &1.tag)
+      # "shared-tag" appears in 2 public bookmarks (count > 1)
+      assert "shared-tag" in tag_names
+      # "public-tag" appears only once publicly
+      refute "public-tag" in tag_names
+      # "secret-tag" is private
+      refute "secret-tag" in tag_names
+    end
+
+    test "returns domain_saves count", %{url: url, alice: alice} do
+      # Add another link from same domain
+      Links.create_link(alice, %{
+        url: "https://example.com/other-page",
+        title: "Other Page",
+        is_private: false
+      })
+
+      detail = Links.url_detail(url)
+      # 3 exactly: alice's shared, bob's shared, alice's other page
+      assert detail.domain_saves == 3
+    end
+
+    test "returns weekly activity buckets with gap filling", %{url: url} do
+      detail = Links.url_detail(url)
+      assert %{granularity: :week, buckets: buckets} = detail.activity
+      assert buckets != []
+
+      for bucket <- buckets do
+        assert %{period: %DateTime{}, count: count} = bucket
+        assert count >= 0
+      end
+
+      # At least one bucket has saves
+      assert Enum.any?(buckets, &(&1.count > 0))
+
+      # Buckets extend to the current period
+      last = List.last(buckets)
+      assert DateTime.compare(last.period, DateTime.utc_now()) != :gt
+    end
+
+    test "returns monthly activity buckets for old URLs" do
+      alice = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      bob = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      url = "https://old-url.example.com"
+
+      Links.create_link(alice, %{
+        url: url,
+        title: "Old",
+        is_private: false,
+        inserted_at: DateTime.add(DateTime.utc_now(), -365, :day)
+      })
+
+      Links.create_link(bob, %{
+        url: url,
+        title: "Recent",
+        is_private: false
+      })
+
+      detail = Links.url_detail(url)
+      assert %{granularity: :month, buckets: buckets} = detail.activity
+      assert buckets != []
+      assert Enum.any?(buckets, &(&1.count > 0))
+    end
+
+    test "returns single save correctly" do
+      user = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      url = "https://single-save.example.com"
+
+      Links.create_link(user, %{
+        url: url,
+        title: "Solo",
+        is_private: false
+      })
+
+      detail = Links.url_detail(url)
+      assert detail.total_saves == 1
+      assert detail.first_save.username == user.username
+      assert detail.latest_save.username == user.username
+    end
+
+    test "includes bookmarks from unconfirmed users" do
+      confirmed = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      unconfirmed = AccountsFixtures.user_fixture()
+      url = "https://unconfirmed-test.example.com"
+
+      Links.create_link(confirmed, %{
+        url: url,
+        title: "Confirmed User",
+        is_private: false
+      })
+
+      Links.create_link(unconfirmed, %{
+        url: url,
+        title: "Unconfirmed User",
+        is_private: false
+      })
+
+      detail = Links.url_detail(url)
+      assert detail.total_saves == 2
+    end
+
+    test "excludes bookmarks from banned users" do
+      active = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+      banned = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
+
+      Linkhut.Accounts.User.ban_user(banned)
+      |> Linkhut.Repo.update!()
+
+      url = "https://banned-test.example.com"
+
+      Links.create_link(active, %{
+        url: url,
+        title: "Active User",
+        is_private: false
+      })
+
+      Links.create_link(banned, %{
+        url: url,
+        title: "Banned User",
+        is_private: false
+      })
+
+      detail = Links.url_detail(url)
+      assert detail.total_saves == 1
+      assert detail.first_save.username == active.username
     end
   end
 

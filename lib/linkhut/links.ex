@@ -365,6 +365,8 @@ defmodule Linkhut.Links do
     query |> order_by(^filter_order_by)
   end
 
+  defdelegate url_detail(url, opts \\ []), to: Linkhut.Links.UrlAggregate
+
   @doc """
   Gets a link belonging to a specific user.
   """
