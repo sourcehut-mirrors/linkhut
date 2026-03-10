@@ -56,7 +56,8 @@ defmodule Linkhut.Archiving.Storage.Local do
     else
       case File.write(dest_path, content) do
         :ok ->
-          {:ok, StorageKey.local(dest_path), %{file_size_bytes: byte_size(content), encoding: nil}}
+          {:ok, StorageKey.local(dest_path),
+           %{file_size_bytes: byte_size(content), encoding: nil}}
 
         {:error, reason} ->
           {:error, reason}

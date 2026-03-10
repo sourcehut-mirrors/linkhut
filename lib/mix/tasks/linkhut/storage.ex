@@ -69,7 +69,9 @@ defmodule Mix.Tasks.Linkhut.Storage do
 
     {count, failures, saved} = compress_loop(0, batch_size, dry_run?, 0, 0, 0)
 
-    shell_info("\nDone. Compressed: #{count}, Failed: #{failures}, Saved: #{Linkhut.Formatting.format_bytes(saved)}")
+    shell_info(
+      "\nDone. Compressed: #{count}, Failed: #{failures}, Saved: #{Linkhut.Formatting.format_bytes(saved)}"
+    )
   end
 
   defp compress_loop(last_id, batch_size, dry_run?, count, failures, saved) do

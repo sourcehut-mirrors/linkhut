@@ -106,8 +106,7 @@ config :linkhut, Linkhut.Archiving,
   # can report issues or request opt-out, e.g. "+https://your-instance.com"
   user_agent_suffix: nil
 
-config :linkhut, Linkhut.Archiving.Storage.Local,
-  compression: :none
+config :linkhut, Linkhut.Archiving.Storage.Local, compression: :none
 
 # Mail configuration
 config :linkhut, Linkhut.Mail, sender: nil

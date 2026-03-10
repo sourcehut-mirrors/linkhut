@@ -122,8 +122,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
               %{
                 "msg" => "stored",
                 "size" => Linkhut.Formatting.format_bytes(file_size),
-                "compressed_size" =>
-                  Linkhut.Formatting.format_bytes(store_meta.file_size_bytes),
+                "compressed_size" => Linkhut.Formatting.format_bytes(store_meta.file_size_bytes),
                 "encoding" => store_meta.encoding
               }
             else
@@ -136,11 +135,9 @@ defmodule Linkhut.Archiving.Workers.Crawler do
             processing_time_ms: processing_time,
             file_size_bytes: store_meta.file_size_bytes,
             encoding: store_meta.encoding,
-            original_file_size_bytes:
-              if(store_meta.encoding, do: file_size, else: nil),
+            original_file_size_bytes: if(store_meta.encoding, do: file_size, else: nil),
             response_code: result[:response_code] || 200,
-            crawl_info:
-              Steps.add_crawl_step(snapshot.crawl_info, "complete", stored_msg),
+            crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "complete", stored_msg),
             archive_metadata: %{
               content_type: result[:content_type],
               original_url: url,

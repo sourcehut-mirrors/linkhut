@@ -31,8 +31,7 @@ config :linkhut, Linkhut.Archiving,
   serve_host: nil,
   storage: Linkhut.Archiving.Storage.Local
 
-config :linkhut, Linkhut.Archiving.Storage.Local,
-  compression: :none
+config :linkhut, Linkhut.Archiving.Storage.Local, compression: :none
 
 # Disable SSL requirement for redirect URIs in tests
 config :linkhut, ExOauth2Provider, force_ssl_in_redirect_uri: false

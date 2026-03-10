@@ -228,10 +228,10 @@ if config_env() == :prod do
 
   if local_storage_overrides != [] do
     config :linkhut,
-      Linkhut.Archiving.Storage.Local,
-      Keyword.merge(
-        Application.get_env(:linkhut, Linkhut.Archiving.Storage.Local, []),
-        local_storage_overrides
-      )
+           Linkhut.Archiving.Storage.Local,
+           Keyword.merge(
+             Application.get_env(:linkhut, Linkhut.Archiving.Storage.Local, []),
+             local_storage_overrides
+           )
   end
 end
