@@ -75,7 +75,7 @@ defmodule LinkhutWeb.ConnCase do
   def register_and_log_in_paying_user(%{conn: conn} = context) do
     user =
       Linkhut.AccountsFixtures.user_fixture()
-      |> Linkhut.AccountsFixtures.activate_user(:active_paying)
+      |> Linkhut.AccountsFixtures.activate_user()
 
     insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
 

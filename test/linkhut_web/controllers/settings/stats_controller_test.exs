@@ -49,7 +49,7 @@ defmodule LinkhutWeb.Settings.StatsControllerTest do
 
   describe "GET /_/stats (archiving-enabled user)" do
     setup %{conn: conn} do
-      user = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user(:active_free)
+      user = AccountsFixtures.user_fixture() |> AccountsFixtures.activate_user()
       conn = LinkhutWeb.ConnCase.log_in_user(conn, user)
       %{conn: conn, user: user}
     end

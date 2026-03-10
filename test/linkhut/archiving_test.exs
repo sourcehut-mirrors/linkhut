@@ -14,31 +14,31 @@ defmodule Linkhut.ArchivingTest do
     test "returns false for all users when disabled" do
       put_override(Linkhut.Archiving, :mode, :disabled)
 
-      user = insert(:user, type: :active_paying)
+      user = insert(:user, type: :active)
       assert Archiving.can_create_archives?(user) == false
 
-      free_user = insert(:user, type: :active_free)
+      free_user = insert(:user, type: :active)
       assert Archiving.can_create_archives?(free_user) == false
     end
 
     test "returns true for all active users when enabled" do
       put_override(Linkhut.Archiving, :mode, :enabled)
 
-      user = insert(:user, type: :active_paying)
+      user = insert(:user, type: :active)
       assert Archiving.can_create_archives?(user) == true
 
-      free_user = insert(:user, type: :active_free)
+      free_user = insert(:user, type: :active)
       assert Archiving.can_create_archives?(free_user) == true
     end
 
     test "returns true only for users with active supporter subscription when limited" do
       put_override(Linkhut.Archiving, :mode, :limited)
 
-      user_with_sub = insert(:user, type: :active_paying)
+      user_with_sub = insert(:user, type: :active)
       insert(:subscription, user_id: user_with_sub.id, plan: :supporter, status: :active)
       assert Archiving.can_create_archives?(user_with_sub) == true
 
-      user_without_sub = insert(:user, type: :active_free)
+      user_without_sub = insert(:user, type: :active)
       assert Archiving.can_create_archives?(user_without_sub) == false
     end
 
@@ -54,22 +54,22 @@ defmodule Linkhut.ArchivingTest do
     test "returns false for all users when disabled" do
       put_override(Linkhut.Archiving, :mode, :disabled)
 
-      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_paying}) == false
-      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_free}) == false
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active}) == false
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active}) == false
     end
 
     test "returns true for all active users when enabled" do
       put_override(Linkhut.Archiving, :mode, :enabled)
 
-      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_paying}) == true
-      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_free}) == true
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active}) == true
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active}) == true
     end
 
     test "returns true for all active users when limited" do
       put_override(Linkhut.Archiving, :mode, :limited)
 
-      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_paying}) == true
-      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active_free}) == true
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active}) == true
+      assert Archiving.can_view_archives?(%Linkhut.Accounts.User{type: :active}) == true
     end
 
     test "returns false for non-active users regardless of mode" do

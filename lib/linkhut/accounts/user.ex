@@ -2,8 +2,8 @@ defmodule Linkhut.Accounts.User do
   @moduledoc """
   The User schema represents a user account in the Linkhut application.
 
-  A user can have different account types (unconfirmed, active_free, active_paying)
-  and optional admin roles. Each user has an associated credential for authentication,
+  A user can have different account types (unconfirmed, active) and optional
+  admin roles. Each user has an associated credential for authentication,
   can own multiple links, and participates in the OAuth system through applications,
   access grants, and access tokens.
 
@@ -12,7 +12,7 @@ defmodule Linkhut.Accounts.User do
   - `username` - Unique identifier for the user; must be alphanumeric and at least 3 characters
   - `bio` - Optional information about the user
   - `unlisted` - Boolean flag to hide the user's links from public listings
-  - `type` - Account status enum: `:unconfirmed`, `:active_free`, or `:active_paying`
+  - `type` - Account status enum: `:unconfirmed` or `:active`
   - `roles` - Array of user roles, currently supports `:admin`
 
   ## Associations
@@ -34,7 +34,7 @@ defmodule Linkhut.Accounts.User do
       true
 
       iex> User.confirm_user(%User{credential: %Credential{}}, %{})
-      %Ecto.Changeset{changes: %{type: :active_free}}
+      %Ecto.Changeset{changes: %{type: :active}}
   """
 
   use Ecto.Schema
@@ -53,7 +53,7 @@ defmodule Linkhut.Accounts.User do
     field :is_banned, :boolean, default: false
 
     field :type, Ecto.Enum,
-      values: [:unconfirmed, :active_free, :active_paying],
+      values: [:unconfirmed, :active_free, :active_paying, :active],
       default: :unconfirmed
 
     field :roles, {:array, Ecto.Enum}, values: [:admin], default: []
@@ -138,7 +138,7 @@ defmodule Linkhut.Accounts.User do
   Creates a changeset to confirm a user's email and activate their account.
 
   This function confirms the user's email credential and upgrades their
-  account type from `:unconfirmed` to `:active_free`.
+  account type from `:unconfirmed` to `:active`.
 
   ## Parameters
 
@@ -162,7 +162,7 @@ defmodule Linkhut.Accounts.User do
     |> put_assoc(:credential, Credential.confirm_email_changeset(credential, attrs),
       on_replace: :update
     )
-    |> put_change(:type, :active_free)
+    |> put_change(:type, :active)
   end
 
   def ban_user(user) do

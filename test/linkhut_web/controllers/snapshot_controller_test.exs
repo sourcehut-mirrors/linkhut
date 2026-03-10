@@ -497,7 +497,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       free_user =
         Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+        |> Linkhut.AccountsFixtures.activate_user()
 
       conn =
         conn
@@ -516,7 +516,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       free_user =
         Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+        |> Linkhut.AccountsFixtures.activate_user()
 
       link = insert(:link, user_id: free_user.id)
 
@@ -560,7 +560,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       free_user =
         Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+        |> Linkhut.AccountsFixtures.activate_user()
 
       link = insert(:link, user_id: free_user.id)
 
@@ -579,7 +579,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       free_user =
         Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user(:active_free)
+        |> Linkhut.AccountsFixtures.activate_user()
 
       link = insert(:link, user_id: free_user.id)
 

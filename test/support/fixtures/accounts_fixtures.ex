@@ -34,7 +34,7 @@ defmodule Linkhut.AccountsFixtures do
     user
   end
 
-  def activate_user(%Accounts.User{id: id} = user, type \\ :active_paying) do
+  def activate_user(%Accounts.User{id: id} = user, type \\ :active) do
     {1, _} =
       Linkhut.Repo.update_all(
         from(u in Accounts.User, where: u.id == ^id),
@@ -67,7 +67,7 @@ defmodule Linkhut.AccountsFixtures do
 
     Linkhut.Repo.update_all(
       from(u in Accounts.User, where: u.id == ^user_id),
-      set: [inserted_at: past_date, type: :active_free]
+      set: [inserted_at: past_date, type: :active]
     )
   end
 end

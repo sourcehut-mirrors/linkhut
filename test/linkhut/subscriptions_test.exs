@@ -138,7 +138,7 @@ defmodule Linkhut.SubscriptionsTest do
 
   describe "list_subscribed_users/1" do
     test "returns users with matching active subscriptions" do
-      user = insert(:user, type: :active_paying)
+      user = insert(:user, type: :active)
       insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
 
       result = Subscriptions.list_subscribed_users([:supporter])
@@ -147,21 +147,21 @@ defmodule Linkhut.SubscriptionsTest do
     end
 
     test "excludes canceled subscriptions" do
-      user = insert(:user, type: :active_paying)
+      user = insert(:user, type: :active)
       insert(:subscription, user_id: user.id, plan: :supporter, status: :canceled)
 
       assert [] = Subscriptions.list_subscribed_users([:supporter])
     end
 
     test "excludes banned users" do
-      user = insert(:user, type: :active_paying, is_banned: true)
+      user = insert(:user, type: :active, is_banned: true)
       insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
 
       assert [] = Subscriptions.list_subscribed_users([:supporter])
     end
 
     test "excludes plans not in the queried list" do
-      user = insert(:user, type: :active_paying)
+      user = insert(:user, type: :active)
       insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
 
       assert [] = Subscriptions.list_subscribed_users([])
@@ -175,10 +175,10 @@ defmodule Linkhut.SubscriptionsTest do
     end
 
     test "returns users ordered by id" do
-      user1 = insert(:user, type: :active_free)
+      user1 = insert(:user, type: :active)
       insert(:subscription, user_id: user1.id, plan: :supporter, status: :active)
 
-      user2 = insert(:user, type: :active_paying)
+      user2 = insert(:user, type: :active)
       insert(:subscription, user_id: user2.id, plan: :supporter, status: :active)
 
       result = Subscriptions.list_subscribed_users([:supporter])

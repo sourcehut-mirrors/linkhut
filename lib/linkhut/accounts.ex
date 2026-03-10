@@ -558,11 +558,11 @@ defmodule Linkhut.Accounts do
   end
 
   @doc """
-  Lists all active users (both free and paying) for archive processing.
+  Lists all active users for archive processing.
   """
   def list_active_users do
     User
-    |> where([u], u.type in [:active_free, :active_paying])
+    |> where([u], u.type in [:active, :active_free, :active_paying])
     |> where([u], u.is_banned == false)
     |> order_by([u], asc: u.id)
     |> Repo.all()

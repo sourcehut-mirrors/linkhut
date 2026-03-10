@@ -6,7 +6,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
   alias Linkhut.Archiving.Scheduler
 
   defp create_paying_user do
-    user = insert(:user, credential: build(:credential), type: :active_paying)
+    user = insert(:user, credential: build(:credential), type: :active)
     insert(:subscription, user_id: user.id, plan: :supporter, status: :active)
     user
   end
@@ -39,7 +39,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
       subscribed_user = create_paying_user()
       insert(:link, user_id: subscribed_user.id)
 
-      free_user = insert(:user, credential: build(:credential), type: :active_free)
+      free_user = insert(:user, credential: build(:credential), type: :active)
       insert(:link, user_id: free_user.id)
 
       results = Scheduler.schedule_pending_archives()
