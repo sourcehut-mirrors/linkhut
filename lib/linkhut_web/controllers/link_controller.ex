@@ -114,19 +114,19 @@ defmodule LinkhutWeb.LinkController do
 
     cond do
       has_query?(params) ->
-        query(conn, context(params), Map.get(params, "query"), page(params), tag_options)
+        query(conn, context(params), Map.get(params, "query"), Utils.page(params), tag_options)
 
       has_filters?(params) ->
-        filter(conn, context(params), page(params), tag_options)
+        filter(conn, context(params), Utils.page(params), tag_options)
 
       true ->
-        explore(conn, view(params), page(params), tag_options)
+        explore(conn, view(params), Utils.page(params), tag_options)
     end
   end
 
   def unread(conn, params) do
     user = conn.assigns[:current_user]
-    page = page(params)
+    page = Utils.page(params)
     query = Map.get(params, "query", "")
 
     context = %{context(params) | from: user, visible_as: user.username}
@@ -135,7 +135,7 @@ defmodule LinkhutWeb.LinkController do
       Search.search(
         context,
         query,
-        Keyword.put(query_opts(conn), :is_unread, true)
+        Keyword.put(Utils.query_opts(conn), :is_unread, true)
       )
 
     conn
@@ -150,31 +150,6 @@ defmodule LinkhutWeb.LinkController do
     )
   end
 
-  defp query_opts(%Plug.Conn{query_params: query_params} = conn) do
-    []
-    |> maybe_put(:sort_by, parse_sort(query_params))
-    |> maybe_put(:order, parse_order(query_params))
-    |> maybe_put_current_user(conn)
-  end
-
-  defp parse_order(%{"order" => "asc"}), do: :asc
-  defp parse_order(%{"order" => "desc"}), do: :desc
-  defp parse_order(_), do: nil
-
-  defp parse_sort(%{"sort" => "recency"}), do: :recency
-  defp parse_sort(%{"sort" => "popularity"}), do: :popularity
-  defp parse_sort(%{"sort" => "relevancy"}), do: :relevancy
-  defp parse_sort(%{"query" => query}) when is_binary(query) and query != "", do: :relevancy
-  defp parse_sort(_), do: nil
-
-  defp maybe_put(opts, _key, nil), do: opts
-  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
-
-  defp maybe_put_current_user(opts, %{assigns: %{current_user: %{id: user_id}}}),
-    do: Keyword.put(opts, :current_user_id, user_id)
-
-  defp maybe_put_current_user(opts, _conn), do: opts
-
   defp explore(conn, view, page, tag_options) do
     context =
       case conn.assigns[:current_user] do
@@ -184,8 +159,8 @@ defmodule LinkhutWeb.LinkController do
 
     links_query =
       case view do
-        :recent -> Links.recent(query_opts(conn))
-        :popular -> Links.popular(query_opts(conn))
+        :recent -> Links.recent(Utils.query_opts(conn))
+        :popular -> Links.popular(Utils.query_opts(conn))
       end
 
     conn
@@ -207,7 +182,7 @@ defmodule LinkhutWeb.LinkController do
         current_user -> %Context{context | visible_as: current_user.username}
       end
 
-    links_query = Search.search(context, query, query_opts(conn))
+    links_query = Search.search(context, query, Utils.query_opts(conn))
 
     conn
     |> render(:index,
@@ -228,7 +203,7 @@ defmodule LinkhutWeb.LinkController do
         current_user -> %Context{context | visible_as: current_user.username}
       end
 
-    links_query = Search.search(context, "", query_opts(conn))
+    links_query = Search.search(context, "", Utils.query_opts(conn))
 
     conn
     |> render(:index,
@@ -273,9 +248,6 @@ defmodule LinkhutWeb.LinkController do
   defp context(%{"username" => username}), do: %Context{from: Accounts.get_user!(username)}
   defp context(%{"url" => url}), do: %Context{url: URI.decode(url)}
   defp context(_), do: %Context{}
-
-  defp page(%{"p" => page}), do: page
-  defp page(_), do: 1
 
   defp view(%{"v" => "recent"}), do: :recent
   defp view(%{"v" => "popular"}), do: :popular

@@ -5,8 +5,6 @@ defmodule LinkhutWeb.LinkHTML do
   import LinkhutWeb.Controllers.Utils
   import LinkhutWeb.LinkComponents
 
-  use PhoenixHtmlSanitizer, :basic_html
-
   alias LinkhutWeb.Router.Helpers, as: Routes
   alias Linkhut.Search.Context
   alias LinkhutWeb.Controllers.Utils
@@ -16,32 +14,6 @@ defmodule LinkhutWeb.LinkHTML do
 
   defp tags_value(tags) when is_list(tags), do: Enum.join(tags, " ")
   defp tags_value(value), do: value
-
-  attr :link, Linkhut.Links.Link, required: true
-  attr :scope, Utils.Scope, required: true
-
-  def link_tags(assigns) do
-    ~H"""
-    <div class="tags">
-      <%= if @link.tags != [] do %>
-        <h5 class="label">{gettext("Tags:")}</h5>
-        <ul class="tags" data-label={gettext("tags")}>
-          <.link_tag :for={tag <- @link.tags} path={html_path(@scope, tag: tag)} tag={tag} />
-        </ul>
-      <% end %>
-    </div>
-    """
-  end
-
-  attr :tag, :string, required: true
-  attr :path, :string, required: true
-  attr :rest, :global
-
-  def link_tag(assigns) do
-    ~H"""
-    <li><a rel="tag" href={@path} {@rest}>{@tag}</a></li>
-    """
-  end
 
   def search_result?(%Plug.Conn{query_params: params} = _conn) do
     case params do

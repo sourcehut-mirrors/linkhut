@@ -190,6 +190,49 @@ defmodule LinkhutWeb.Controllers.Utils do
     end
   end
 
+  @doc """
+  Builds search query options from the connection's query params and current user.
+  """
+  @spec query_opts(Plug.Conn.t()) :: Keyword.t()
+  def query_opts(%Plug.Conn{query_params: query_params} = conn) do
+    []
+    |> maybe_put(:sort_by, parse_sort(query_params))
+    |> maybe_put(:order, parse_order(query_params))
+    |> maybe_put_current_user(conn)
+  end
+
+  @doc """
+  Extracts the page number from request params.
+  """
+  @spec page(map()) :: integer() | String.t()
+  def page(%{"p" => page}), do: page
+  def page(_), do: 1
+
+  @doc """
+  Extracts the current user's username from conn assigns, or nil if not logged in.
+  """
+  @spec visible_as(Plug.Conn.t()) :: String.t() | nil
+  def visible_as(%{assigns: %{current_user: %{username: username}}}), do: username
+  def visible_as(_), do: nil
+
+  defp parse_order(%{"order" => "asc"}), do: :asc
+  defp parse_order(%{"order" => "desc"}), do: :desc
+  defp parse_order(_), do: nil
+
+  defp parse_sort(%{"sort" => "recency"}), do: :recency
+  defp parse_sort(%{"sort" => "popularity"}), do: :popularity
+  defp parse_sort(%{"sort" => "relevancy"}), do: :relevancy
+  defp parse_sort(%{"query" => query}) when is_binary(query) and query != "", do: :relevancy
+  defp parse_sort(_), do: nil
+
+  defp maybe_put(opts, _key, nil), do: opts
+  defp maybe_put(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp maybe_put_current_user(opts, %{assigns: %{current_user: %{id: user_id}}}),
+    do: Keyword.put(opts, :current_user_id, user_id)
+
+  defp maybe_put_current_user(opts, _conn), do: opts
+
   @spec scope_to_map(Scope.t()) :: map()
   defp scope_to_map(%Scope{} = scope) do
     scope

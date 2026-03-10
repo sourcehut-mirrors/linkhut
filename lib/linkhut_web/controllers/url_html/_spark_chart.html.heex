@@ -1,0 +1,25 @@
+<% chart = chart_params(@buckets) %>
+<svg
+  class="spark-chart"
+  viewBox={"0 0 #{chart.chart_width} #{chart.chart_height}"}
+  preserveAspectRatio="none"
+  width="100%"
+  height="24"
+  shape-rendering="crispEdges"
+  aria-label={gettext("Bookmark activity over time")}
+  role="img"
+>
+  <%= for {bucket, i} <- Enum.with_index(@buckets) do %>
+    <% x = i * chart.bar_width %>
+    <g class="spark-bucket">
+      <title>{format_period(bucket.period, @granularity)}: {bucket.count}</title>
+      <rect x={x} y="0" width={chart.bar_width} height={chart.chart_height} class="spark-hit-area" />
+      <%= if bucket.count > 0 do %>
+        <% height = max(bucket.count / chart.max_count * chart.chart_height, chart.min_bar_height) %>
+        <rect x={x} y={chart.chart_height - height} width={chart.bar_width} height={height} class="spark-bar" />
+      <% else %>
+        <rect x={x} y={chart.chart_height - chart.border_height} width={chart.bar_width} height={chart.border_height} class="spark-empty" />
+      <% end %>
+    </g>
+  <% end %>
+</svg>

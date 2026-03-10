@@ -285,3 +285,91 @@ div.bookmark {
         background-color: $card-background-dark;
     }
 }
+
+// URL detail page
+
+.url-detail-header {
+    padding: $spacing-small $spacing-tiny;
+    border-color: $dark-gray;
+    border-width: 1px 0 0 0;
+    border-style: solid;
+
+    & > .title > h3 {
+        margin: 0;
+
+        @include link-title();
+    }
+
+    & > .full-url {
+        @include link-url();
+    }
+
+    & > .metadata {
+        color: $muted;
+        font-size: $font-tiny;
+        margin-top: $spacing-tiny;
+
+        & > span:not(:first-child)::before {
+            content: '\00B7';
+            margin: 0 $spacing-tiny;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+}
+
+.spark-chart {
+    display: block;
+    margin: $spacing-tiny 0;
+
+    .spark-hit-area {
+        fill: transparent;
+        pointer-events: all;
+    }
+
+    .spark-bar {
+        fill: $dark-green;
+        pointer-events: none;
+
+        @media (prefers-color-scheme: dark) {
+            fill: $bright-green;
+        }
+    }
+
+    .spark-empty {
+        fill: $light-gray;
+        pointer-events: none;
+
+        @media (prefers-color-scheme: dark) {
+            fill: $dark-gray;
+        }
+    }
+
+    .spark-bucket:hover {
+        .spark-hit-area {
+            fill: rgba(0, 0, 0, 0.05);
+
+            @media (prefers-color-scheme: dark) {
+                fill: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        .spark-bar {
+            fill: $bright-green;
+
+            @media (prefers-color-scheme: dark) {
+                fill: $light-green;
+            }
+        }
+
+        .spark-empty {
+            fill: $bright-gray;
+
+            @media (prefers-color-scheme: dark) {
+                fill: $gray;
+            }
+        }
+    }
+}

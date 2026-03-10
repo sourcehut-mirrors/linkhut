@@ -1,0 +1,102 @@
+<div class={["bookmark-card", highlight_owned?(@link, assigns) && "your-bookmark"]}>
+  <div class="bookmark">
+    <%= if Map.get(assigns, :show_title, true) do %>
+      <div data-posted-on={@link.inserted_at} data-saves={@link.saves} data-relevance={@link.score} class="title">
+        <h4><a rel="nofollow" class="taggedlink" href={@link.url}>{@link.title}</a></h4>
+        <%= if @link.is_private do %>
+          <span class="no-css-label">{gettext("Private")}</span>
+        <% end %>
+        <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.saves > 1 do %>
+          <a class="savers" data-count={@link.saves} data-label={gettext("people")} href={~p"/-#{@link.url}"}></a>
+        <% end %>
+      </div>
+    <% end %>
+    <%= if @context.url == nil do %>
+      <div class="full-url">
+        <a rel="nofollow" href={@link.url}>{@link.url}</a>
+      </div>
+    <% end %>
+    <%= if Map.get(assigns, :show_notes, true) do %>
+      <div class="description">
+        <%= if @logged_in? && @link.user_id == @current_user.id do %>
+          {sanitize(HtmlSanitizeEx.basic_html(Earmark.as_html!(@link.notes, pure_links: false)))}
+        <% else %>
+          {sanitize(@link.notes_html)}
+        <% end %>
+      </div>
+    <% end %>
+    <div class="ownership">
+      <%= unless owned?(@link, assigns) do %>
+        <span>
+          {gettext("by")} <a href={html_path(@scope, user: @link.user.username)}>{@link.user.username}</a>
+        </span>
+      <% end %>
+      <span>
+        <%= if assigns[:show_full_dates] do %>
+          <a href={~p"/~#{@link.user.username}/-#{@link.url}"}>
+            {Calendar.strftime(@link.inserted_at, "%Y-%m-%d")}
+          </a>
+        <% else %>
+          <a
+            href={~p"/~#{@link.user.username}/-#{@link.url}"}
+            title={Calendar.strftime(@link.inserted_at, "%Y-%m-%d %H:%M UTC")}
+          >
+            {Timex.format!(@link.inserted_at, "{relative}", :relative)}
+          </a>
+        <% end %>
+      </span>
+      <%= if @context.url == nil and not (@link.is_private) and @link.saves > 1 do %>
+        <span class="savers">
+          {gettext("saved")} <a href={~p"/-#{@link.url}"}>{@link.saves}</a> {ngettext("time", "times", @link.saves)}
+        </span>
+      <% end %>
+    </div>
+    <div class="meta">
+      <.link_tags scope={@scope} link={@link} />
+      <%= if @logged_in? do %>
+        <div class="actions">
+          <h5 class="label">{gettext("Actions:")}</h5>
+          <ul class="actions">
+            <%= if owned?(@link, assigns) do %>
+              <li>
+                <a href={~p"/_/edit?#{%{url: @link.url}}"}>{gettext("edit")}</a>
+              </li>
+              <li>
+                <a href={~p"/_/delete?#{%{url: @link.url}}"}>{gettext("delete")}</a>
+              </li>
+              <%= if @link.is_unread do %>
+                <li>
+                  <.form for={%{}} action={~p"/_/edit"} method="put">
+                    <input type="hidden" name="link[url]" value={@link.url} />
+                    <input type="hidden" name="link[is_unread]" value="false" />
+                    <button type="submit">{gettext("mark as read")}</button>
+                  </.form>
+                </li>
+              <% end %>
+              <%= if @can_view_archives? && @link.has_archive? do %>
+                <li>
+                  <a href={~p"/_/archive/#{@link.id}"}>{gettext("view archive")}</a>
+                </li>
+              <% end %>
+            <% else %>
+              <li>
+                <a href={~p"/_/add?#{%{url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags}}"}>{gettext("copy to mine")}</a>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  <%= if @link.is_private or @link.is_unread do %>
+    <div class="icons">
+      <%= if @link.is_private do %>
+        <span data-icon-type="private" title={gettext("private")}></span>
+      <% end %>
+      <%= if @link.is_unread do %>
+        <span data-icon-type="unread" title={gettext("unread")}></span>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+<hr />

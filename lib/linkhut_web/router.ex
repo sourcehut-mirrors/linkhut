@@ -242,7 +242,8 @@ defmodule LinkhutWeb.Router do
     get "/~:username", LinkController, :show, as: :user
     get "/~:username/-:url", LinkController, :show, as: :user_bookmark
     get "/~:username/*tags", LinkController, :show, as: :user_tags
-    get "/-:url", LinkController, :show, as: :bookmark
+    get "/-", UrlController, :show, as: :url_lookup
+    get "/-:url", UrlController, :show
     get "/*tags", LinkController, :show, as: :tags
   end
 end

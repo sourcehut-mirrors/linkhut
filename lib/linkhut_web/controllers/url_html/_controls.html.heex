@@ -1,0 +1,25 @@
+<div id="controls">
+  <section>
+    <fieldset>
+      <form id="check-url" action={~p"/-"} method="get">
+        <input type="url" name="check_url" value={@url} size="45" placeholder={gettext("Check a URL...")} />
+      </form>
+    </fieldset>
+  </section>
+  <%= if @detail do %>
+    <aside>
+      <div class="actions">
+        <%= if @logged_in? && @detail.current_user_bookmark do %>
+          <a class="button" href={~p"/_/edit?#{%{url: @detail.url}}"}>
+            <span>{gettext("Edit your bookmark")}</span>
+          </a>
+        <% end %>
+        <%= if @logged_in? && !@detail.current_user_bookmark do %>
+          <a class="button primary" href={~p"/_/add?#{%{url: @detail.url, title: @detail.title}}"}>
+            <span>{gettext("Add to your bookmarks")}</span>
+          </a>
+        <% end %>
+      </div>
+    </aside>
+  <% end %>
+</div>

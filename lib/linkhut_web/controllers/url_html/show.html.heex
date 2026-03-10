@@ -1,0 +1,80 @@
+{_controls(assigns)}
+<div id="content">
+  <section>
+    <%= if @detail do %>
+      <div class="url-detail-header">
+        <div class="title">
+          <h3><a rel="nofollow" href={@detail.url}>{@detail.title}</a></h3>
+        </div>
+        <div class="full-url">
+          <a rel="nofollow" href={@detail.url}>{@detail.url}</a>
+        </div>
+        <div class="metadata">
+          <span>
+            {gettext("Saved by %{count} %{people}",
+              count: @detail.total_saves,
+              people: ngettext("person", "people", @detail.total_saves)
+            )}
+          </span>
+          <span>
+            {gettext("First saved by")}
+            <a href={~p"/~#{@detail.first_save.username}"}>{@detail.first_save.username}</a>
+            <span data-datetime={DateTime.to_iso8601(@detail.first_save.saved_at)}>
+              {gettext("on %{date}", date: Calendar.strftime(@detail.first_save.saved_at, "%B %Y"))}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div class="sort-options">
+        <div>
+          {gettext("Order:")}
+          <ul>
+            <li>
+              <a href={html_path(@scope, ordering: "desc")} class={if @order == :desc, do: "active"}>
+                {gettext("newest first")}
+              </a>
+            </li>
+            <li>
+              <a href={html_path(@scope, ordering: "asc")} class={if @order == :asc, do: "active"}>
+                {gettext("oldest first")}
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <%= for [head | _] = entries <- @entry_groups do %>
+        <div class="date-group">
+          <h4 class="date"><span>{prettify(head.link.inserted_at)}</span></h4>
+          <div class="bookmarks">
+            <%= for entry <- entries do %>
+              {bookmark_card(
+                assigns
+                |> Map.put(:link, entry.link)
+                |> Map.put(:show_title, entry.show_title)
+                |> Map.put(:show_notes, entry.show_notes)
+              )}
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      {pagination(assigns)}
+    <% else %>
+      <%= if @url do %>
+        <div class="url-detail-header">
+          <div class="full-url">
+            <a rel="nofollow" href={@url}>{@url}</a>
+          </div>
+          <p class="empty-state">{gettext("No public bookmarks found for this URL.")}</p>
+        </div>
+      <% else %>
+        <p class="empty-state">{gettext("Enter a URL above to look it up.")}</p>
+      <% end %>
+    <% end %>
+  </section>
+  <%= if @detail do %>
+    {_side_panel(assigns)}
+  <% end %>
+</div>

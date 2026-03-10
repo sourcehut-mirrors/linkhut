@@ -1,0 +1,40 @@
+<aside>
+  <%= if match?([_, _ | _], @detail.activity.buckets) do %>
+    <section>
+      <h5>{gettext("Saves over time")}</h5>
+      {_spark_chart(@detail.activity)}
+    </section>
+  <% end %>
+  <%= if @detail.common_tags != [] do %>
+    <section>
+      <h5>{gettext("Common tags")}</h5>
+      <ul class="tag-cloud">
+        <li :for={%{tag: tag, count: count} <- @detail.common_tags}>
+          <a rel="tag" href={~p"/#{tag}"} data-count={count}>{tag}</a>
+        </li>
+      </ul>
+    </section>
+  <% end %>
+  <% host = URI.parse(@detail.url).host %>
+  <%= if host && @detail.domain_saves > 0 do %>
+    <section>
+      <h5>{gettext("Domain")}</h5>
+      <p>
+        <a href={~p"/?query=site:#{host}"}>
+          {ngettext(
+            "%{count} bookmark from %{domain}",
+            "%{count} bookmarks from %{domain}",
+            @detail.domain_saves,
+            count: @detail.domain_saves,
+            domain: host
+          )}
+        </a>
+      </p>
+    </section>
+  <% end %>
+  <section>
+    <h5>
+      <a class="feed-link" href={feed_path(@scope)}>{gettext("RSS feed")}</a>
+    </h5>
+  </section>
+</aside>

@@ -35,12 +35,12 @@
         <h4 class="date"><span>{prettify(head.inserted_at)}</span></h4>
         <div class="bookmarks">
           <%= for link <- links do %>
-            {_bookmark(Map.put_new(assigns, :link, link))}
+            {bookmark_card(Map.put(assigns, :link, link))}
           <% end %>
         </div>
       </div>
     <% end %>
-    {_pagination(Map.put(assigns, :page, Map.drop(@links, [:entries])))}
+    {pagination(Map.put(assigns, :page, Map.drop(@links, [:entries])))}
   </section>
   {_side_panel(assigns)}
 </div>

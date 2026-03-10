@@ -16,7 +16,7 @@
           <% end %>
           <%= if @breadcrumb.url do %>
             <h5 class="no-css-label">{gettext("matching: ")}</h5>
-            <span class="url"><a href={Routes.bookmark_path(@conn, :show, @breadcrumb.url)}>{@breadcrumb.url}</a></span>
+            <span class="url"><a href={~p"/-#{@breadcrumb.url}"}>{@breadcrumb.url}</a></span>
           <% end %>
           <%= if @breadcrumb.tags != [] do %>
             <h5 class="no-css-label">{gettext("tagged with: ")}</h5>
