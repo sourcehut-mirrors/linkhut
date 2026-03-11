@@ -181,7 +181,8 @@ defmodule Linkhut.Links do
   end
 
   defp filter({:url, url}, dynamic) do
-    dynamic([l], ^dynamic and l.url == ^url)
+    normalized = Linkhut.Network.normalize_url(url)
+    dynamic([l], ^dynamic and l.normalized_url == ^normalized)
   end
 
   defp filter({:is_private, is_private}, dynamic) do
@@ -346,8 +347,8 @@ defmodule Linkhut.Links do
       dynamic(
         [l],
         fragment(
-          "EXISTS(SELECT 1 FROM links WHERE url = ? AND user_id = ?)",
-          l.url,
+          "EXISTS(SELECT 1 FROM links WHERE normalized_url = ? AND user_id = ?)",
+          l.normalized_url,
           ^user_id
         )
       )

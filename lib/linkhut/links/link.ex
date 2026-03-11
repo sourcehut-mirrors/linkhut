@@ -21,6 +21,7 @@ defmodule Linkhut.Links.Link do
     field :tags, Tags, default: []
     field :is_private, :boolean, default: false
     field :language, :string
+    field :normalized_url, :string
     field :is_unread, :boolean, default: false
     field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
@@ -51,6 +52,7 @@ defmodule Linkhut.Links.Link do
       opts
     )
     |> validate_url()
+    |> compute_normalized_url()
     |> maybe_add_metadata()
     |> maybe_fetch_title(opts)
     |> validate_required([:user_id, :title, :is_private])
@@ -139,6 +141,13 @@ defmodule Linkhut.Links.Link do
 
   defp add_unread_tag(tags), do: ["unread" | tags]
   defp remove_unread_tag(tags), do: Enum.reject(tags, &Tags.is_unread?/1)
+
+  defp compute_normalized_url(changeset) do
+    case get_change(changeset, :url) do
+      nil -> changeset
+      url -> put_change(changeset, :normalized_url, Linkhut.Network.normalize_url(url))
+    end
+  end
 
   defp validate_url(changeset) do
     changeset

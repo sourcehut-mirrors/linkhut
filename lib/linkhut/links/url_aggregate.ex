@@ -55,7 +55,7 @@ defmodule Linkhut.Links.UrlAggregate do
   defp summary(url) do
     from(l in Link,
       join: u in assoc(l, :user),
-      where: l.url == ^url,
+      where: l.normalized_url == ^url,
       where: not l.is_private and not l.is_unread,
       where: not u.is_banned,
       windows: [
@@ -79,13 +79,14 @@ defmodule Linkhut.Links.UrlAggregate do
   defp current_user_bookmark(_url, nil), do: nil
 
   defp current_user_bookmark(url, user_id) do
-    Repo.get_by(Link, url: url, user_id: user_id)
+    from(l in Link, where: l.normalized_url == ^url and l.user_id == ^user_id, limit: 1)
+    |> Repo.one()
   end
 
   defp common_tags(url) do
     from(l in Link,
       join: u in assoc(l, :user),
-      where: l.url == ^url,
+      where: l.normalized_url == ^url,
       where: not l.is_private and not l.is_unread,
       where: not u.is_banned,
       inner_lateral_join: t in fragment("SELECT unnest(?) AS tag", l.tags),
@@ -131,7 +132,7 @@ defmodule Linkhut.Links.UrlAggregate do
     buckets =
       from(l in Link,
         join: u in assoc(l, :user),
-        where: l.url == ^url,
+        where: l.normalized_url == ^url,
         where: not l.is_private and not l.is_unread,
         where: not u.is_banned,
         group_by: selected_as(:period),

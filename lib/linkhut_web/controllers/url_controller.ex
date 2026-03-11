@@ -6,6 +6,7 @@ defmodule LinkhutWeb.UrlController do
   use LinkhutWeb, :controller
 
   alias Linkhut.Links
+  alias Linkhut.Network
   alias Linkhut.Pagination
   alias Linkhut.Search
   alias Linkhut.Search.Context
@@ -26,15 +27,15 @@ defmodule LinkhutWeb.UrlController do
 
   # Bare /-  — just the check-URL input
   def show(conn, %{"check_url" => check_url}) when check_url != "" do
-    redirect(conn, to: ~p"/-#{check_url}")
+    redirect(conn, to: ~p"/-#{Network.normalize_url(check_url)}")
   end
 
   def show(conn, %{"url" => _url, "check_url" => check_url}) when check_url != "" do
-    redirect(conn, to: ~p"/-#{check_url}")
+    redirect(conn, to: ~p"/-#{Network.normalize_url(check_url)}")
   end
 
   def show(conn, params) do
-    url = if url_param = params["url"], do: URI.decode(url_param)
+    url = if url_param = params["url"], do: url_param |> URI.decode() |> Network.normalize_url()
     current_user_id = get_in(conn.assigns, [:current_user, Access.key(:id)])
 
     detail = url && Links.url_detail(url, current_user_id: current_user_id)

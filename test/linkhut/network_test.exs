@@ -50,4 +50,58 @@ defmodule Linkhut.NetworkTest do
                Network.check_address("169.254.1.1")
     end
   end
+
+  describe "normalize_url/1" do
+    test "lowercases host for HTTP URLs" do
+      assert Network.normalize_url("http://EXAMPLE.COM/Path") == "http://example.com/Path"
+    end
+
+    test "lowercases host for HTTPS URLs" do
+      assert Network.normalize_url("https://Example.COM/Path") == "https://example.com/Path"
+    end
+
+    test "lowercases scheme" do
+      assert Network.normalize_url("HTTP://example.com") == "http://example.com"
+      assert Network.normalize_url("HTTPS://example.com") == "https://example.com"
+    end
+
+    test "strips default ports" do
+      assert Network.normalize_url("http://example.com:80/path") == "http://example.com/path"
+      assert Network.normalize_url("https://example.com:443/path") == "https://example.com/path"
+    end
+
+    test "preserves non-default ports" do
+      assert Network.normalize_url("http://example.com:8080/path") ==
+               "http://example.com:8080/path"
+    end
+
+    test "preserves path, query, and fragment" do
+      assert Network.normalize_url("https://Example.COM/Path?q=1&b=2#frag") ==
+               "https://example.com/Path?q=1&b=2#frag"
+    end
+
+    test "is idempotent" do
+      url = "https://example.com/path?q=1"
+      assert Network.normalize_url(url) == url
+      assert Network.normalize_url(Network.normalize_url(url)) == url
+    end
+
+    test "returns unchanged for URLs without a host" do
+      assert Network.normalize_url("file:///some/path") == "file:///some/path"
+    end
+
+    test "returns unchanged for malformed input" do
+      assert Network.normalize_url("not a url") == "not a url"
+    end
+
+    test "normalizes other DNS-based schemes" do
+      assert Network.normalize_url("ftp://FTP.Example.COM/pub") == "ftp://ftp.example.com/pub"
+      assert Network.normalize_url("gemini://EXAMPLE.COM/page") == "gemini://example.com/page"
+      assert Network.normalize_url("gopher://EXAMPLE.COM/1") == "gopher://example.com/1"
+    end
+
+    test "does not lowercase host for unknown schemes" do
+      assert Network.normalize_url("ipfs://QmAbCdEf/path") == "ipfs://QmAbCdEf/path"
+    end
+  end
 end

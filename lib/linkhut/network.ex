@@ -102,4 +102,43 @@ defmodule Linkhut.Network do
       if InetCidr.contains?(cidr, address), do: label
     end)
   end
+
+  # Schemes known to use DNS hostnames (case-insensitive per RFC 1034 §3.1).
+  @dns_schemes ~w(http https ftp gemini gopher)
+
+  @doc """
+  Normalizes a URL by downcasing the scheme and host for protocols that use
+  DNS hostnames.
+
+  Default ports (80 for HTTP, 443 for HTTPS) are stripped.
+  Schemes not known to use DNS hostnames are returned unchanged to avoid
+  corrupting case-sensitive identifiers (e.g. IPFS content hashes).
+
+  Returns the input unchanged for URLs without a host (e.g. `file:///path`)
+  or for malformed input. The function is idempotent.
+
+  ## Examples
+
+      iex> Linkhut.Network.normalize_url("HTTP://Example.COM/Path?q=1")
+      "http://example.com/Path?q=1"
+
+      iex> Linkhut.Network.normalize_url("https://example.com:443/path")
+      "https://example.com/path"
+
+      iex> Linkhut.Network.normalize_url("ipfs://QmAbCdEf/path")
+      "ipfs://QmAbCdEf/path"
+
+  """
+  @spec normalize_url(String.t()) :: String.t()
+  def normalize_url(url) when is_binary(url) do
+    case URI.new(url) do
+      {:ok, %URI{scheme: scheme, host: host} = uri}
+      when is_binary(host) and scheme in @dns_schemes ->
+        %URI{uri | host: String.downcase(host)}
+        |> URI.to_string()
+
+      _ ->
+        url
+    end
+  end
 end

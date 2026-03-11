@@ -7,6 +7,7 @@ All notable changes to linkhut will be documented in this file.
 - Add more MIME types that can be compressed at-rest.
 - Introduce concept of subscriptions instead of relying on user types to determine Archiving eligibility
 - Add a proper URL history page at `/-:url` (this deprecates the `/-:url/*:tags` that were really not that useful)
+- URL matching now treats hostnames as case-insensitive and ignores default ports
 
 ## [0.1.1] - 2026-03-10
 

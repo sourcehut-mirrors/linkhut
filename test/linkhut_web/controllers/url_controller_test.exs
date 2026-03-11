@@ -85,6 +85,26 @@ defmodule LinkhutWeb.UrlControllerTest do
       assert response =~ "Edit your bookmark"
     end
 
+    test "normalizes mixed-case scheme and host in URL lookup", %{conn: conn} do
+      user = insert(:user, type: :active)
+      insert(:link, user_id: user.id, url: @test_url, title: "Example Site")
+
+      mixed_case_url = "HTTPS://EXAMPLE.COM"
+      conn = get(conn, ~p"/-#{mixed_case_url}")
+      response = html_response(conn, 200)
+
+      assert response =~ "Example Site"
+    end
+
+    test "normalizes check_url redirect", %{conn: conn} do
+      mixed_case_url = "HTTP://Example.COM/path"
+      conn = get(conn, ~p"/-#{@test_url}?check_url=#{mixed_case_url}")
+      location = redirected_to(conn)
+
+      assert location =~ "example.com"
+      refute location =~ "Example.COM"
+    end
+
     test "shows 'Add to your bookmarks' when logged-in user hasn't saved the URL", %{conn: conn} do
       owner = insert(:user, type: :active)
       visitor = insert(:user, type: :active)

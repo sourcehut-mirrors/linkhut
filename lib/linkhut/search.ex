@@ -6,6 +6,7 @@ defmodule Linkhut.Search do
   import Ecto.Query
 
   alias Linkhut.Links
+  alias Linkhut.Network
   alias Linkhut.Search.Context
   alias Linkhut.Search.ParsedQuery
   alias Linkhut.Search.QueryParser
@@ -106,7 +107,7 @@ defmodule Linkhut.Search do
   defp matching(query, nil), do: query
 
   defp matching(query, url) do
-    where(query, url: ^url)
+    where(query, normalized_url: ^Network.normalize_url(url))
   end
 
   defp filtered_by_hosts(query, []), do: query
