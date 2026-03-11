@@ -324,8 +324,8 @@ defmodule Linkhut.Links do
   end
 
   defp select_field({:current_user_id, user_id}, fields) do
-    Map.put(
-      fields,
+    fields
+    |> Map.put(
       :has_archive?,
       dynamic(
         [l],
@@ -338,6 +338,17 @@ defmodule Linkhut.Links do
           l.user_id,
           ^user_id,
           l.id
+        )
+      )
+    )
+    |> Map.put(
+      :saved_by_current_user?,
+      dynamic(
+        [l],
+        fragment(
+          "EXISTS(SELECT 1 FROM links WHERE url = ? AND user_id = ?)",
+          l.url,
+          ^user_id
         )
       )
     )

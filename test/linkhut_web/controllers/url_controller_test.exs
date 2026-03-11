@@ -98,6 +98,33 @@ defmodule LinkhutWeb.UrlControllerTest do
       response = html_response(conn, 200)
       assert response =~ "Add to your bookmarks"
     end
+
+    test "shows 'copy to mine' when logged-in user hasn't saved the URL", %{conn: conn} do
+      owner = insert(:user, type: :active)
+      visitor = insert(:user, type: :active)
+      insert(:link, user_id: owner.id, url: @test_url, title: "Example")
+
+      conn =
+        conn
+        |> LinkhutWeb.ConnCase.log_in_user(visitor)
+        |> get(~p"/-#{@test_url}")
+
+      assert html_response(conn, 200) =~ "copy to mine"
+    end
+
+    test "hides 'copy to mine' when logged-in user has already saved the URL", %{conn: conn} do
+      owner = insert(:user, type: :active)
+      visitor = insert(:user, type: :active)
+      insert(:link, user_id: owner.id, url: @test_url, title: "Example")
+      insert(:link, user_id: visitor.id, url: @test_url, title: "My copy")
+
+      conn =
+        conn
+        |> LinkhutWeb.ConnCase.log_in_user(visitor)
+        |> get(~p"/-#{@test_url}")
+
+      refute html_response(conn, 200) =~ "copy to mine"
+    end
   end
 
   describe "GET /-" do
