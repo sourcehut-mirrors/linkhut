@@ -8,7 +8,6 @@ submitter:
 image: alpine/edge
 packages:
   - docker
-  - docker-cli-compose
 secrets:
   -  dafdc7fa-451e-44cb-aa67-339ae7ca2e87 # docker registry credentials
 environment:
@@ -29,10 +28,21 @@ tasks:
       set -x +a
   - build: |
       cd linkhut
+      export DOCKER_BUILDKIT=1
+      # Register QEMU for arm64 emulation
+      docker run --privileged --rm tonistiigi/binfmt --install all
       # Extract version from mix.exs (e.g., "0.2.0")
       VERSION=$(grep 'version:' mix.exs | head -1 | sed 's/.*"\(.*\)".*/\1/')
-      docker buildx create --use
-      docker buildx build --push --platform linux/amd64,linux/arm64 -f contrib/docker/Dockerfile \
-        -t ${DOCKER_IMAGE}:${VERSION} \
-        -t ${DOCKER_IMAGE}:latest \
-        .
+      # Build and push each platform separately (avoids docker-in-docker issues)
+      for arch in amd64 arm64; do
+        docker build --platform linux/${arch} -f contrib/docker/Dockerfile \
+          -t ${DOCKER_IMAGE}:${VERSION}-${arch} .
+        docker push ${DOCKER_IMAGE}:${VERSION}-${arch}
+      done
+      # Create and push multi-arch manifests
+      for tag in ${VERSION} latest; do
+        docker manifest create ${DOCKER_IMAGE}:${tag} \
+          ${DOCKER_IMAGE}:${VERSION}-amd64 \
+          ${DOCKER_IMAGE}:${VERSION}-arm64
+        docker manifest push ${DOCKER_IMAGE}:${tag}
+      done
