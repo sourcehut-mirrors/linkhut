@@ -6,7 +6,7 @@
         <%= if @link.is_private do %>
           <span class="no-css-label">{gettext("Private")}</span>
         <% end %>
-        <%= if @context.url == nil and not (@link.is_private or @link.is_unread) and @link.saves > 1 do %>
+        <%= if @context.url == nil and @link.saves > 1 do %>
           <a class="savers" data-count={@link.saves} data-label={gettext("people")} href={~p"/-#{@link.url}"}></a>
         <% end %>
       </div>
@@ -45,7 +45,7 @@
           </a>
         <% end %>
       </span>
-      <%= if @context.url == nil and not (@link.is_private) and @link.saves > 1 do %>
+      <%= if @context.url == nil and @link.saves > 1 do %>
         <span class="savers">
           {gettext("saved")} <a href={~p"/-#{@link.url}"}>{@link.saves}</a> {ngettext("time", "times", @link.saves)}
         </span>

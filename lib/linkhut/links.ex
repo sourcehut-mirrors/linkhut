@@ -318,7 +318,15 @@ defmodule Linkhut.Links do
     Enum.reduce(
       params,
       %{
-        saves: dynamic([_, s], coalesce(s.saves, 1) |> selected_as(:saves))
+        saves:
+          dynamic(
+            [l],
+            fragment(
+              "COALESCE((SELECT saves FROM public_links WHERE normalized_url = ? LIMIT 1), 0)",
+              l.normalized_url
+            )
+            |> selected_as(:saves)
+          )
       },
       &select_field/2
     )

@@ -9,6 +9,7 @@ defmodule Linkhut.Links.PublicLink do
   @primary_key false
   schema "public_links" do
     field :id, :integer, primary_key: true
+    field :normalized_url, :string
     field :inserted_at, :utc_datetime
     belongs_to :user, User, define_field: false
     field :saves, :integer
