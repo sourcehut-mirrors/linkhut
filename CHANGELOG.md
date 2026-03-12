@@ -2,7 +2,7 @@
 
 All notable changes to linkhut will be documented in this file.
 
-## [Unreleased]
+## [0.1.2] - 2026-03-12
 
 - Add more MIME types that can be compressed at-rest.
 - Introduce concept of subscriptions instead of relying on user types to determine Archiving eligibility
