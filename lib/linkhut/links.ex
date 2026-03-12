@@ -370,8 +370,8 @@ defmodule Linkhut.Links do
 
     filter_order_by =
       case sort_direction do
-        :asc -> [asc: column, asc: :inserted_at]
-        :desc -> [desc: column, desc: :inserted_at]
+        :asc -> [asc: column, asc: :id]
+        :desc -> [desc: column, desc: :id]
       end
 
     query |> order_by(^filter_order_by)
