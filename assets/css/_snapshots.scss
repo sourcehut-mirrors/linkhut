@@ -33,7 +33,7 @@ div.snapshot-toolbar {
     }
 
     & > .snapshot-nav {
-        padding: $spacing-small;
+        padding: 0 $spacing-small;
 
         & > a {
             @media (prefers-color-scheme: dark) {
@@ -47,30 +47,24 @@ div.snapshot-toolbar {
     }
 }
 
-dl.snapshot-link {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0 $spacing-tiny;
-    margin: 0;
-    padding: $spacing-small;
+div.bookmark-header {
+    & > .title > h3 {
+        margin: 0;
 
-    @media (prefers-color-scheme: dark) {
-        border-bottom-color: $dark-gray;
+        @include link-title();
     }
 
-    & > dt {
-        font-weight: bold;
+    & > .full-url {
+        @include link-url();
     }
+}
 
-    & > dd {
-        margin-left: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    @media screen and (max-width: 48em) {
-        grid-template-columns: 1fr;
-    }
+div.snapshot-link {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0;
 }
 
 details.snapshot-details {
@@ -142,12 +136,6 @@ div.snapshot-content-external {
 }
 
 // Snapshot listing (index page)
-
-div.snapshot-list {
-    & > h2 {
-        margin-bottom: 0;
-    }
-}
 
 table.snapshot-table {
     width: 100%;

@@ -42,12 +42,14 @@ defmodule LinkhutWeb.SnapshotHTML do
   def toolbar(assigns) do
     ~H"""
     <div class="snapshot-toolbar">
-      <dl class="snapshot-link">
-        <dt>Title</dt>
-        <dd><a rel="nofollow" href={@link.url}>{@link.title}</a></dd>
-        <dt>URL</dt>
-        <dd><a rel="nofollow" href={@link.url}>{@link.url}</a></dd>
-      </dl>
+      <div class="bookmark-header">
+        <div class="title">
+          <h3><a rel="nofollow" href={@link.url}>{@link.title}</a></h3>
+        </div>
+        <div class="full-url">
+          <a rel="nofollow" href={@link.url}>{@link.url}</a>
+        </div>
+      </div>
       <div :if={!@external_url} class="snapshot-nav">
         <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/full"}>full page</a>
         <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/download"}>download</a>

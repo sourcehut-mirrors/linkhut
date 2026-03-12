@@ -1,13 +1,13 @@
 <.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
-<div class="snapshot-list">
-  <div>
-    <dl class="snapshot-link">
-      <dt>Title</dt>
-      <dd><a rel="nofollow" href={@link.url}>{@link.title}</a></dd>
-      <dt>URL</dt>
-      <dd><a rel="nofollow" href={@link.url}>{@link.url}</a></dd>
-    </dl>
+<div class="bookmark-header">
+  <div class="title">
+    <h3><a rel="nofollow" href={@link.url}>{@link.title}</a></h3>
   </div>
+  <div class="full-url">
+    <a rel="nofollow" href={@link.url}>{@link.url}</a>
+  </div>
+</div>
+<div class="snapshot-list">
   <.archive_group :for={archive <- @archives} archive={archive} link={@link} />
   <div :if={!any_processing?(@archives)} class="snapshot-actions">
     <form method="post" action={~p"/_/archive/#{@link.id}/recrawl"}>
