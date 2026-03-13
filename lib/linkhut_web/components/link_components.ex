@@ -5,7 +5,7 @@ defmodule LinkhutWeb.LinkComponents do
   use LinkhutWeb, :html
 
   import LinkhutWeb.Controllers.Utils, only: [html_path: 2]
-  import LinkhutWeb.Helpers, only: [in_timezone: 2]
+  import LinkhutWeb.Helpers, only: [in_timezone: 2, time_ago: 1]
 
   use PhoenixHtmlSanitizer, :basic_html
 
@@ -141,7 +141,7 @@ defmodule LinkhutWeb.LinkComponents do
 
     cond do
       diff_days < 7 ->
-        Timex.format!(dt, "{relative}", :relative)
+        time_ago(dt)
 
       diff_days < 28 ->
         weeks = div(diff_days, 7)

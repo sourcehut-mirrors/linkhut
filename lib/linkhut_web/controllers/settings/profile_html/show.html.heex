@@ -22,7 +22,7 @@
         </.inputs_for>
         <div :if={@current_user.type != :unconfirmed} class="inline-info">
           {gettext("Confirmed on:")}
-          <span>{Timex.format!(@changeset.data.credential.email_confirmed_at, "{YYYY}-{0M}-{0D}")}</span>
+          <span>{Calendar.strftime(@changeset.data.credential.email_confirmed_at, "%Y-%m-%d")}</span>
         </div>
         <.input field={f[:bio]} type="textarea" label="Bio" placeholder="Tell something about yourself" />
       </fieldset>

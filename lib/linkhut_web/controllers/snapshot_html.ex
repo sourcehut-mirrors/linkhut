@@ -303,7 +303,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   Formats a datetime as a relative time string (e.g. "3 days ago").
   """
   def format_relative_datetime(%DateTime{} = dt) do
-    Timex.format!(dt, "{relative}", :relative)
+    LinkhutWeb.Helpers.time_ago(dt)
   end
 
   def format_relative_datetime(_), do: "Unknown"

@@ -14,7 +14,7 @@ defmodule LinkhutWeb.Api.IFTTT.TestController do
       Oauth.create_token!(ifttt_user, %{
         application: ifttt_app,
         scopes: "ifttt",
-        expires_in: Timex.Duration.to_seconds(10, :minutes)
+        expires_in: 600
       })
 
     public_url = "https://example.com##{:crypto.strong_rand_bytes(3) |> Base.encode64()}"

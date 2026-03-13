@@ -51,7 +51,7 @@ defmodule Linkhut.Oauth do
   end
 
   defp do_create_token(access_token, attrs) do
-    attrs = Map.merge(%{expires_in: Timex.Duration.to_seconds(365, :days)}, attrs)
+    attrs = Map.merge(%{expires_in: 365 * 86_400}, attrs)
 
     access_token
     |> AccessToken.changeset(attrs)
