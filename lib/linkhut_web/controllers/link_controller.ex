@@ -14,10 +14,13 @@ defmodule LinkhutWeb.LinkController do
   @links_per_page 20
 
   def new(conn, params) do
+    link_defaults = %Link{is_private: conn.assigns.preferences.default_private}
+
+    changeset =
+      Links.change_link(link_defaults, Map.take(params, ["url", "title", "tags", "notes"]))
+
     conn
-    |> render("add.html",
-      changeset: Links.change_link(%Link{}, Map.take(params, ["url", "title", "tags", "notes"]))
-    )
+    |> render("add.html", changeset: changeset)
   end
 
   def insert(conn, %{"link" => link_params}) do

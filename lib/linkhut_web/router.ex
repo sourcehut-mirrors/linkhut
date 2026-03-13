@@ -123,6 +123,10 @@ defmodule LinkhutWeb.Router do
     put "/profile", ProfileController, :update
     put "/profile/delete", ProfileController, :delete
 
+    get "/preferences", PreferencesController, :show
+    post "/preferences", PreferencesController, :update
+    put "/preferences", PreferencesController, :update
+
     get "/security", SecurityController, :show
   end
 

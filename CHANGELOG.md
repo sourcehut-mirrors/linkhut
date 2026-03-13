@@ -2,6 +2,11 @@
 
 All notable changes to linkhut will be documented in this file.
 
+## [Unreleased]
+
+- Add support for setting user preferences (show URLs below titles, show exact dates, timezone and default bookmark privacy)
+- Improve relative date display
+
 ## [0.1.2] - 2026-03-12
 
 - Add more MIME types that can be compressed at-rest.

@@ -1,12 +1,7 @@
 <div>
   <h3>Remove link</h3>
   <div class="bookmark">
-    <div class="title">
-      <h4><a class="taggedlink" href={@link.url}>{@link.title}</a></h4>
-    </div>
-    <div class="full-url">
-      <a rel="nofollow" href={@link.url}>{@link.url}</a>
-    </div>
+    <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} />
     <div class="description">
       {sanitize(@link.notes_html)}
     </div>

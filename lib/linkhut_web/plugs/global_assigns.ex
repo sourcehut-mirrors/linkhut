@@ -6,7 +6,7 @@ defmodule LinkhutWeb.Plugs.GlobalAssigns do
   """
 
   import Plug.Conn
-  alias Linkhut.{Archiving, Links}
+  alias Linkhut.{Accounts.Preferences, Archiving, Links}
 
   @doc false
   @impl true
@@ -21,11 +21,13 @@ defmodule LinkhutWeb.Plugs.GlobalAssigns do
       |> assign(:unread_count, Links.unread_count(user.id))
       |> assign(:can_create_archives?, Archiving.can_create_archives?(user))
       |> assign(:can_view_archives?, Archiving.can_view_archives?(user))
+      |> assign(:preferences, Preferences.get_or_default(user))
     else
       conn
       |> assign(:logged_in?, false)
       |> assign(:can_create_archives?, false)
       |> assign(:can_view_archives?, false)
+      |> assign(:preferences, %Linkhut.Accounts.Preferences.UserPreference{})
     end
   end
 end

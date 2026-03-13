@@ -11,7 +11,7 @@
         <% end %>
       </div>
     <% end %>
-    <%= if @context.url == nil do %>
+    <%= if show_url?(assigns) do %>
       <div class="full-url">
         <a rel="nofollow" href={@link.url}>{@link.url}</a>
       </div>
@@ -32,18 +32,12 @@
         </span>
       <% end %>
       <span>
-        <%= if assigns[:show_full_dates] do %>
-          <a href={~p"/~#{@link.user.username}/-#{@link.url}"}>
-            {Calendar.strftime(@link.inserted_at, "%Y-%m-%d")}
-          </a>
-        <% else %>
-          <a
-            href={~p"/~#{@link.user.username}/-#{@link.url}"}
-            title={Calendar.strftime(@link.inserted_at, "%Y-%m-%d %H:%M UTC")}
-          >
-            {Timex.format!(@link.inserted_at, "{relative}", :relative)}
-          </a>
-        <% end %>
+        <.bookmark_date
+          datetime={@link.inserted_at}
+          href={~p"/~#{@link.user.username}/-#{@link.url}"}
+          exact={show_exact_dates?(assigns)}
+          timezone={pref(assigns, :timezone)}
+        />
       </span>
       <%= if @context.url == nil and @link.saves > 1 do %>
         <span class="savers">

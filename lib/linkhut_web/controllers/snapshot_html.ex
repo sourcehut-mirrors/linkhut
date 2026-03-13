@@ -37,18 +37,14 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :link, :map, required: true
   attr :snapshot, :map, required: true
+  attr :show_url, :boolean, default: true
   attr :external_url, :string, default: nil
 
   def toolbar(assigns) do
     ~H"""
     <div class="snapshot-toolbar">
       <div class="bookmark-header">
-        <div class="title">
-          <h3><a rel="nofollow" href={@link.url}>{@link.title}</a></h3>
-        </div>
-        <div class="full-url">
-          <a rel="nofollow" href={@link.url}>{@link.url}</a>
-        </div>
+        <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={@show_url} />
       </div>
       <div :if={!@external_url} class="snapshot-nav">
         <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/full"}>full page</a>

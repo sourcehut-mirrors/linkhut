@@ -2,12 +2,12 @@
 <div>
   <section class="settings">
     <h4>Personal Access Tokens</h4>
-    <.personal_token_list personal_access_tokens={@personal_access_tokens} />
+    <.personal_token_list personal_access_tokens={@personal_access_tokens} preferences={@preferences} />
     <a class="button" href={~p"/_/oauth/personal-token"}>Generate new token</a>
   </section>
   <section class="settings">
     <h4>Authorized Applications</h4>
-    <.authorized_application_list authorized_applications={@authorized_applications} />
+    <.authorized_application_list authorized_applications={@authorized_applications} preferences={@preferences} />
   </section>
   <section class="settings">
     <h4>Registered Applications</h4>

@@ -21,6 +21,7 @@ defmodule LinkhutWeb.SettingsComponents do
           :for={
             {to, name} <- [
               {~p"/_/profile", gettext("Profile")},
+              {~p"/_/preferences", gettext("Preferences")},
               {~p"/_/security", gettext("Security")},
               {~p"/_/import", gettext("Import / Export")},
               {~p"/_/misc", gettext("Misc")},

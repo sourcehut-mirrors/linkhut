@@ -3,12 +3,7 @@
   <section>
     <%= if @detail do %>
       <div class="url-detail-header">
-        <div class="title">
-          <h3><a rel="nofollow" href={@detail.url}>{@detail.title}</a></h3>
-        </div>
-        <div class="full-url">
-          <a rel="nofollow" href={@detail.url}>{@detail.url}</a>
-        </div>
+        <LinkhutWeb.LinkComponents.bookmark_header title={@detail.title} url={@detail.url} />
         <div class="metadata">
           <span>
             {gettext("Saved by %{count} %{people}",
@@ -46,7 +41,7 @@
 
       <%= for [head | _] = entries <- @entry_groups do %>
         <div class="date-group">
-          <h4 class="date"><span>{prettify(head.link.inserted_at)}</span></h4>
+          <h4 class="date"><span>{format_date(head.link.inserted_at, @preferences.timezone)}</span></h4>
           <div class="bookmarks">
             <%= for entry <- entries do %>
               {bookmark_card(

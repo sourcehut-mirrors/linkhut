@@ -1,11 +1,6 @@
 <.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
 <div class="bookmark-header">
-  <div class="title">
-    <h3><a rel="nofollow" href={@link.url}>{@link.title}</a></h3>
-  </div>
-  <div class="full-url">
-    <a rel="nofollow" href={@link.url}>{@link.url}</a>
-  </div>
+  <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={LinkhutWeb.LinkComponents.show_url?(assigns)} />
 </div>
 <div class="snapshot-list">
   <.archive_group :for={archive <- @archives} archive={archive} link={@link} />

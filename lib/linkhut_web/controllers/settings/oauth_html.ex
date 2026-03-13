@@ -7,6 +7,7 @@ defmodule LinkhutWeb.Settings.OauthHTML do
   embed_templates "oauth_html/*"
 
   attr :personal_access_tokens, :list, required: true
+  attr :preferences, :any, default: nil
 
   defp personal_token_list(assigns) do
     ~H"""
@@ -24,8 +25,8 @@ defmodule LinkhutWeb.Settings.OauthHTML do
         <tr :for={token <- @personal_access_tokens}>
           <td><code>{String.slice(token.token, 0, 8)}&hellip;</code></td>
           <td>{token.comment}</td>
-          <td>{prettify(token.inserted_at)}</td>
-          <td>{prettify(NaiveDateTime.add(token.inserted_at, token.expires_in, :second))}</td>
+          <td>{format_date(token.inserted_at, @preferences.timezone)}</td>
+          <td>{format_date(NaiveDateTime.add(token.inserted_at, token.expires_in, :second), @preferences.timezone)}</td>
           <td><a class="button fill" href={~p"/_/oauth/personal-token/revoke/#{token.id}"}>Revoke</a></td>
         </tr>
       </tbody>
@@ -37,6 +38,7 @@ defmodule LinkhutWeb.Settings.OauthHTML do
   end
 
   attr :authorized_applications, :list, required: true
+  attr :preferences, :any, default: nil
 
   defp authorized_application_list(assigns) do
     ~H"""
@@ -54,8 +56,8 @@ defmodule LinkhutWeb.Settings.OauthHTML do
         <tr :for={application <- @authorized_applications}>
           <td>{application.name}</td>
           <td>{application.owner.username}</td>
-          <td>{first_authorized_at(application)}</td>
-          <td>{expires_at(application)}</td>
+          <td>{first_authorized_at(application, @preferences.timezone)}</td>
+          <td>{expires_at(application, @preferences.timezone)}</td>
           <td>
             <.form for={%{}} action={~p"/_/oauth/revoke-access/#{application.uid}"} class="inline">
               <input type="hidden" name="uid" value={application.uid} />
@@ -105,13 +107,15 @@ defmodule LinkhutWeb.Settings.OauthHTML do
     |> Enum.count()
   end
 
-  defp first_authorized_at(%{access_tokens: [token | _]}), do: prettify(token.inserted_at)
-  defp first_authorized_at(_), do: ""
+  defp first_authorized_at(%{access_tokens: [token | _]}, tz),
+    do: format_date(token.inserted_at, tz)
 
-  defp expires_at(%{access_tokens: tokens}) when tokens != [] do
+  defp first_authorized_at(_, _), do: ""
+
+  defp expires_at(%{access_tokens: tokens}, tz) when tokens != [] do
     token = List.last(tokens)
-    prettify(NaiveDateTime.add(token.inserted_at, token.expires_in, :second))
+    format_date(NaiveDateTime.add(token.inserted_at, token.expires_in, :second), tz)
   end
 
-  defp expires_at(_), do: ""
+  defp expires_at(_, _), do: ""
 end

@@ -32,7 +32,7 @@
     </div>
     <%= for [head | _] = links <- @links.entries do %>
       <div class="date-group">
-        <h4 class="date"><span>{prettify(head.inserted_at)}</span></h4>
+        <h4 class="date"><span>{format_date(head.inserted_at, @preferences.timezone)}</span></h4>
         <div class="bookmarks">
           <%= for link <- links do %>
             {bookmark_card(Map.put(assigns, :link, link))}

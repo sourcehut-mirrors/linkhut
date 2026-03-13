@@ -1,0 +1,24 @@
+<.menu is_admin?={Linkhut.Accounts.is_admin?(@current_user)} request_path={@conn.request_path} />
+<div>
+  <section class="settings">
+    <h4>{gettext("Display")}</h4>
+    <.form :let={f} for={@changeset} action={~p"/_/preferences"}>
+      <fieldset>
+        <.input field={f[:show_url]} type="checkbox" label={gettext("Show full URL below bookmark titles")} />
+        <.input field={f[:show_exact_dates]} type="checkbox" label={gettext("Show exact dates instead of relative times")} />
+        <.input
+          field={f[:timezone]}
+          type="select"
+          label={gettext("Timezone")}
+          options={timezone_options()}
+          prompt={gettext("UTC (default)")}
+        />
+      </fieldset>
+      <h4>{gettext("Defaults")}</h4>
+      <fieldset>
+        <.input field={f[:default_private]} type="checkbox" label={gettext("Make new bookmarks private by default")} />
+      </fieldset>
+      <.button type="submit">{gettext("Save")}</.button>
+    </.form>
+  </section>
+</div>

@@ -1,6 +1,8 @@
 defmodule LinkhutWeb.LinkControllerTest do
   use LinkhutWeb.ConnCase
 
+  alias Linkhut.Accounts.Preferences
+
   test "GET /", %{conn: conn} do
     conn = get(conn, "/")
     assert html_response(conn, 200)
@@ -35,5 +37,30 @@ defmodule LinkhutWeb.LinkControllerTest do
     assert body =~ "This URL is already in your bookmarks."
     assert body =~ "Edit the existing entry"
     assert body =~ Routes.link_path(conn, :edit, url: link.url)
+  end
+
+  test "GET /_/add: pre-checks private checkbox when default_private is true", %{conn: conn} do
+    user = insert(:user)
+    Preferences.upsert(user, %{default_private: true})
+
+    body =
+      conn
+      |> LinkhutWeb.ConnCase.log_in_user(user)
+      |> get(~p"/_/add")
+      |> html_response(200)
+
+    assert body =~ ~s(name="link[is_private]" value="true" checked)
+  end
+
+  test "GET /_/add: private checkbox is unchecked by default", %{conn: conn} do
+    user = insert(:user)
+
+    body =
+      conn
+      |> LinkhutWeb.ConnCase.log_in_user(user)
+      |> get(~p"/_/add")
+      |> html_response(200)
+
+    refute body =~ ~s(name="link[is_private]" value="true" checked)
   end
 end
