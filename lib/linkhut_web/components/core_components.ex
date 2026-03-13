@@ -282,6 +282,31 @@ defmodule LinkhutWeb.CoreComponents do
   end
 
   @doc """
+  Renders a state badge — a colored pill indicating status.
+
+  The CSS class is derived from the state atom (e.g., `:in_progress` → `"in-progress"`).
+
+  ## Examples
+
+      <.state_badge state={:complete}>{gettext("Complete")}</.state_badge>
+      <.state_badge state={:failed}>{gettext("Failed")}</.state_badge>
+  """
+  attr :state, :atom, required: true
+  slot :inner_block, required: true
+
+  def state_badge(assigns) do
+    assigns = assign(assigns, :class, state_badge_class(assigns.state))
+
+    ~H"""
+    <span class={"state #{@class}"}>{render_slot(@inner_block)}</span>
+    """
+  end
+
+  defp state_badge_class(state) when is_atom(state) do
+    state |> Atom.to_string() |> String.replace("_", "-")
+  end
+
+  @doc """
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do

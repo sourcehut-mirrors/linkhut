@@ -3,6 +3,12 @@ defmodule LinkhutWeb.Settings.ImportHTML do
 
   import LinkhutWeb.SettingsComponents
 
+  defp state_label(:queued), do: gettext("Queued")
+  defp state_label(:in_progress), do: gettext("In progress")
+  defp state_label(:complete), do: gettext("Complete")
+  defp state_label(:failed), do: gettext("Failed")
+  defp state_label(_), do: gettext("Unknown")
+
   defp print_overrides(overrides) do
     Enum.flat_map(overrides, fn
       {"is_private", "true"} -> ["Links will be imported as private"]
@@ -38,7 +44,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
     """
   end
 
-  attr :job, Linkhut.Jobs.Import, required: true
+  attr :job, Linkhut.DataTransfer.Import, required: true
 
   def import_job(assigns) do
     ~H"""
@@ -53,7 +59,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
     """
   end
 
-  attr :job, Linkhut.Jobs.Import, required: true
+  attr :job, Linkhut.DataTransfer.Import, required: true
 
   def summary(assigns) do
     ~H"""
@@ -75,7 +81,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
       <:col :let={{key, _}}>
         <%= case Map.get(@job, key) do %>
           <% value when is_atom(value) and not is_nil(value) -> %>
-            {Phoenix.Naming.humanize(value)}
+            <.state_badge state={value}>{state_label(value)}</.state_badge>
           <% value when is_map(value) and map_size(value) > 0 -> %>
             <%= if (overrides = print_overrides(value)) != [] do %>
               <ul>

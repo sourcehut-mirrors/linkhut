@@ -1,10 +1,19 @@
-defmodule Linkhut.Dump.HTMLParser do
+defmodule Linkhut.DataTransfer.Parsers.Netscape do
   @moduledoc """
   A parser for the Netscape Bookmark File Format.
   """
+  @behaviour Linkhut.DataTransfer.Parser
+
   @root_node "linkhut"
   @error_node "__ERROR_TAG__"
 
+  @impl true
+  def can_parse?(document) do
+    String.contains?(document, "NETSCAPE-Bookmark-file-1") or
+      Regex.match?(~r/<DT>\s*<A\s/i, document)
+  end
+
+  @impl true
   def parse_document(html) do
     html = "<#{@root_node}>#{html}</#{@root_node}>"
     {@root_node, [], parsed} = :mochiweb_html.parse(html)
@@ -40,8 +49,8 @@ defmodule Linkhut.Dump.HTMLParser do
   defp parse_tree([item | rest], acc) do
     {rest, acc} =
       case item do
-        {"dt", [], [{"a", _, _}]} -> {rest, [item | acc]}
-        {"dd", [], [<<_::binary>>]} -> {rest, [item | acc]}
+        {"dt", _, [{"a", _, _}]} -> {rest, [item | acc]}
+        {"dd", _, _} -> {rest, [item | acc]}
         {_, _, items} -> {rest ++ items, acc}
         _ -> {rest, acc}
       end
@@ -53,19 +62,12 @@ defmodule Linkhut.Dump.HTMLParser do
     Enum.reverse(acc)
   end
 
-  defp parse_bookmark([{"dt", [], [{"a", params, [<<title::binary>>]}]}]) do
-    to_link(title, "", params)
+  defp parse_bookmark([{"dt", _, [{"a", params, children}]}]) do
+    to_link(extract_text(children), "", params)
   end
 
-  defp parse_bookmark([{"dt", [], [{"a", params, [<<title::binary>>]}]}, {"dd", [], []}]) do
-    to_link(title, "", params)
-  end
-
-  defp parse_bookmark([
-         {"dt", [], [{"a", params, [<<title::binary>>]}]},
-         {"dd", [], [<<notes::binary>>]}
-       ]) do
-    to_link(title, notes, params)
+  defp parse_bookmark([{"dt", _, [{"a", params, children}]}, {"dd", _, dd_children}]) do
+    to_link(extract_text(children), extract_text(dd_children) |> String.trim(), params)
   end
 
   defp parse_bookmark(unmatched) do
@@ -84,10 +86,10 @@ defmodule Linkhut.Dump.HTMLParser do
     {:ok,
      %{
        url: url,
-       title: title,
+       title: if(title == "", do: url, else: title),
        notes: notes,
-       tags: Map.get(params, "tags", []),
-       is_private: is_private(params),
+       tags: Map.get(params, "tags", ""),
+       is_private: private?(params),
        inserted_at:
          Map.get(params, "add_date")
          |> to_timestamp()
@@ -97,6 +99,17 @@ defmodule Linkhut.Dump.HTMLParser do
   defp to_link(title, _, _) do
     {:error, "No URL found for entry with title: '#{title}'"}
   end
+
+  defp extract_text(children) when is_list(children) do
+    children
+    |> Enum.map_join("", &extract_text/1)
+  end
+
+  defp extract_text(text) when is_binary(text), do: text
+  defp extract_text({_tag, _attrs, children}), do: extract_text(children)
+  defp extract_text(_), do: ""
+
+  defp to_timestamp(nil), do: DateTime.utc_now()
 
   defp to_timestamp(value) do
     formats = [
@@ -123,6 +136,6 @@ defmodule Linkhut.Dump.HTMLParser do
     |> String.replace(~r/<\/#{@error_node}>$/, "")
   end
 
-  defp is_private(%{"private" => value}) when value in ~w{1 true yes}, do: true
-  defp is_private(%{} = _), do: false
+  defp private?(%{"private" => value}) when value in ~w{1 true yes}, do: true
+  defp private?(%{} = _), do: false
 end

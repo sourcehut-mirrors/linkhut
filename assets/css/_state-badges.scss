@@ -1,0 +1,49 @@
+// State badges — reusable colored pills for status indicators.
+
+.state {
+    padding: 1px $spacing-tiny;
+
+    &.pending,
+    &.crawling,
+    &.queued {
+        color: $light-blue;
+        background-color: $blue;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $dark-blue;
+        }
+    }
+
+    &.retryable,
+    &.processing,
+    &.in-progress {
+        color: $light-yellow;
+        background-color: $yellow;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $gold;
+        }
+    }
+
+    &.failed {
+        color: $washed-red;
+        background-color: $red;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $dark-red;
+        }
+    }
+
+    &.complete {
+        color: $washed-green;
+        background-color: $green;
+
+        @media (prefers-color-scheme: dark) {
+            color: $foreground-dark;
+            background-color: $dark-green;
+        }
+    }
+}

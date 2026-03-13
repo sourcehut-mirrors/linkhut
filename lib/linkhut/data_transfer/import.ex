@@ -1,4 +1,4 @@
-defmodule Linkhut.Jobs.Import do
+defmodule Linkhut.DataTransfer.Import do
   use Ecto.Schema
   import Ecto.Changeset
   alias Linkhut.Accounts.User
@@ -11,8 +11,8 @@ defmodule Linkhut.Jobs.Import do
     field :overrides, :map
 
     field :state, Ecto.Enum,
-      values: [:in_progress, :complete, :failed],
-      default: :in_progress
+      values: [:queued, :in_progress, :complete, :failed],
+      default: :queued
 
     field :total, :integer
     field :saved, :integer

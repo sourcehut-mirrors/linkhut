@@ -116,7 +116,9 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
           <tr>
             <th>State</th>
-            <td><span class={"state #{state_class(@snapshot.state)}"}>{state_label(@snapshot.state)}</span></td>
+            <td>
+              <.state_badge state={@snapshot.state}>{state_label(@snapshot.state)}</.state_badge>
+            </td>
           </tr>
           <tr :if={@snapshot.retry_count && @snapshot.retry_count > 0}>
             <th>Retries</th>
@@ -161,7 +163,7 @@ defmodule LinkhutWeb.SnapshotHTML do
           <span :if={@archive.state == :failed && @max_retry_count > 0} class="archive-retries">
             {ngettext("1 retry", "%{count} retries", @max_retry_count)}
           </span>
-          <span class={"state #{archive_state_class(@archive.state)}"}>{archive_state_label(@archive.state)}</span>
+          <.state_badge state={@archive.state}>{archive_state_label(@archive.state)}</.state_badge>
         </div>
       </div>
       <div :if={@archive.error} class="archive-error">{@archive.error}</div>
@@ -193,7 +195,7 @@ defmodule LinkhutWeb.SnapshotHTML do
             <td data-label="Processing time">{format_processing_time(snapshot.processing_time_ms)}</td>
             <td data-label="Size">{if snapshot.file_size_bytes, do: format_file_size(snapshot.file_size_bytes), else: "N/A"}</td>
             <td data-label="State">
-              <span class={"state #{state_class(snapshot.state)}"}>{state_label(snapshot.state)}</span>
+              <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
             </td>
             <td data-label="Actions">
               <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/type/#{snapshot.type}"}>view</a>

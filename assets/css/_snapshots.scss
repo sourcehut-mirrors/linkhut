@@ -222,54 +222,6 @@ table.snapshot-table {
 
 }
 
-// State badges (shared between show and index)
-
-.state {
-    padding: 1px $spacing-tiny;
-
-    &.pending,
-    &.crawling {
-        color: $light-blue;
-        background-color: $blue;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $dark-blue;
-        }
-    }
-
-    &.retryable,
-    &.processing {
-        color: $light-yellow;
-        background-color: $yellow;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $gold;
-        }
-    }
-
-    &.failed {
-        color: $washed-red;
-        background-color: $red;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $dark-red;
-        }
-    }
-
-    &.complete {
-        color: $washed-green;
-        background-color: $green;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $dark-green;
-        }
-    }
-}
-
 // Archive groups (index page)
 
 .archive-group {
