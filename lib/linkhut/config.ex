@@ -10,6 +10,9 @@ defmodule Linkhut.Config do
   @spec ifttt(atom(), any()) :: any()
   def ifttt(key, default \\ nil), do: get(Linkhut.IFTTT, key, default)
 
+  @spec moderation(atom(), any()) :: any()
+  def moderation(key, default \\ nil), do: get(Linkhut.Moderation, key, default)
+
   @spec prometheus(atom(), any()) :: any()
   def prometheus(key, default \\ nil), do: get(Linkhut.Prometheus, key, default)
 

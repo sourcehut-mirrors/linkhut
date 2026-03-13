@@ -121,6 +121,7 @@ defmodule LinkhutWeb.UrlControllerTest do
 
     test "shows 'copy to mine' when logged-in user hasn't saved the URL", %{conn: conn} do
       owner = insert(:user, type: :active)
+      Linkhut.AccountsFixtures.override_user_inserted_at(owner.id, 60)
       visitor = insert(:user, type: :active)
       insert(:link, user_id: owner.id, url: @test_url, title: "Example")
 

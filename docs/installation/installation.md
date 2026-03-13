@@ -85,6 +85,9 @@ LINKHUT_HOST="<service_host>"
 # SMTP_DKIM_DOMAIN="<dkim_domain>"
 # SMTP_DKIM_PRIVATE_KEY="<dkim_pkey>"
 
+# Moderation
+# MODERATION_ACCOUNT_AGE_DAYS="30"
+
 # Optional archiving (page snapshots)
 # ARCHIVING_MODE="disabled"
 # ARCHIVING_DATA_DIR="/var/lib/linkhut/archives"

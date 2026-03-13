@@ -190,6 +190,12 @@ if config_env() == :prod do
     config :linkhut, Linkhut.IFTTT, ifttt_overrides
   end
 
+  # Moderation
+  case System.get_env("MODERATION_ACCOUNT_AGE_DAYS") do
+    nil -> :ok
+    val -> config :linkhut, Linkhut.Moderation, account_age_days: String.to_integer(val)
+  end
+
   # Archiving -- only override keys that have env var values.
   archiving_overrides =
     [

@@ -401,6 +401,62 @@ defmodule Linkhut.SearchTest do
     end
   end
 
+  describe "account-age quarantine" do
+    setup do
+      old_user = AccountsFixtures.user_fixture()
+      AccountsFixtures.override_user_inserted_at(old_user.id, 60)
+
+      new_user = AccountsFixtures.user_fixture()
+      AccountsFixtures.override_user_inserted_at(new_user.id, 10)
+
+      viewer = AccountsFixtures.user_fixture()
+      AccountsFixtures.override_user_inserted_at(viewer.id, 60)
+
+      create_links_for_user(old_user, [
+        %{url: "https://example.com/old-user", title: "Old User Link", tags: ["test"]}
+      ])
+
+      create_links_for_user(new_user, [
+        %{url: "https://example.com/new-user", title: "New User Link", tags: ["test"]}
+      ])
+
+      %{old_user: old_user, new_user: new_user, viewer: viewer}
+    end
+
+    test "anonymous search excludes new user's links", %{old_user: _old, new_user: _new} do
+      urls = search_urls(%Context{visible_as: nil}, "")
+
+      assert "https://example.com/old-user" in urls
+      refute "https://example.com/new-user" in urls
+    end
+
+    test "authenticated search shows viewer's own links despite quarantine", %{
+      new_user: new_user
+    } do
+      urls = search_urls(%Context{visible_as: new_user.username}, "")
+
+      assert "https://example.com/new-user" in urls
+    end
+
+    test "user profile page (from set) shows new user's links", %{new_user: new_user} do
+      urls =
+        search_urls(%Context{from: new_user, visible_as: new_user.username}, "")
+
+      assert "https://example.com/new-user" in urls
+    end
+
+    test "tag filtering without from applies quarantine", %{viewer: viewer} do
+      urls =
+        search_urls(
+          %Context{tagged_with: ["test"], visible_as: viewer.username},
+          ""
+        )
+
+      assert "https://example.com/old-user" in urls
+      refute "https://example.com/new-user" in urls
+    end
+  end
+
   # Helpers
 
   defp create_links_for_user(user, specs) do

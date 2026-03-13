@@ -7,6 +7,7 @@ All notable changes to linkhut will be documented in this file.
 - Add support for setting user preferences (show URLs below titles, show exact dates, timezone and default bookmark privacy)
 - Improve relative date display
 - Dropped arm64 Docker images (amd64 only for now)
+- Account-age quarantine is now configurable and applied to search, popular, and URL timelines (previously only applied to recent view)
 
 ## [0.1.2] - 2026-03-12
 

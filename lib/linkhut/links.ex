@@ -9,6 +9,7 @@ defmodule Linkhut.Links do
   alias Linkhut.Archiving
   alias Linkhut.Links.Link
   alias Linkhut.Links.PublicLink
+  alias Linkhut.Moderation
   alias Linkhut.Repo
 
   @typedoc """
@@ -246,9 +247,10 @@ defmodule Linkhut.Links do
   @doc """
   Returns most recent public links
   """
-  def recent(params, days \\ 30) do
-    link_age_cutoff = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
-    account_age_cutoff = DateTime.add(DateTime.now!("Etc/UTC"), -days, :day)
+  def recent(params) do
+    link_age_days = 30
+    link_age_cutoff = DateTime.add(DateTime.utc_now(), -link_age_days, :day)
+    account_age_cutoff = Moderation.account_age_cutoff()
 
     links()
     |> where([_, _, u], u.is_banned == false)
@@ -267,6 +269,8 @@ defmodule Linkhut.Links do
   Returns the most popular public links
   """
   def popular(params, popularity \\ 3) do
+    account_age_cutoff = Moderation.account_age_cutoff()
+
     links()
     |> where([_, _, u], u.is_banned == false)
     |> where([l, s, _], s.rank == 1.0)
@@ -275,6 +279,7 @@ defmodule Linkhut.Links do
     |> where([_, s, _], s.saves >= ^popularity)
     |> where([l], fragment("NOT 'via:ifttt' = ANY(?)", l.tags))
     |> where([_, _, u], u.type != ^:unconfirmed)
+    |> where([_, _, u], u.inserted_at <= ^account_age_cutoff)
     |> ordering(params)
   end
 

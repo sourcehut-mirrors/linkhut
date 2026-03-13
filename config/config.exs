@@ -111,6 +111,9 @@ config :linkhut, Linkhut.Archiving.Storage.Local, compression: :none
 # Mail configuration
 config :linkhut, Linkhut.Mail, sender: nil
 
+# Moderation
+config :linkhut, Linkhut.Moderation, account_age_days: 30
+
 # Prometheus metrics endpoint
 config :linkhut, Linkhut.Prometheus,
   username: nil,

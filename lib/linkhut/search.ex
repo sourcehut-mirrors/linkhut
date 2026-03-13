@@ -6,6 +6,7 @@ defmodule Linkhut.Search do
   import Ecto.Query
 
   alias Linkhut.Links
+  alias Linkhut.Moderation
   alias Linkhut.Network
   alias Linkhut.Search.Context
   alias Linkhut.Search.ParsedQuery
@@ -49,23 +50,15 @@ defmodule Linkhut.Search do
     |> Links.ordering(params)
   end
 
-  defp links_for_context(
-         %Context{
-           from: from,
-           tagged_with: tags,
-           visible_as: visible_as,
-           url: url,
-           query_filters: query_filters
-         },
-         params
-       ) do
+  defp links_for_context(%Context{} = context, params) do
     Links.links(params)
-    |> from_user(from)
-    |> tagged_with(tags)
-    |> visible_as(visible_as)
-    |> matching(url)
-    |> filtered_by_hosts(query_filters.sites)
-    |> filtered_by_url_terms(query_filters.url_parts)
+    |> from_user(context.from)
+    |> tagged_with(context.tagged_with)
+    |> visible_as(context.visible_as)
+    |> quarantine_new_accounts(context)
+    |> matching(context.url)
+    |> filtered_by_hosts(context.query_filters.sites)
+    |> filtered_by_url_terms(context.query_filters.url_parts)
   end
 
   defp from_user(query, nil), do: query
@@ -102,6 +95,21 @@ defmodule Linkhut.Search do
     |> where([l, _, u], l.is_private == false or u.username == ^user)
     |> where([l, _, u], l.is_unread == false or u.username == ^user)
     |> where([l, _, u], fragment("NOT 'via:ifttt' = ANY(?)", l.tags) or u.username == ^user)
+  end
+
+  # User profile page (from is set) — skip quarantine
+  defp quarantine_new_accounts(query, %Context{from: from}) when not is_nil(from), do: query
+
+  # Anonymous — apply unconditionally
+  defp quarantine_new_accounts(query, %Context{visible_as: nil}) do
+    cutoff = Moderation.account_age_cutoff()
+    where(query, [_, _, u], u.inserted_at <= ^cutoff)
+  end
+
+  # Authenticated — exempt viewer's own content
+  defp quarantine_new_accounts(query, %Context{visible_as: viewer}) do
+    cutoff = Moderation.account_age_cutoff()
+    where(query, [_, _, u], u.inserted_at <= ^cutoff or u.username == ^viewer)
   end
 
   defp matching(query, nil), do: query

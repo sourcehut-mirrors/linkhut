@@ -5,11 +5,24 @@ defmodule Linkhut.Moderation do
 
   import Ecto.Query
 
+  alias Linkhut.Config
   alias Linkhut.Repo
 
   alias Linkhut.Accounts
   alias Linkhut.Accounts.User
   alias Linkhut.Moderation.Entry
+
+  @doc """
+  Returns the cutoff datetime for the account-age quarantine.
+
+  Accounts created after this point are considered "new" and their content
+  is hidden from public discovery surfaces (search, recent, popular).
+  """
+  @spec account_age_cutoff() :: DateTime.t()
+  def account_age_cutoff do
+    days = Config.moderation(:account_age_days, 30)
+    DateTime.add(DateTime.utc_now(), -days, :day)
+  end
 
   @doc """
   Bans a user with an optional reason.
