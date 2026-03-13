@@ -28,7 +28,7 @@
     <div class="ownership">
       <%= unless owned?(@link, assigns) do %>
         <span>
-          {gettext("by")} <a href={html_path(@scope, user: @link.user.username)}>{@link.user.username}</a>
+          {gettext("by")} <a href={~p"/~#{@link.user.username}"}>{@link.user.username}</a>
         </span>
       <% end %>
       <span>
