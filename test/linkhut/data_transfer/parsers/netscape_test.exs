@@ -76,6 +76,50 @@ defmodule Linkhut.DataTransfer.Parsers.NetscapeTest do
       assert bookmark.inserted_at == ~U[2023-03-15 17:06:40Z]
     end
 
+    test "parses JS Date.toString() timestamp" do
+      html = """
+      <DL><p>
+      <DT><A HREF="https://example.com" ADD_DATE="Wed Mar 15 2023 17:06:40 GMT+0000 (Coordinated Universal Time)">JS Date</A>
+      </DL>
+      """
+
+      assert {:ok, [{:ok, bookmark}]} = Netscape.parse_document(html)
+      assert bookmark.inserted_at == ~U[2023-03-15 17:06:40Z]
+    end
+
+    test "parses JS Date.toString() with non-zero offset" do
+      html = """
+      <DL><p>
+      <DT><A HREF="https://example.com" ADD_DATE="Thu Jan 01 2015 03:30:00 GMT+0530 (India Standard Time)">JS Date Offset</A>
+      </DL>
+      """
+
+      assert {:ok, [{:ok, bookmark}]} = Netscape.parse_document(html)
+      assert bookmark.inserted_at == ~U[2014-12-31 22:00:00Z]
+    end
+
+    test "parses JS Date.toString() with negative offset" do
+      html = """
+      <DL><p>
+      <DT><A HREF="https://example.com" ADD_DATE="Thu Jan 01 2015 10:00:00 GMT-0500 (Eastern Standard Time)">JS Date Negative</A>
+      </DL>
+      """
+
+      assert {:ok, [{:ok, bookmark}]} = Netscape.parse_document(html)
+      assert bookmark.inserted_at == ~U[2015-01-01 15:00:00Z]
+    end
+
+    test "unrecognized date format falls back to current time" do
+      html = """
+      <DL><p>
+      <DT><A HREF="https://example.com" ADD_DATE="not-a-date">Bad Date</A>
+      </DL>
+      """
+
+      assert {:ok, [{:ok, bookmark}]} = Netscape.parse_document(html)
+      assert %DateTime{} = bookmark.inserted_at
+    end
+
     test "empty title defaults to URL" do
       html = """
       <DL><p>

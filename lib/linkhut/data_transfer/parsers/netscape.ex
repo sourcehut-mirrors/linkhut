@@ -112,21 +112,61 @@ defmodule Linkhut.DataTransfer.Parsers.Netscape do
   defp to_timestamp(nil), do: DateTime.utc_now()
 
   defp to_timestamp(value) do
-    formats = [
-      "{s-epoch}",
-      "{ISO:Extended}",
-      "{ISO:Extended:Z}",
-      "{WDshort} {Mshort} {0D} {YYYY} {ISOtime} {Zabbr}{Z} (Coordinated Universal Time)"
-    ]
-
-    Enum.find_value(formats, Timex.now(), fn format ->
-      case Timex.parse(value, format) do
-        {:ok, datetime} -> datetime
-        {:error, _} -> nil
-      end
-    end)
-    |> Timex.to_datetime()
+    with :error <- parse_epoch(value),
+         :error <- parse_iso8601(value),
+         :error <- parse_js_date(value) do
+      DateTime.utc_now()
+    else
+      {:ok, datetime} -> datetime
+    end
   end
+
+  defp parse_epoch(value) do
+    case Integer.parse(value) do
+      {epoch, ""} -> DateTime.from_unix(epoch)
+      _ -> :error
+    end
+  end
+
+  defp parse_iso8601(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, datetime, _offset} -> {:ok, DateTime.shift_zone!(datetime, "Etc/UTC")}
+      _ -> :error
+    end
+  end
+
+  # Parses JS Date.toString() format, e.g.:
+  # "Wed Mar 15 2023 17:06:40 GMT+0530 (India Standard Time)"
+  @months %{
+    "Jan" => 1,
+    "Feb" => 2,
+    "Mar" => 3,
+    "Apr" => 4,
+    "May" => 5,
+    "Jun" => 6,
+    "Jul" => 7,
+    "Aug" => 8,
+    "Sep" => 9,
+    "Oct" => 10,
+    "Nov" => 11,
+    "Dec" => 12
+  }
+
+  defp parse_js_date(value) do
+    with {:ok, [_wday, month_str, day, year, hour, min, sec, _tz, sign, offset], _rest} <-
+           :io_lib.fread(~c"~3s ~3s ~d ~d ~d:~d:~d ~3s~c~4d", String.to_charlist(value)),
+         {:ok, month} <- Map.fetch(@months, List.to_string(month_str)),
+         {:ok, naive} <- NaiveDateTime.new(year, month, day, hour, min, sec) do
+      offset_secs = (div(offset, 100) * 3600 + rem(offset, 100) * 60) * sign_multiplier(sign)
+
+      {:ok, naive |> NaiveDateTime.add(-offset_secs) |> DateTime.from_naive!("Etc/UTC")}
+    else
+      _ -> :error
+    end
+  end
+
+  defp sign_multiplier(~c"-"), do: -1
+  defp sign_multiplier(~c"+"), do: 1
 
   defp to_html(tokens) do
     {@error_node, [], tokens}

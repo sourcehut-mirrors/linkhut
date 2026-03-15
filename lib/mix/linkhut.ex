@@ -5,7 +5,6 @@ defmodule Mix.Linkhut do
     :postgrex,
     :db_connection,
     :swoosh,
-    :timex,
     :oban
   ]
 

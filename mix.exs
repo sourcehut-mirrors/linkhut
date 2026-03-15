@@ -84,7 +84,7 @@ defmodule Linkhut.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:tidewave, "~> 0.5", only: :dev},
-      {:timex, "~> 3.7"},
+      {:tzdata, "~> 1.1"},
       {:xml_builder, "~> 2.2"}
     ]
   end
