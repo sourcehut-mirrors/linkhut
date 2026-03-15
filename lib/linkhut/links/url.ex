@@ -9,7 +9,7 @@ defmodule Linkhut.Links.Url do
   # Canonical list of tracking parameters, organized by source for self-documentation.
   @tracking_params_by_source [
     {"UTM", ~w[utm_source utm_medium utm_campaign utm_term utm_content utm_id]},
-    {"Google Ads", ~w[gclid gclsrc dclid gbraid wbraid _ga _gl]},
+    {"Google Ads", ~w[gclid gclsrc dclid gbraid wbraid _ga _gl gad_campaignid gad_source]},
     {"Meta (Facebook/Instagram)", ~w[fbclid igshid]},
     {"Microsoft Ads", ~w[msclkid]},
     {"eX-Twitter", ~w[twclid]},
@@ -19,7 +19,8 @@ defmodule Linkhut.Links.Url do
     {"Klaviyo", ~w[_kx]},
     {"Marketo", ~w[mkt_tok]},
     {"Olytics", ~w[oly_enc_id oly_anon_id]},
-    {"Other", ~w[vero_id s_cid wickedid rb_clickid soc_src soc_trk]}
+    {"Other",
+     ~w[vero_id s_cid WickedID wickedid WickedSource wickedsource rb_clickid soc_src soc_trk]}
   ]
 
   # Flat set derived from the canonical list for fast membership checks.
