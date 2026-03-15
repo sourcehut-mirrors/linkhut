@@ -15,6 +15,7 @@ defmodule LinkhutWeb.Settings.PreferencesControllerTest do
       assert response =~ "Show full URL"
       assert response =~ "Show exact dates"
       assert response =~ "Make new bookmarks private"
+      assert response =~ "Strip tracking parameters"
       assert response =~ "Timezone"
     end
 

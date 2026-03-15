@@ -106,7 +106,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
     ~H"""
     <%= unless length(@records) == 0 do %>
       <section class="settings">
-        <details class="error">
+        <details class="import-results error">
           <summary>Failed links</summary>
           <dl>
             <%= for item <- @records do %>
@@ -138,7 +138,7 @@ defmodule LinkhutWeb.Settings.ImportHTML do
     ~H"""
     <%= unless length(@entries) == 0 do %>
       <section class="settings">
-        <details class="error">
+        <details class="import-results error">
           <summary>Parsing errors</summary>
           <dl>
             <%= for item <- @entries do %>

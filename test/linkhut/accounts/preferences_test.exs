@@ -17,6 +17,7 @@ defmodule Linkhut.Accounts.PreferencesTest do
       assert pref.show_url == true
       assert pref.show_exact_dates == false
       assert pref.default_private == false
+      assert pref.strip_tracking_params == false
       assert pref.timezone == nil
     end
 
@@ -48,6 +49,15 @@ defmodule Linkhut.Accounts.PreferencesTest do
 
       assert pref.show_url == true
       assert pref.default_private == true
+    end
+
+    test "toggles strip_tracking_params" do
+      user = user_fixture()
+      {:ok, pref} = Preferences.upsert(user, %{strip_tracking_params: true})
+      assert pref.strip_tracking_params == true
+
+      {:ok, pref} = Preferences.upsert(user, %{strip_tracking_params: false})
+      assert pref.strip_tracking_params == false
     end
 
     test "validates timezone" do

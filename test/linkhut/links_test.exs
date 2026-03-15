@@ -793,6 +793,36 @@ defmodule Linkhut.LinksTest do
     end
   end
 
+  describe "maybe_clean_url/2" do
+    test "strips tracking params with string keys when preference enabled" do
+      attrs = %{"url" => "https://example.com?utm_source=twitter&ref=top", "title" => "Test"}
+      prefs = %{strip_tracking_params: true}
+      result = Links.maybe_clean_url(attrs, prefs)
+      assert result["url"] == "https://example.com?ref=top"
+      assert result["title"] == "Test"
+    end
+
+    test "strips tracking params with atom keys when preference enabled" do
+      attrs = %{url: "https://example.com?fbclid=abc123&page=1", title: "Test"}
+      prefs = %{strip_tracking_params: true}
+      result = Links.maybe_clean_url(attrs, prefs)
+      assert result.url == "https://example.com?page=1"
+      assert result.title == "Test"
+    end
+
+    test "returns attrs unchanged when preference disabled" do
+      attrs = %{"url" => "https://example.com?utm_source=twitter", "title" => "Test"}
+      prefs = %{strip_tracking_params: false}
+      assert Links.maybe_clean_url(attrs, prefs) == attrs
+    end
+
+    test "returns attrs unchanged when no URL key" do
+      attrs = %{"title" => "Test"}
+      prefs = %{strip_tracking_params: true}
+      assert Links.maybe_clean_url(attrs, prefs) == attrs
+    end
+  end
+
   describe "delete_link/1" do
     setup do
       user = AccountsFixtures.user_fixture()

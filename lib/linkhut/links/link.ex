@@ -142,10 +142,18 @@ defmodule Linkhut.Links.Link do
   defp add_unread_tag(tags), do: ["unread" | tags]
   defp remove_unread_tag(tags), do: Enum.reject(tags, &Tags.is_unread?/1)
 
+  # Always normalizes and strips tracking parameters from normalized_url
+  # regardless of user preference. This ensures deduplication and save-count
+  # aggregation treat URLs that differ only in tracking params as the same
+  # page. The user-visible `url` field is cleaned separately via
+  # `Links.maybe_clean_url/2` based on preference.
   defp compute_normalized_url(changeset) do
     case get_change(changeset, :url) do
-      nil -> changeset
-      url -> put_change(changeset, :normalized_url, Linkhut.Network.normalize_url(url))
+      nil ->
+        changeset
+
+      url ->
+        put_change(changeset, :normalized_url, Linkhut.Links.Url.normalize(url))
     end
   end
 

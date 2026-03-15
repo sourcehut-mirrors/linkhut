@@ -1,0 +1,35 @@
+section.settings.preferences label {
+    flex-wrap: nowrap;
+    text-transform: none;
+}
+
+.preference-help {
+    font-size: $font-small;
+    color: $muted;
+    margin-left: $spacing-medium;
+    margin-bottom: $spacing-small;
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
+    }
+
+    & summary {
+        cursor: pointer;
+    }
+
+    & dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: $spacing-tiny $spacing-medium;
+        font-size: $font-tiny;
+        margin: $spacing-small 0 0;
+
+        & dt {
+            font-weight: bold;
+        }
+
+        & dd {
+            margin: 0;
+        }
+    }
+}

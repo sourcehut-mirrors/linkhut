@@ -32,7 +32,7 @@ defmodule Linkhut.Factory do
     %Linkhut.Links.Link{
       user_id: build(:user).id,
       url: sequence(:url, &"http://link-#{&1}.example.net"),
-      normalized_url: fn link -> Linkhut.Network.normalize_url(link.url) end,
+      normalized_url: fn link -> Linkhut.Links.Url.normalize(link.url) end,
       title: sequence(:title, &"link-#{&1}"),
       notes: "An awesome link description",
       tags: ["test", "auto-generated"],

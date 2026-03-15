@@ -1,0 +1,53 @@
+details.import-results {
+    border-radius: 4px;
+    border: 1px solid $light-gray;
+
+    & > summary, & > dl {
+        padding: $spacing-small;
+    }
+
+    &[open] > summary {
+        border-bottom: 1px solid $light-gray;
+    }
+
+    &.error > summary {
+        background-color: $light-red;
+    }
+
+    &.success > summary {
+        background-color: $light-green;
+    }
+
+    & > dl {
+        margin-top: 0;
+
+        & > dt {
+            border-top: 1px solid $gray;
+
+            @include link-title();
+
+            & > span {
+                font-weight: normal;
+            }
+        }
+
+        & > dd {
+            margin-left: 0;
+            margin-bottom: $spacing-small;
+
+            & > pre {
+                background-color: $near-black;
+                color: $white;
+                font-size: $font-tiny;
+                overflow-x: auto;
+                white-space: pre-wrap;
+            }
+
+            & > .full-url {
+                @include link-url();
+            }
+
+            @include link-actions();
+        }
+    }
+}

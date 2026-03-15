@@ -4,8 +4,10 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorker do
   """
   use Oban.Worker, queue: :default, max_attempts: 1
 
-  alias Linkhut.DataTransfer
   alias Linkhut.Accounts
+  alias Linkhut.Accounts.Preferences
+  alias Linkhut.DataTransfer
+  alias Linkhut.Links
 
   @chunk_size 50
 
@@ -74,6 +76,7 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorker do
 
   defp process_bookmarks(user, user_id, job_id, bookmarks, overrides) do
     import_record = DataTransfer.get_import(user_id, job_id)
+    prefs = Preferences.get_or_default(user)
     total = length(bookmarks)
 
     {:ok, import_record} =
@@ -93,6 +96,7 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorker do
       |> Enum.reduce({acc, import_record}, fn chunk, {acc, import_record} ->
         chunk_acc =
           Enum.reduce(chunk, acc, fn bookmark, acc ->
+            bookmark = maybe_clean_bookmark(bookmark, prefs)
             result = DataTransfer.save_bookmark(user, bookmark, overrides)
             accumulate_result(acc, result)
           end)
@@ -117,6 +121,12 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorker do
       invalid_entries: acc.invalid_entries
     })
   end
+
+  defp maybe_clean_bookmark({:ok, attrs}, prefs) do
+    {:ok, Links.maybe_clean_url(attrs, prefs)}
+  end
+
+  defp maybe_clean_bookmark(error, _prefs), do: error
 
   defp accumulate_result(acc, {:ok, _}) do
     Map.update!(acc, :saved, &(&1 + 1))

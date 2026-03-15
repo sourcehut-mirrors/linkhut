@@ -18,6 +18,26 @@ defmodule Linkhut.Links do
   @type link :: %Link{}
 
   @doc """
+  Strips tracking parameters from the URL in `attrs` if the user's
+  `strip_tracking_params` preference is enabled.
+  """
+  @spec maybe_clean_url(map(), map()) :: map()
+  def maybe_clean_url(attrs, %{strip_tracking_params: true}) do
+    cond do
+      is_map_key(attrs, :url) ->
+        Map.update!(attrs, :url, &Linkhut.Links.Url.strip_tracking_params/1)
+
+      is_map_key(attrs, "url") ->
+        Map.update!(attrs, "url", &Linkhut.Links.Url.strip_tracking_params/1)
+
+      true ->
+        attrs
+    end
+  end
+
+  def maybe_clean_url(attrs, _preferences), do: attrs
+
+  @doc """
   Creates a link.
 
   ## Examples
@@ -182,7 +202,7 @@ defmodule Linkhut.Links do
   end
 
   defp filter({:url, url}, dynamic) do
-    normalized = Linkhut.Network.normalize_url(url)
+    normalized = Linkhut.Links.Url.normalize(url)
     dynamic([l], ^dynamic and l.normalized_url == ^normalized)
   end
 
