@@ -222,12 +222,13 @@ div.bookmark {
         }
 
         & > div.tags {
+            position: relative;
+
             @media #{$not-small} {
                 margin-left: auto;
             }
 
             & > ul.tags {
-                display: inline;
                 font-size: $font-tiny;
                 list-style: none;
                 margin: 0;
@@ -243,10 +244,10 @@ div.bookmark {
                         content: attr(data-label);
                         font-size: $font-tiny;
                         font-weight: normal;
-                        margin-top: 2px;
                         margin-left: $spacing-small;
                         position: absolute;
                         text-transform: uppercase;
+                        top: 0;
 
                         @media (prefers-color-scheme: dark) {
                             color: $muted-dark;
