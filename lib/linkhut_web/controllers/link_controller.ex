@@ -242,7 +242,7 @@ defmodule LinkhutWeb.LinkController do
   defp context(%{"username" => username, "url" => url}) do
     %Context{
       from: Accounts.get_user!(username),
-      url: URI.decode(url)
+      url: url
     }
   end
 
@@ -252,7 +252,7 @@ defmodule LinkhutWeb.LinkController do
     }
 
   defp context(%{"username" => username}), do: %Context{from: Accounts.get_user!(username)}
-  defp context(%{"url" => url}), do: %Context{url: URI.decode(url)}
+  defp context(%{"url" => url}), do: %Context{url: url}
   defp context(_), do: %Context{}
 
   defp view(%{"v" => "recent"}), do: :recent

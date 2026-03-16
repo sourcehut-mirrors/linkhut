@@ -35,7 +35,7 @@ defmodule LinkhutWeb.UrlController do
   end
 
   def show(conn, params) do
-    url = if url_param = params["url"], do: url_param |> URI.decode() |> Url.normalize()
+    url = if url_param = params["url"], do: Url.normalize(url_param)
     current_user_id = get_in(conn.assigns, [:current_user, Access.key(:id)])
 
     detail = url && Links.url_detail(url, current_user_id: current_user_id)
