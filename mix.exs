@@ -61,7 +61,7 @@ defmodule Linkhut.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:floki, "~> 0.37"},
       {:gen_smtp, "~> 1.2"},
-      {:gettext, "~> 0.20"},
+      {:gettext, "~> 1.0"},
       {:inet_cidr, "~> 1.0"},
       {:jason, "~> 1.3"},
       {:oban, "~> 2.19"},
