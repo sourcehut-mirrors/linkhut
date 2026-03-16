@@ -159,7 +159,9 @@ defmodule LinkhutWeb.Controllers.Utils do
   end
 
   defp with_overrides(%{} = scope, tag: tag) do
-    Map.update(scope, :tags, [tag], fn tags -> Enum.uniq(tags ++ [tag]) end)
+    scope
+    |> Map.delete(:url)
+    |> Map.update(:tags, [tag], fn tags -> Enum.uniq(tags ++ [tag]) end)
   end
 
   defp with_overrides(%{} = scope, page: page) do
