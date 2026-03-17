@@ -366,7 +366,7 @@ defmodule Linkhut.Links do
         fragment(
           """
           CASE WHEN ? = ? THEN
-            EXISTS(SELECT 1 FROM archives WHERE link_id = ? AND state != 'pending_deletion')
+            EXISTS(SELECT 1 FROM crawl_runs WHERE link_id = ? AND state != 'pending_deletion')
           ELSE FALSE END
           """,
           l.user_id,

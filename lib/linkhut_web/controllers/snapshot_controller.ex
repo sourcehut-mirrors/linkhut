@@ -61,7 +61,7 @@ defmodule LinkhutWeb.SnapshotController do
   end
 
   defp render_snapshot_or_redirect(conn, user, _link, link_id, [], _type) do
-    if Archiving.get_archives_by_link(link_id) == [] do
+    if Archiving.get_crawl_runs_by_link(link_id) == [] do
       conn
       |> put_flash(:info, "Archive is being prepared, check back soon.")
       |> redirect(to: ~p"/~#{user.username}")
@@ -223,7 +223,7 @@ defmodule LinkhutWeb.SnapshotController do
   defp render_index(conn, user, link_id) do
     case Links.get_user_link(link_id, user.id) do
       {:ok, link} ->
-        archives = Archiving.get_archives_by_link(link_id)
+        archives = Archiving.get_crawl_runs_by_link(link_id)
 
         if archives == [] do
           conn

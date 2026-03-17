@@ -3,7 +3,7 @@ defmodule Linkhut.Archiving.Storage.Local do
   Local filesystem implementation of the Storage behaviour.
 
   Stores files in a directory structure like:
-  `{data_dir}/{user_id}/{link_id}/{archive_id}/{snapshot_id}.{type}`
+  `{data_dir}/{user_id}/{link_id}/{crawl_run_id}/{snapshot_id}.{type}`
 
   Returns storage keys prefixed with `local:`, e.g. `local:/data/archiving/42/1234/567/890.singlefile`.
   """
@@ -168,12 +168,12 @@ defmodule Linkhut.Archiving.Storage.Local do
   end
 
   # Opts must be hierarchically complete: user_id required if link_id given,
-  # link_id required if archive_id given.
+  # link_id required if crawl_run_id given.
   defp build_storage_root(opts) do
     Linkhut.Config.archiving(:data_dir)
     |> maybe_join(Keyword.get(opts, :user_id))
     |> maybe_join(Keyword.get(opts, :link_id))
-    |> maybe_join(Keyword.get(opts, :archive_id))
+    |> maybe_join(Keyword.get(opts, :crawl_run_id))
   end
 
   defp maybe_join(path, nil), do: path
@@ -261,16 +261,16 @@ defmodule Linkhut.Archiving.Storage.Local do
          id: id,
          user_id: user_id,
          link_id: link_id,
-         archive_id: archive_id,
+         crawl_run_id: crawl_run_id,
          type: type
        })
        when is_integer(id) and is_integer(user_id) and is_integer(link_id) and
-              is_integer(archive_id) and is_binary(type) do
+              is_integer(crawl_run_id) and is_binary(type) do
     Path.join([
       Linkhut.Config.archiving(:data_dir),
       Integer.to_string(user_id),
       Integer.to_string(link_id),
-      Integer.to_string(archive_id),
+      Integer.to_string(crawl_run_id),
       "#{id}.#{type}"
     ])
   end

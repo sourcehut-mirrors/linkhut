@@ -8,20 +8,20 @@ defmodule Linkhut.Archiving.Pipeline.Helpers do
   require Logger
 
   @doc """
-  Updates an archive, logging and swallowing failures.
+  Updates a crawl run, logging and swallowing failures.
 
   Used for non-critical updates (step recording, retry markers) where
   the pipeline should continue even if the DB write fails.
   """
-  def update_archive_best_effort(archive, attrs) do
-    case Archiving.update_archive(archive, attrs) do
-      {:ok, archive} ->
-        archive
+  def update_crawl_run_best_effort(crawl_run, attrs) do
+    case Archiving.update_crawl_run(crawl_run, attrs) do
+      {:ok, crawl_run} ->
+        crawl_run
 
       {:error, changeset} ->
-        Logger.warning("Failed to update archive #{archive.id}: #{inspect(changeset.errors)}")
+        Logger.warning("Failed to update crawl run #{crawl_run.id}: #{inspect(changeset.errors)}")
 
-        archive
+        crawl_run
     end
   end
 

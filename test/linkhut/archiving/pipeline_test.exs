@@ -4,21 +4,21 @@ defmodule Linkhut.Archiving.PipelineTest do
   import Linkhut.Factory
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.{Archive, Pipeline}
+  alias Linkhut.Archiving.{CrawlRun, Pipeline}
 
-  defp create_archive do
+  defp create_crawl_run do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id, url: "https://example.com/page")
 
-    {:ok, archive} =
-      Archiving.create_archive(%{
+    {:ok, crawl_run} =
+      Archiving.create_crawl_run(%{
         user_id: user.id,
         link_id: link.id,
         url: link.url,
         state: :processing
       })
 
-    {user, link, archive}
+    {user, link, crawl_run}
   end
 
   defp stub_preflight(status \\ 200, content_type \\ "text/html; charset=utf-8") do
@@ -31,10 +31,10 @@ defmodule Linkhut.Archiving.PipelineTest do
 
   describe "run/2" do
     test "full pipeline succeeds for valid HTML URL" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
       stub_preflight()
 
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       assert %{crawlers: crawlers} = result
       assert crawlers != []
       names = Enum.map(crawlers, & &1.name)
@@ -45,13 +45,13 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       assert {:error, {:reserved_address, {:reserved, :loopback, "localhost"}}} =
-               Pipeline.run(archive)
+               Pipeline.run(crawl_run)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       assert updated.state == :failed
 
       failed_step = Enum.find(updated.steps, &(&1["step"] == "failed"))
@@ -63,12 +63,12 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "not-a-url")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      assert {:error, :invalid_url} = Pipeline.run(archive)
+      assert {:error, :invalid_url} = Pipeline.run(crawl_run)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       assert updated.state == :failed
     end
 
@@ -76,12 +76,12 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "ftp://example.com/file.txt")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      assert {:error, {:unsupported_scheme, "ftp"}} = Pipeline.run(archive)
+      assert {:error, {:unsupported_scheme, "ftp"}} = Pipeline.run(crawl_run)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       assert updated.state == :failed
 
       failed_step = Enum.find(updated.steps, &(&1["step"] == "failed"))
@@ -89,34 +89,34 @@ defmodule Linkhut.Archiving.PipelineTest do
     end
 
     test "dispatches wayback crawler when HEAD returns 500 with no content_type" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
 
       Req.Test.stub(Linkhut.Links.Link, fn conn ->
         Plug.Conn.send_resp(conn, 500, "Internal Server Error")
       end)
 
       # No target crawlers match (no content_type), but Wayback Machine (third-party) does
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       names = Enum.map(result.crawlers, & &1.name)
       assert "wayback" in names
     end
 
     test "dispatches only httpfetch for PDF content" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
       stub_preflight(200, "application/pdf")
 
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       names = Enum.map(result.crawlers, & &1.name)
       assert names == ["httpfetch"]
     end
 
     test "fails for unsupported content type with 200 status" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
       stub_preflight(200, "image/png")
 
-      assert {:error, :no_eligible_crawlers} = Pipeline.run(archive)
+      assert {:error, :no_eligible_crawlers} = Pipeline.run(crawl_run)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       assert updated.state == :failed
     end
 
@@ -124,12 +124,12 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      Pipeline.run(archive, attempt: 2, max_attempts: 4)
+      Pipeline.run(crawl_run, attempt: 2, max_attempts: 4)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       step_names = Enum.map(updated.steps, & &1["step"])
       assert "retry" in step_names
 
@@ -142,12 +142,12 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      Pipeline.run(archive, attempt: 1, max_attempts: 4)
+      Pipeline.run(crawl_run, attempt: 1, max_attempts: 4)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       assert updated.state == :processing
       failed_step = Enum.find(updated.steps, &(&1["step"] == "failed"))
       assert failed_step["detail"]["msg"] == "failed_will_retry"
@@ -159,12 +159,12 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      Pipeline.run(archive, attempt: 4, max_attempts: 4)
+      Pipeline.run(crawl_run, attempt: 4, max_attempts: 4)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       assert updated.state == :failed
       failed_step = Enum.find(updated.steps, &(&1["step"] == "failed"))
       assert failed_step["detail"]["msg"] == "failed_final"
@@ -173,7 +173,7 @@ defmodule Linkhut.Archiving.PipelineTest do
     end
 
     test "fails when preflight Content-Length exceeds max_file_size" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
 
       Req.Test.stub(Linkhut.Links.Link, fn conn ->
         conn
@@ -182,16 +182,16 @@ defmodule Linkhut.Archiving.PipelineTest do
         |> Plug.Conn.send_resp(200, "")
       end)
 
-      assert {:error, {:file_too_large, 100_000_000}} = Pipeline.run(archive)
+      assert {:error, {:file_too_large, 100_000_000}} = Pipeline.run(crawl_run)
     end
 
     test "updates archive steps through the pipeline" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
       stub_preflight()
 
-      {:ok, _result} = Pipeline.run(archive)
+      {:ok, _result} = Pipeline.run(crawl_run)
 
-      updated = Repo.get(Archive, archive.id)
+      updated = Repo.get(CrawlRun, crawl_run.id)
       step_names = Enum.map(updated.steps, & &1["step"])
       assert "created" in step_names
       assert "preflight" in step_names
@@ -204,18 +204,18 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
 
-      assert {:error, {:reserved_address, _}} = Pipeline.run(archive)
+      assert {:error, {:reserved_address, _}} = Pipeline.run(crawl_run)
     end
 
     test "dispatches third-party crawler after preflight network failure" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
 
       Req.Test.stub(Linkhut.Links.Link, fn conn ->
         Req.Test.transport_error(conn, :econnrefused)
@@ -226,12 +226,12 @@ defmodule Linkhut.Archiving.PipelineTest do
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
 
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       assert %{crawlers: [%{name: "thirdparty"}]} = result
     end
 
     test "dispatches third-party crawler on HTTP error status" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
       stub_preflight(404, "text/html")
 
       put_override(Linkhut.Archiving, :crawlers, [
@@ -239,7 +239,7 @@ defmodule Linkhut.Archiving.PipelineTest do
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
 
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       names = Enum.map(result.crawlers, & &1.name)
       assert "thirdparty" in names
       refute "singlefile" in names
@@ -249,15 +249,15 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://nonexistent.invalid/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Crawler.SingleFile,
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
 
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       names = Enum.map(result.crawlers, & &1.name)
       assert "thirdparty" in names
       refute "singlefile" in names
@@ -267,16 +267,16 @@ defmodule Linkhut.Archiving.PipelineTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://nonexistent.invalid/page")
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       put_override(Linkhut.Archiving, :crawlers, [])
 
-      assert {:error, {:dns_failed, "nonexistent.invalid"}} = Pipeline.run(archive)
+      assert {:error, {:dns_failed, "nonexistent.invalid"}} = Pipeline.run(crawl_run)
     end
 
     test "does not dispatch third-party crawler on successful preflight" do
-      {_user, _link, archive} = create_archive()
+      {_user, _link, crawl_run} = create_crawl_run()
       stub_preflight()
 
       put_override(Linkhut.Archiving, :crawlers, [
@@ -284,7 +284,7 @@ defmodule Linkhut.Archiving.PipelineTest do
         Linkhut.Archiving.PipelineTest.ThirdPartyCrawler
       ])
 
-      assert {:ok, result} = Pipeline.run(archive)
+      assert {:ok, result} = Pipeline.run(crawl_run)
       names = Enum.map(result.crawlers, & &1.name)
       assert names == ["singlefile"]
     end

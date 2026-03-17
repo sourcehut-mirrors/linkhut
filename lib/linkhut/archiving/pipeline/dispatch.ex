@@ -5,7 +5,7 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
   """
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.{Archive, Steps}
+  alias Linkhut.Archiving.{CrawlRun, Steps}
   alias Linkhut.Links.Link
   alias Linkhut.Repo
   alias Linkhut.Archiving.Workers.Crawler, as: CrawlerWorker
@@ -14,23 +14,23 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
   Atomically creates pending snapshots and enqueues Crawler jobs.
   Uses Repo.transaction + Oban.insert_all for atomicity.
   """
-  @spec dispatch_crawlers(Archive.t(), [module()], keyword()) ::
-          {:ok, map()} | {:error, term(), Archive.t()}
-  def dispatch_crawlers(_archive, [], _opts) do
+  @spec dispatch_crawlers(CrawlRun.t(), [module()], keyword()) ::
+          {:ok, map()} | {:error, term(), CrawlRun.t()}
+  def dispatch_crawlers(_crawl_run, [], _opts) do
     raise ArgumentError, "dispatch_crawlers/3 called with empty crawler list"
   end
 
-  def dispatch_crawlers(%Archive{} = archive, crawlers, opts) when is_list(crawlers) do
+  def dispatch_crawlers(%CrawlRun{} = crawl_run, crawlers, opts) when is_list(crawlers) do
     indexed_crawlers = Enum.with_index(crawlers)
-    preflight_meta = archive.preflight_meta
-    link_inserted_at = get_link_inserted_at(archive.link_id)
+    preflight_meta = crawl_run.preflight_meta
+    link_inserted_at = get_link_inserted_at(crawl_run.link_id)
 
     multi =
       indexed_crawlers
       |> Enum.reduce(Ecto.Multi.new(), fn {crawler_module, idx}, multi ->
         build_crawler_steps(
           multi,
-          archive,
+          crawl_run,
           crawler_module,
           idx,
           preflight_meta,
@@ -38,12 +38,12 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
           opts
         )
       end)
-      |> Ecto.Multi.run(:update_archive, fn _repo, _changes ->
+      |> Ecto.Multi.run(:update_crawl_run, fn _repo, _changes ->
         crawler_names = Enum.map_join(crawlers, ", ", & &1.type())
 
-        Archiving.update_archive(archive, %{
+        Archiving.update_crawl_run(crawl_run, %{
           steps:
-            Steps.append_step(archive.steps, "dispatched", %{
+            Steps.append_step(crawl_run.steps, "dispatched", %{
               "msg" => "dispatched",
               "crawlers" => crawler_names
             })
@@ -63,13 +63,13 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
          }}
 
       {:error, _step, reason, _changes} ->
-        {:error, reason, archive}
+        {:error, reason, crawl_run}
     end
   end
 
   defp build_crawler_steps(
          multi,
-         archive,
+         crawl_run,
          crawler_module,
          idx,
          preflight_meta,
@@ -80,8 +80,8 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
 
     multi
     |> Ecto.Multi.run({:snapshot, idx}, fn _repo, _changes ->
-      Archiving.create_snapshot(archive.link_id, archive.user_id, %{
-        archive_id: archive.id,
+      Archiving.create_snapshot(crawl_run.link_id, crawl_run.user_id, %{
+        crawl_run_id: crawl_run.id,
         type: type,
         state: :pending,
         crawler_meta: crawler_module.meta()
@@ -93,12 +93,12 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
       CrawlerWorker.new(
         %{
           "snapshot_id" => snapshot.id,
-          "user_id" => archive.user_id,
-          "link_id" => archive.link_id,
-          "url" => archive.final_url || archive.url,
+          "user_id" => crawl_run.user_id,
+          "link_id" => crawl_run.link_id,
+          "url" => crawl_run.final_url || crawl_run.url,
           "type" => type,
           "recrawl" => Keyword.get(opts, :recrawl, false),
-          "archive_id" => archive.id,
+          "crawl_run_id" => crawl_run.id,
           "preflight_meta" => preflight_meta,
           "link_inserted_at" => encode_datetime(link_inserted_at)
         },

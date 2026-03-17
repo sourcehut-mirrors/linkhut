@@ -11,7 +11,7 @@ defmodule Linkhut.Archiving do
   import Ecto.Query
 
   alias Linkhut.Accounts.User
-  alias Linkhut.Archiving.{Archive, Snapshot, Steps, Storage, Tokens}
+  alias Linkhut.Archiving.{CrawlRun, Snapshot, Steps, Storage, Tokens}
   alias Linkhut.Links.Link
   alias Linkhut.{Repo, Subscriptions}
 
@@ -71,7 +71,7 @@ defmodule Linkhut.Archiving do
   end
 
   defp pending_links(user_id) do
-    Archive
+    CrawlRun
     |> where([a], a.user_id == ^user_id and a.state in [:pending, :processing])
     |> select([a], count(a.link_id, :distinct))
     |> Repo.one()
@@ -105,7 +105,7 @@ defmodule Linkhut.Archiving do
   end
 
   defp archives_by_state do
-    Archive
+    CrawlRun
     |> group_by(:state)
     |> select([a], {a.state, count(a.id)})
     |> Repo.all()
@@ -154,7 +154,7 @@ defmodule Linkhut.Archiving do
 
   defp stale_work_counts do
     stale_archives =
-      Archive
+      CrawlRun
       |> where([a], a.state == :processing and a.updated_at < ago(1, "hour"))
       |> Repo.aggregate(:count)
 
@@ -172,68 +172,69 @@ defmodule Linkhut.Archiving do
   @doc "Verifies a snapshot serving token, returning the snapshot_id or an error."
   def verify_token(token), do: Tokens.verify_token(token)
 
-  # --- Archive functions ---
+  # --- CrawlRun functions ---
 
-  @doc "Creates a new archive record."
-  def create_archive(attrs) do
-    %Archive{}
-    |> Archive.changeset(attrs)
+  @doc "Creates a new crawl run record."
+  def create_crawl_run(attrs) do
+    %CrawlRun{}
+    |> CrawlRun.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Transitions a `:pending` archive to `:processing`.
-  Idempotent for already-processing archives (safe for Oban retries).
-  Returns `{:error, :not_found}` if the archive doesn't exist or is in
+  Transitions a `:pending` crawl run to `:processing`.
+  Idempotent for already-processing crawl runs (safe for Oban retries).
+  Returns `{:error, :not_found}` if the crawl run doesn't exist or is in
   an unexpected state.
   """
-  def start_processing(archive_id) do
-    case Repo.get(Archive, archive_id) do
-      %Archive{state: :pending} = archive ->
-        update_archive(archive, %{state: :processing})
+  def start_processing(crawl_run_id) do
+    case Repo.get(CrawlRun, crawl_run_id) do
+      %CrawlRun{state: :pending} = crawl_run ->
+        update_crawl_run(crawl_run, %{state: :processing})
 
-      %Archive{state: :processing} = archive ->
-        {:ok, archive}
+      %CrawlRun{state: :processing} = crawl_run ->
+        {:ok, crawl_run}
 
       _ ->
         {:error, :not_found}
     end
   end
 
-  @doc "Updates an archive's attributes."
-  def update_archive(%Archive{} = archive, attrs) do
-    archive
-    |> Archive.changeset(attrs)
+  @doc "Updates a crawl run's attributes."
+  def update_crawl_run(%CrawlRun{} = crawl_run, attrs) do
+    crawl_run
+    |> CrawlRun.changeset(attrs)
     |> Repo.update()
   end
 
   @doc """
-  Marks old archives (and their snapshots) for deletion for a given link,
-  excluding specific archive IDs.
+  Marks old crawl runs (and their snapshots) for deletion for a given link,
+  excluding specific crawl run IDs.
   """
-  def mark_old_archives_for_deletion(link_id, opts \\ []) do
+  def mark_old_crawl_runs_for_deletion(link_id, opts \\ []) do
     exclude_ids = Keyword.get(opts, :exclude, []) |> Enum.reject(&is_nil/1)
 
     Repo.transaction(fn ->
-      archive_query =
-        from(a in Archive,
-          where: a.link_id == ^link_id and a.state in [:pending, :processing, :complete, :failed]
+      crawl_run_query =
+        from(cr in CrawlRun,
+          where:
+            cr.link_id == ^link_id and cr.state in [:pending, :processing, :complete, :failed]
         )
 
-      archive_query =
+      crawl_run_query =
         if exclude_ids != [] do
-          from(a in archive_query, where: a.id not in ^exclude_ids)
+          from(cr in crawl_run_query, where: cr.id not in ^exclude_ids)
         else
-          archive_query
+          crawl_run_query
         end
 
-      archive_ids = Repo.all(from(a in archive_query, select: a.id))
+      crawl_run_ids = Repo.all(from(cr in crawl_run_query, select: cr.id))
 
-      if archive_ids != [] do
-        from(a in Archive, where: a.id in ^archive_ids)
+      if crawl_run_ids != [] do
+        from(cr in CrawlRun, where: cr.id in ^crawl_run_ids)
         |> Repo.update_all(set: [state: :pending_deletion])
 
-        from(s in Snapshot, where: s.archive_id in ^archive_ids)
+        from(s in Snapshot, where: s.crawl_run_id in ^crawl_run_ids)
         |> Repo.update_all(set: [state: :pending_deletion])
       end
     end)
@@ -259,12 +260,12 @@ defmodule Linkhut.Archiving do
     end
   end
 
-  @doc "Returns all complete snapshots for a link, newest first, with archive preloaded."
+  @doc "Returns all complete snapshots for a link, newest first, with crawl_run preloaded."
   def get_complete_snapshots_by_link(link_id) do
     Snapshot
     |> where(link_id: ^link_id, state: :complete)
     |> order_by([s], desc: s.inserted_at)
-    |> preload(:archive)
+    |> preload(:crawl_run)
     |> Repo.all()
   end
 
@@ -289,13 +290,13 @@ defmodule Linkhut.Archiving do
   end
 
   @doc """
-  Returns all archives for a link (excluding pending_deletion),
+  Returns all crawl runs for a link (excluding pending_deletion),
   with preloaded snapshots (also excluding pending_deletion), newest first.
   """
-  def get_archives_by_link(link_id) do
-    from(a in Archive,
-      where: a.link_id == ^link_id and a.state != :pending_deletion,
-      order_by: [desc: a.inserted_at],
+  def get_crawl_runs_by_link(link_id) do
+    from(cr in CrawlRun,
+      where: cr.link_id == ^link_id and cr.state != :pending_deletion,
+      order_by: [desc: cr.inserted_at],
       preload: [
         snapshots:
           ^from(s in Snapshot,
@@ -349,10 +350,10 @@ defmodule Linkhut.Archiving do
     |> to_integer()
   end
 
-  @doc "Marks all snapshots and archives for a link as pending deletion."
+  @doc "Marks all snapshots and crawl runs for a link as pending deletion."
   def mark_snapshots_for_deletion(link_id) do
     Repo.transaction(fn ->
-      from(a in Archive, where: a.link_id == ^link_id and a.state != :pending_deletion)
+      from(cr in CrawlRun, where: cr.link_id == ^link_id and cr.state != :pending_deletion)
       |> Repo.update_all(set: [state: :pending_deletion])
 
       from(s in Snapshot, where: s.link_id == ^link_id and s.state != :pending_deletion)
@@ -377,19 +378,19 @@ defmodule Linkhut.Archiving do
     |> Enum.map(&Linkhut.Archiving.Workers.SnapshotDeleter.new(%{"snapshot_id" => &1}))
     |> Oban.insert_all()
 
-    # Clean up orphaned archives (pending_deletion with no remaining snapshots)
-    orphaned_archive_ids =
-      from(a in Archive,
-        where: a.state == :pending_deletion,
+    # Clean up orphaned crawl runs (pending_deletion with no remaining snapshots)
+    orphaned_crawl_run_ids =
+      from(cr in CrawlRun,
+        where: cr.state == :pending_deletion,
         left_join: s in Snapshot,
-        on: s.archive_id == a.id and s.state != :pending_deletion,
+        on: s.crawl_run_id == cr.id and s.state != :pending_deletion,
         where: is_nil(s.id),
-        select: a.id
+        select: cr.id
       )
       |> Repo.all()
 
-    if orphaned_archive_ids != [] do
-      from(a in Archive, where: a.id in ^orphaned_archive_ids)
+    if orphaned_crawl_run_ids != [] do
+      from(cr in CrawlRun, where: cr.id in ^orphaned_crawl_run_ids)
       |> Repo.delete_all()
     end
 
@@ -413,7 +414,7 @@ defmodule Linkhut.Archiving do
   defp do_delete_snapshot(snapshot) do
     with :ok <- delete_snapshot_storage(snapshot),
          {:ok, _} <- Repo.delete(snapshot) do
-      if snapshot.archive_id, do: recompute_archive_size_by_id(snapshot.archive_id)
+      if snapshot.crawl_run_id, do: recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
       :ok
     end
   end
@@ -429,9 +430,9 @@ defmodule Linkhut.Archiving do
     from(l in Link,
       left_join: s in Snapshot,
       on: l.id == s.link_id and s.state == :complete,
-      left_join: a in Archive,
-      on: l.id == a.link_id and a.state in [:pending, :processing, :complete, :failed],
-      where: l.user_id == ^user.id and is_nil(s.id) and is_nil(a.id),
+      left_join: cr in CrawlRun,
+      on: l.id == cr.link_id and cr.state in [:pending, :processing, :complete, :failed],
+      where: l.user_id == ^user.id and is_nil(s.id) and is_nil(cr.id),
       order_by: [desc: l.inserted_at],
       limit: ^limit
     )
@@ -489,60 +490,60 @@ defmodule Linkhut.Archiving do
   def crawl_steps(_), do: []
 
   @doc """
-  Atomically recomputes the `total_size_bytes` for a single archive
+  Atomically recomputes the `total_size_bytes` for a single crawl run
   from its complete snapshots.
   """
-  def recompute_archive_size(%Archive{id: archive_id}) do
-    recompute_archive_size_by_id(archive_id)
+  def recompute_crawl_run_size(%CrawlRun{id: crawl_run_id}) do
+    recompute_crawl_run_size_by_id(crawl_run_id)
   end
 
   @doc """
-  Atomically recomputes the `total_size_bytes` for an archive by ID.
+  Atomically recomputes the `total_size_bytes` for a crawl run by ID.
   Uses a single UPDATE ... SET ... = (SELECT ...) statement — no locks needed.
   """
-  def recompute_archive_size_by_id(nil), do: :ok
+  def recompute_crawl_run_size_by_id(nil), do: :ok
 
-  def recompute_archive_size_by_id(archive_id) when is_integer(archive_id) do
+  def recompute_crawl_run_size_by_id(crawl_run_id) when is_integer(crawl_run_id) do
     Repo.query!(
-      "UPDATE archives SET total_size_bytes = (SELECT COALESCE(SUM(file_size_bytes), 0) FROM snapshots WHERE archive_id = $1 AND state = 'complete') WHERE id = $1",
-      [archive_id]
+      "UPDATE crawl_runs SET total_size_bytes = (SELECT COALESCE(SUM(file_size_bytes), 0) FROM snapshots WHERE crawl_run_id = $1 AND state = 'complete') WHERE id = $1",
+      [crawl_run_id]
     )
 
     :ok
   end
 
   @doc """
-  Transitions a `:processing` archive to `:complete` when all its snapshots
+  Transitions a `:processing` crawl run to `:complete` when all its snapshots
   have reached a terminal state (`:complete`, `:failed`, or `:pending_deletion`).
 
   Uses atomic `UPDATE ... WHERE state = :processing` to prevent race conditions
   when concurrent crawlers finish simultaneously.
   """
-  def maybe_complete_archive(archive_id) when is_integer(archive_id) do
+  def maybe_complete_crawl_run(crawl_run_id) when is_integer(crawl_run_id) do
     %{num_rows: count} =
       Repo.query!(
         """
-        UPDATE archives SET state = 'complete', lock_version = lock_version + 1, updated_at = NOW()
+        UPDATE crawl_runs SET state = 'complete', lock_version = lock_version + 1, updated_at = NOW()
         WHERE id = $1 AND state = 'processing'
         AND EXISTS (
-          SELECT 1 FROM snapshots WHERE archive_id = $1 AND state != 'pending_deletion'
+          SELECT 1 FROM snapshots WHERE crawl_run_id = $1 AND state != 'pending_deletion'
         )
         AND NOT EXISTS (
-          SELECT 1 FROM snapshots WHERE archive_id = $1
+          SELECT 1 FROM snapshots WHERE crawl_run_id = $1
           AND state NOT IN ('complete', 'failed', 'pending_deletion')
         )
         """,
-        [archive_id]
+        [crawl_run_id]
       )
 
     if count == 1 do
-      case Repo.get(Archive, archive_id) do
+      case Repo.get(CrawlRun, crawl_run_id) do
         nil ->
           :ok
 
-        archive ->
-          update_archive(archive, %{
-            steps: Steps.append_step(archive.steps, "completed", %{"msg" => "completed"})
+        crawl_run ->
+          update_crawl_run(crawl_run, %{
+            steps: Steps.append_step(crawl_run.steps, "completed", %{"msg" => "completed"})
           })
       end
     else
@@ -550,21 +551,21 @@ defmodule Linkhut.Archiving do
     end
   end
 
-  def maybe_complete_archive(_), do: :ok
+  def maybe_complete_crawl_run(_), do: :ok
 
   # --- Scheduler helpers ---
 
   @doc """
-  Returns a `MapSet` of domain strings that have had an archive created
+  Returns a `MapSet` of domain strings that have had a crawl run created
   within the cooldown window. Used by the scheduler to skip domains that
   were recently crawled.
   """
   def domains_on_cooldown(cooldown_seconds \\ @domain_cooldown_seconds) do
     cutoff = DateTime.add(DateTime.utc_now(), -cooldown_seconds)
 
-    from(a in Archive,
-      where: a.inserted_at > ^cutoff and a.state != :pending_deletion,
-      select: a.url
+    from(cr in CrawlRun,
+      where: cr.inserted_at > ^cutoff and cr.state != :pending_deletion,
+      select: cr.url
     )
     |> Repo.all()
     |> Enum.map(&extract_domain/1)

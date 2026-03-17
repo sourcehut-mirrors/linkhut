@@ -70,13 +70,13 @@ defmodule Linkhut.Factory do
     merge_attributes(snapshot, attrs)
   end
 
-  def archive_factory(attrs) do
+  def crawl_run_factory(attrs) do
     {user_id, attrs} =
       Map.pop_lazy(attrs, :user_id, fn -> insert(:user, credential: build(:credential)).id end)
 
     {link_id, attrs} = Map.pop_lazy(attrs, :link_id, fn -> insert(:link, user_id: user_id).id end)
 
-    archive = %Linkhut.Archiving.Archive{
+    crawl_run = %Linkhut.Archiving.CrawlRun{
       user_id: user_id,
       link_id: link_id,
       url: sequence(:url, &"http://archive-#{&1}.example.net"),
@@ -91,6 +91,6 @@ defmodule Linkhut.Factory do
       total_size_bytes: 0
     }
 
-    merge_attributes(archive, attrs)
+    merge_attributes(crawl_run, attrs)
   end
 end

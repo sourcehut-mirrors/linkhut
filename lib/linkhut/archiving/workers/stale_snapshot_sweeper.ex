@@ -67,7 +67,7 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
            }
          }) do
       {:ok, _} ->
-        Archiving.maybe_complete_archive(snapshot.archive_id)
+        Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
 
       {:error, changeset} ->
         Logger.warning(

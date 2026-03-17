@@ -73,13 +73,13 @@ defmodule LinkhutWeb.Settings.StatsControllerTest do
 
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
 
       insert(:snapshot,
         user_id: user.id,
         link_id: link.id,
-        archive_id: archive.id,
+        crawl_run_id: crawl_run.id,
         state: :complete,
         file_size_bytes: 5000,
         type: "singlefile"

@@ -8,13 +8,13 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
   alias Linkhut.Archiving.Workers.StaleSnapshotSweeper
 
   defp create_snapshot(user, link, attrs) do
-    archive =
-      insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+    crawl_run =
+      insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
     {:ok, snapshot} =
-      Archiving.create_snapshot(link.id, user.id, Map.put(attrs, :archive_id, archive.id))
+      Archiving.create_snapshot(link.id, user.id, Map.put(attrs, :crawl_run_id, crawl_run.id))
 
-    {snapshot, archive}
+    {snapshot, crawl_run}
   end
 
   defp age_snapshot(snapshot, minutes) do
@@ -28,7 +28,7 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
   test "marks stale :crawling snapshot as :failed" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)
-    {snapshot, _archive} = create_snapshot(user, link, %{state: :crawling})
+    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
 
     age_snapshot(snapshot, 45)
 
@@ -41,7 +41,7 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
   test "marks stale :retryable snapshot as :failed" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)
-    {snapshot, _archive} = create_snapshot(user, link, %{state: :retryable})
+    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :retryable})
 
     age_snapshot(snapshot, 45)
 
@@ -54,7 +54,7 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
   test "does not mark recent snapshots as failed" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)
-    {snapshot, _archive} = create_snapshot(user, link, %{state: :crawling})
+    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
 
     # Only 5 minutes old — should not be swept
     age_snapshot(snapshot, 5)
@@ -68,7 +68,7 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
   test "does not mark snapshots that have active Oban crawler jobs" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)
-    {snapshot, _archive} = create_snapshot(user, link, %{state: :crawling})
+    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
 
     age_snapshot(snapshot, 45)
 
@@ -88,17 +88,17 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
     assert updated.state == :crawling
   end
 
-  test "calls maybe_complete_archive after marking snapshot failed" do
+  test "calls maybe_complete_crawl_run after marking snapshot failed" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)
-    {snapshot, archive} = create_snapshot(user, link, %{state: :crawling})
+    {snapshot, crawl_run} = create_snapshot(user, link, %{state: :crawling})
 
     age_snapshot(snapshot, 45)
 
     assert :ok = perform_job(StaleSnapshotSweeper, %{})
 
-    updated_archive = Repo.get(Linkhut.Archiving.Archive, archive.id)
-    assert updated_archive.state == :complete
+    updated_crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, crawl_run.id)
+    assert updated_crawl_run.state == :complete
   end
 
   test "does not touch :complete or :failed snapshots" do

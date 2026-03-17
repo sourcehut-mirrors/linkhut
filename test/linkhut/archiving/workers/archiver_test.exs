@@ -4,7 +4,7 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
   import Linkhut.Factory
 
   alias Linkhut.Archiving.Workers.Archiver
-  alias Linkhut.Archiving.Archive
+  alias Linkhut.Archiving.CrawlRun
 
   describe "enqueue/2" do
     test "inserts an Oban job with link data" do
@@ -25,14 +25,14 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
       assert {:ok, %Oban.Job{} = job} = Archiver.enqueue(link)
 
       args = stringify_keys(job.args)
-      archive_id = args["archive_id"]
-      assert archive_id != nil
+      crawl_run_id = args["crawl_run_id"]
+      assert crawl_run_id != nil
 
-      archive = Repo.get(Archive, archive_id)
-      assert archive.state == :pending
-      assert archive.link_id == link.id
-      assert archive.user_id == user.id
-      assert archive.url == link.url
+      crawl_run = Repo.get(CrawlRun, crawl_run_id)
+      assert crawl_run.state == :pending
+      assert crawl_run.link_id == link.id
+      assert crawl_run.user_id == user.id
+      assert crawl_run.url == link.url
     end
 
     test "accepts scheduling options" do
@@ -132,20 +132,20 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
 
       Archiver.perform(oban_job)
 
-      archive = Repo.get(Archive, args["archive_id"])
-      assert archive != nil
-      assert archive.link_id == link.id
+      crawl_run = Repo.get(CrawlRun, args["crawl_run_id"])
+      assert crawl_run != nil
+      assert crawl_run.link_id == link.id
 
       # Archive is processing (no longer pending) — pipeline may set it to :processing or :failed
       # depending on crawler outcomes, but it should not remain :pending
-      assert archive.state != :pending
+      assert crawl_run.state != :pending
     end
 
     test "returns :ok when archive not found" do
       oban_job = %Oban.Job{
         id: 1,
         args: %{
-          "archive_id" => 999_999,
+          "crawl_run_id" => 999_999,
           "user_id" => 1,
           "link_id" => 1,
           "url" => "https://example.com"

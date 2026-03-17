@@ -1,5 +1,5 @@
-defmodule Linkhut.Archiving.Archive do
-  @moduledoc "Represents a single archiving attempt for a link."
+defmodule Linkhut.Archiving.CrawlRun do
+  @moduledoc "Represents a single crawl run (archiving attempt) for a link."
 
   use Ecto.Schema
   import Ecto.Changeset
@@ -7,7 +7,7 @@ defmodule Linkhut.Archiving.Archive do
 
   @type t :: Ecto.Schema.t()
 
-  schema "archives" do
+  schema "crawl_runs" do
     # Raw fields instead of belongs_to — links can be deleted independently,
     # so we don't want Ecto association constraints here.
     field :link_id, :id
@@ -23,7 +23,7 @@ defmodule Linkhut.Archiving.Archive do
     field :steps, {:array, :map}, default: []
     field :error, :string
 
-    # Managed by Archiving.recompute_archive_size*/1 — not in @castable_fields.
+    # Managed by Archiving.recompute_crawl_run_size*/1 — not in @castable_fields.
     field :total_size_bytes, :integer, default: 0
 
     # Managed by optimistic_lock/1 — not in @castable_fields.
@@ -46,8 +46,8 @@ defmodule Linkhut.Archiving.Archive do
   ]
 
   @doc false
-  def changeset(archive, attrs) do
-    archive
+  def changeset(crawl_run, attrs) do
+    crawl_run
     |> cast(attrs, @castable_fields)
     |> validate_required([:url, :link_id, :user_id])
     |> optimistic_lock(:lock_version)

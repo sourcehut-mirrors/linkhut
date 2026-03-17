@@ -17,14 +17,14 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
   end
 
   defp create_pending_snapshot(user, link, type \\ "singlefile") do
-    archive =
-      insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+    crawl_run =
+      insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
         type: type,
         state: :pending,
-        archive_id: archive.id
+        crawl_run_id: crawl_run.id
       })
 
     snapshot
@@ -33,7 +33,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
   defp make_job(snapshot, user, link, opts \\ []) do
     type = Keyword.get(opts, :type, "singlefile")
     recrawl = Keyword.get(opts, :recrawl, false)
-    archive_id = Keyword.get(opts, :archive_id)
+    crawl_run_id = Keyword.get(opts, :crawl_run_id)
 
     {:ok, real_job} =
       Crawler.new(%{
@@ -43,7 +43,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
         "url" => "https://example.com",
         "type" => type,
         "recrawl" => recrawl,
-        "archive_id" => archive_id
+        "crawl_run_id" => crawl_run_id
       })
       |> Oban.insert()
 
@@ -56,7 +56,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
         "url" => "https://example.com",
         "type" => type,
         "recrawl" => recrawl,
-        "archive_id" => archive_id
+        "crawl_run_id" => crawl_run_id
       },
       attempt: 1,
       max_attempts: 4
@@ -94,14 +94,14 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
     test "returns :ok for already complete snapshot" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
-      archive = insert(:archive, user_id: user.id, link_id: link.id, url: link.url)
+      crawl_run = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url)
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
           state: :complete,
           storage_key: "local:/tmp/test",
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         })
 
       job = make_job(snapshot, user, link)
@@ -233,8 +233,8 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       Crawler.perform(job)
 
-      archive = Repo.get(Linkhut.Archiving.Archive, snapshot.archive_id)
-      assert archive.state == :complete
+      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      assert crawl_run.state == :complete
     end
   end
 
@@ -273,8 +273,8 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       Crawler.perform(job)
 
-      archive = Repo.get(Linkhut.Archiving.Archive, snapshot.archive_id)
-      assert archive.state == :complete
+      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      assert crawl_run.state == :complete
     end
 
     test "does not transition archive to complete on non-final failure" do
@@ -293,8 +293,8 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       updated = Repo.get(Snapshot, snapshot.id)
       assert updated.state == :retryable
 
-      archive = Repo.get(Linkhut.Archiving.Archive, snapshot.archive_id)
-      assert archive.state == :processing
+      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      assert crawl_run.state == :processing
     end
 
     test "completes snapshot on retry after non-final failure" do
@@ -322,8 +322,8 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       assert updated.state == :complete
       assert updated.storage_key != nil
 
-      archive = Repo.get(Linkhut.Archiving.Archive, snapshot.archive_id)
-      assert archive.state == :complete
+      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      assert crawl_run.state == :complete
     end
 
     test "marks old archives for deletion on recrawl" do
@@ -331,18 +331,18 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       link = insert(:link, user_id: user.id)
 
       # Create an old archive
-      old_archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      old_crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       # Create a new archive for the recrawl
-      new_archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      new_crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
           state: :pending,
-          archive_id: new_archive.id
+          crawl_run_id: new_crawl_run.id
         })
 
       put_override(Linkhut.Archiving, :crawlers, [
@@ -353,23 +353,23 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
         make_job(snapshot, user, link,
           type: "success",
           recrawl: true,
-          archive_id: new_archive.id
+          crawl_run_id: new_crawl_run.id
         )
 
       Crawler.perform(job)
 
       # Old archive should be marked for deletion
-      assert Repo.get(Linkhut.Archiving.Archive, old_archive.id).state == :pending_deletion
+      assert Repo.get(Linkhut.Archiving.CrawlRun, old_crawl_run.id).state == :pending_deletion
       # New archive should have completed (only snapshot is now :complete)
-      assert Repo.get(Linkhut.Archiving.Archive, new_archive.id).state == :complete
+      assert Repo.get(Linkhut.Archiving.CrawlRun, new_crawl_run.id).state == :complete
     end
 
     test "does not prematurely complete archive when sibling crawler has retries remaining" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           user_id: user.id,
           link_id: link.id,
           url: link.url,
@@ -381,14 +381,14 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
         Archiving.create_snapshot(link.id, user.id, %{
           type: "success",
           state: :pending,
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         })
 
       {:ok, failing_snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
           type: "failing",
           state: :pending,
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         })
 
       put_override(Linkhut.Archiving, :crawlers, [
@@ -400,7 +400,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       failing_job =
         make_job(failing_snapshot, user, link,
           type: "failing",
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         )
 
       failing_job = %{failing_job | attempt: 1, max_attempts: 4}
@@ -410,14 +410,14 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       success_job =
         make_job(success_snapshot, user, link,
           type: "success",
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         )
 
       Crawler.perform(success_job)
 
       # Failing snapshot is :retryable (non-terminal) — archive should NOT complete
       assert Repo.get(Snapshot, failing_snapshot.id).state == :retryable
-      assert Repo.get(Linkhut.Archiving.Archive, archive.id).state == :processing
+      assert Repo.get(Linkhut.Archiving.CrawlRun, crawl_run.id).state == :processing
     end
   end
 
@@ -459,8 +459,8 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       Crawler.perform(job)
 
-      archive = Repo.get(Linkhut.Archiving.Archive, snapshot.archive_id)
-      assert archive.state == :complete
+      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      assert crawl_run.state == :complete
     end
   end
 

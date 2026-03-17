@@ -883,7 +883,7 @@ defmodule Linkhut.LinksTest do
       user: user,
       link: link
     } do
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -895,7 +895,7 @@ defmodule Linkhut.LinksTest do
     end
 
     test "returns true when link has a failed archive", %{user: user, link: link} do
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -908,7 +908,7 @@ defmodule Linkhut.LinksTest do
     end
 
     test "returns false when link has only pending_deletion archives", %{user: user, link: link} do
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -927,7 +927,7 @@ defmodule Linkhut.LinksTest do
     test "returns false for another user's link", %{link: link} do
       other_user = AccountsFixtures.user_fixture()
 
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: link.user_id,
         url: link.url,
@@ -939,7 +939,7 @@ defmodule Linkhut.LinksTest do
     end
 
     test "returns false when no current_user_id is provided", %{link: link} do
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: link.user_id,
         url: link.url,
@@ -960,7 +960,7 @@ defmodule Linkhut.LinksTest do
 
       assert %{failure: 0} = Oban.drain_queue(queue: :default)
 
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,

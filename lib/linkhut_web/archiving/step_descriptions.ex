@@ -9,7 +9,7 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
   @doc """
   Renders a step detail map into a localized string.
   """
-  def render(%{"msg" => "created"}), do: gettext("Archive created")
+  def render(%{"msg" => "created"}), do: gettext("Archival task initiated")
 
   def render(%{"msg" => "retry", "attempt" => attempt}) do
     gettext("Attempt %{attempt}", attempt: attempt)
@@ -105,7 +105,7 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
     )
   end
 
-  def render(%{"msg" => "completed"}), do: gettext("Archive completed")
+  def render(%{"msg" => "completed"}), do: gettext("Archival task completed")
 
   # Fallback
   def render(%{"msg" => msg}), do: msg

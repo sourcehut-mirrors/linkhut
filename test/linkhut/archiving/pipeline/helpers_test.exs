@@ -5,31 +5,31 @@ defmodule Linkhut.Archiving.Pipeline.HelpersTest do
 
   alias Linkhut.Archiving.Pipeline.Helpers
 
-  describe "update_archive_best_effort/2" do
-    test "returns updated archive on success" do
+  describe "update_crawl_run_best_effort/2" do
+    test "returns updated crawl run on success" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-      result = Helpers.update_archive_best_effort(archive, %{error: "test error"})
+      result = Helpers.update_crawl_run_best_effort(crawl_run, %{error: "test error"})
 
-      assert result.id == archive.id
+      assert result.id == crawl_run.id
       assert result.error == "test error"
     end
 
-    test "returns original archive on changeset error" do
+    test "returns original crawl run on changeset error" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       # state: :bogus should fail validation
-      result = Helpers.update_archive_best_effort(archive, %{state: :bogus})
+      result = Helpers.update_crawl_run_best_effort(crawl_run, %{state: :bogus})
 
-      assert result.id == archive.id
+      assert result.id == crawl_run.id
       assert result.state == :processing
     end
   end

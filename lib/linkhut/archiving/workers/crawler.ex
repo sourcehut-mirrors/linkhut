@@ -135,9 +135,9 @@ defmodule Linkhut.Archiving.Workers.Crawler do
             }
           })
 
-          Archiving.recompute_archive_size_by_id(snapshot.archive_id)
+          Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
           maybe_mark_old_archives(args)
-          Archiving.maybe_complete_archive(snapshot.archive_id)
+          Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
           :ok
 
         {:error, storage_error} ->
@@ -174,7 +174,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
          }) do
       {:ok, _} ->
         maybe_mark_old_archives(args)
-        Archiving.maybe_complete_archive(snapshot.archive_id)
+        Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
         :ok
 
       {:error, changeset} ->
@@ -207,8 +207,8 @@ defmodule Linkhut.Archiving.Workers.Crawler do
   defp maybe_mark_old_archives(args) do
     if Map.get(args, "recrawl", false) do
       link_id = args["link_id"]
-      archive_id = Map.get(args, "archive_id")
-      Archiving.mark_old_archives_for_deletion(link_id, exclude: [archive_id])
+      crawl_run_id = Map.get(args, "crawl_run_id")
+      Archiving.mark_old_crawl_runs_for_deletion(link_id, exclude: [crawl_run_id])
     end
   end
 
@@ -275,14 +275,14 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
 
     maybe_mark_old_archives(job.args)
-    Archiving.maybe_complete_archive(snapshot.archive_id)
+    Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
     :ok
   end
 
   # Non-final failures set the snapshot to :retryable (non-terminal), which
-  # prevents maybe_complete_archive from marking the archive as :complete
+  # prevents maybe_complete_crawl_run from marking the crawl run as :complete
   # while Oban still has retries pending.  Only the final attempt sets :failed
-  # (terminal), after which maybe_complete_archive is called.
+  # (terminal), after which maybe_complete_crawl_run is called.
   defp update_failed(snapshot, job, error, start_time) do
     processing_time = System.monotonic_time(:millisecond) - start_time
     final_attempt? = job.attempt >= job.max_attempts
@@ -318,7 +318,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
     if final_attempt? do
       maybe_mark_old_archives(job.args)
-      Archiving.maybe_complete_archive(snapshot.archive_id)
+      Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
     end
 
     {:error, error}

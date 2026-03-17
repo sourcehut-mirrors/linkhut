@@ -59,7 +59,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
       user = create_paying_user()
       link = insert(:link, user_id: user.id)
 
-      insert(:archive, link_id: link.id, user_id: user.id, url: link.url, state: :processing)
+      insert(:crawl_run, link_id: link.id, user_id: user.id, url: link.url, state: :processing)
 
       assert [] = Scheduler.schedule_pending_archives()
     end
@@ -72,7 +72,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
 
       # Create a recent archive for another URL on the same domain
       # (this puts example.com on cooldown)
-      insert(:archive,
+      insert(:crawl_run,
         user_id: user.id,
         url: "http://example.com/other-page",
         state: :complete
@@ -99,7 +99,7 @@ defmodule Linkhut.Archiving.SchedulerTest do
       insert(:link, user_id: user.id, url: "http://available-domain.com/page")
 
       # Put cooldown-domain.com on cooldown
-      insert(:archive,
+      insert(:crawl_run,
         user_id: user.id,
         url: "http://cooldown-domain.com/other",
         state: :pending
@@ -142,8 +142,8 @@ defmodule Linkhut.Archiving.SchedulerTest do
       insert(:link, user_id: user.id, url: "http://cooldown2.com/page")
 
       # Put both domains on cooldown
-      insert(:archive, user_id: user.id, url: "http://cooldown1.com/other", state: :pending)
-      insert(:archive, user_id: user.id, url: "http://cooldown2.com/other", state: :pending)
+      insert(:crawl_run, user_id: user.id, url: "http://cooldown1.com/other", state: :pending)
+      insert(:crawl_run, user_id: user.id, url: "http://cooldown2.com/other", state: :pending)
 
       assert [] = Scheduler.schedule_pending_archives()
     end

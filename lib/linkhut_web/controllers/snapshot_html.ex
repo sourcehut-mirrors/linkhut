@@ -59,8 +59,8 @@ defmodule LinkhutWeb.SnapshotHTML do
   attr :external_url, :string, default: nil
 
   def details(assigns) do
-    archive = assigns.snapshot.archive
-    archive_steps = if archive, do: archive.steps, else: []
+    crawl_run = assigns.snapshot.crawl_run
+    archive_steps = if crawl_run, do: crawl_run.steps, else: []
 
     assigns =
       assign(assigns, :timeline, Archiving.merge_timeline(archive_steps, [assigns.snapshot]))

@@ -1,6 +1,6 @@
 defmodule Linkhut.Archiving.SchemaHelpers do
   @moduledoc """
-  Shared changeset helpers for archiving schemas (Archive, Snapshot).
+  Shared changeset helpers for archiving schemas (CrawlRun, Snapshot).
   """
 
   @doc """

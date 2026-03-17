@@ -9,8 +9,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
   defp create_link_and_snapshot(%{user: user}) do
     link = insert(:link, user_id: user.id)
 
-    archive =
-      insert(:archive,
+    crawl_run =
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -29,7 +29,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         file_size_bytes: 1024,
         processing_time_ms: 500,
         response_code: 200,
-        archive_id: archive.id,
+        crawl_run_id: crawl_run.id,
         archive_metadata: %{
           content_type: "text/html",
           tool_name: "SingleFile",
@@ -43,7 +43,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     on_exit(fn -> File.rm_rf(data_dir) end)
 
-    %{link: link, snapshot: snapshot, archive: archive}
+    %{link: link, snapshot: snapshot, crawl_run: crawl_run}
   end
 
   describe "GET /archive/:link_id (show - default tab)" do
@@ -73,7 +73,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     } do
       link = insert(:link, user_id: user.id)
 
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -155,13 +155,13 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
-      archive = insert(:archive, link_id: link.id, user_id: user.id, url: link.url)
+      crawl_run = insert(:crawl_run, link_id: link.id, user_id: user.id, url: link.url)
 
       {:ok, _snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
           state: :pending,
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         })
 
       conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/full")
@@ -194,7 +194,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "shows failed archive with error message", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -211,7 +211,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "redirects when only pending_deletion archives exist", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -229,8 +229,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     } do
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           link_id: link.id,
           user_id: user.id,
           url: link.url,
@@ -241,7 +241,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
           state: :pending,
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         })
 
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
@@ -252,7 +252,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "shows queued state for pending archive", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      insert(:archive,
+      insert(:crawl_run,
         link_id: link.id,
         user_id: user.id,
         url: link.url,
@@ -267,8 +267,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "hides re-crawl button when archive is processing", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           link_id: link.id,
           user_id: user.id,
           url: link.url,
@@ -279,7 +279,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         Archiving.create_snapshot(link.id, user.id, %{
           type: "singlefile",
           state: :pending,
-          archive_id: archive.id
+          crawl_run_id: crawl_run.id
         })
 
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
@@ -321,8 +321,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup %{user: user} do
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           link_id: link.id,
           user_id: user.id,
           url: link.url,
@@ -346,7 +346,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           original_file_size_bytes: byte_size(original_content),
           processing_time_ms: 500,
           response_code: 200,
-          archive_id: archive.id,
+          crawl_run_id: crawl_run.id,
           archive_metadata: %{
             content_type: "text/html",
             tool_name: "SingleFile",
@@ -362,7 +362,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       %{
         link: link,
         snapshot: snapshot,
-        archive: archive,
+        crawl_run: crawl_run,
         original_content: original_content
       }
     end
@@ -417,8 +417,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup %{user: user} do
       link = insert(:link, user_id: user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           link_id: link.id,
           user_id: user.id,
           url: link.url,
@@ -434,14 +434,14 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           file_size_bytes: nil,
           processing_time_ms: 500,
           response_code: 200,
-          archive_id: archive.id,
+          crawl_run_id: crawl_run.id,
           archive_metadata: %{
             original_url: link.url,
             final_url: link.url
           }
         })
 
-      %{link: link, snapshot: snapshot, archive: archive}
+      %{link: link, snapshot: snapshot, crawl_run: crawl_run}
     end
 
     test "show renders external content for wayback snapshot", %{conn: conn, link: link} do
@@ -520,8 +520,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       link = insert(:link, user_id: free_user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           link_id: link.id,
           user_id: free_user.id,
           url: link.url,
@@ -538,7 +538,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           state: :complete,
           storage_key: storage_key,
           file_size_bytes: 1024,
-          archive_id: archive.id,
+          crawl_run_id: crawl_run.id,
           archive_metadata: %{content_type: "text/html"}
         })
 
@@ -583,8 +583,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       link = insert(:link, user_id: free_user.id)
 
-      archive =
-        insert(:archive,
+      crawl_run =
+        insert(:crawl_run,
           link_id: link.id,
           user_id: free_user.id,
           url: link.url,
@@ -601,7 +601,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           state: :complete,
           storage_key: storage_key,
           file_size_bytes: 1024,
-          archive_id: archive.id,
+          crawl_run_id: crawl_run.id,
           archive_metadata: %{content_type: "text/html"}
         })
 

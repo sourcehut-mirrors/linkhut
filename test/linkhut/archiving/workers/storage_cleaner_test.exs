@@ -9,12 +9,12 @@ defmodule Linkhut.Archiving.Workers.StorageCleanerTest do
   test "perform/1 enqueues SnapshotDeleter jobs for pending_deletion snapshots" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)
-    archive = insert(:archive, user_id: user.id, link_id: link.id, url: link.url)
+    crawl_run = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url)
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
         state: :pending_deletion,
-        archive_id: archive.id
+        crawl_run_id: crawl_run.id
       })
 
     assert :ok = perform_job(StorageCleaner, %{})

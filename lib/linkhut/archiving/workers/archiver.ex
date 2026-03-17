@@ -29,32 +29,32 @@ defmodule Linkhut.Archiving.Workers.Archiver do
 
     multi =
       Ecto.Multi.new()
-      |> Ecto.Multi.run(:archive, fn _repo, _changes ->
-        Archiving.create_archive(%{
+      |> Ecto.Multi.run(:crawl_run, fn _repo, _changes ->
+        Archiving.create_crawl_run(%{
           link_id: link.id,
           user_id: link.user_id,
           url: link.url,
           state: :pending
         })
       end)
-      |> Oban.insert(:job, fn %{archive: archive} ->
+      |> Oban.insert(:job, fn %{crawl_run: crawl_run} ->
         args =
-          %{user_id: link.user_id, link_id: link.id, url: link.url, archive_id: archive.id}
+          %{user_id: link.user_id, link_id: link.id, url: link.url, crawl_run_id: crawl_run.id}
           |> maybe_add_recrawl(recrawl)
 
         __MODULE__.new(args, oban_opts)
       end)
 
     case Repo.transaction(multi) do
-      {:ok, %{job: %{conflict?: true} = job, archive: archive}} ->
-        # Job was a duplicate — clean up the orphaned archive
-        case Repo.delete(archive) do
+      {:ok, %{job: %{conflict?: true} = job, crawl_run: crawl_run}} ->
+        # Job was a duplicate — clean up the orphaned crawl run
+        case Repo.delete(crawl_run) do
           {:ok, _} ->
             :ok
 
           {:error, changeset} ->
             Logger.warning(
-              "Failed to clean up orphaned archive #{archive.id}: #{inspect(changeset.errors)}"
+              "Failed to clean up orphaned crawl run #{crawl_run.id}: #{inspect(changeset.errors)}"
             )
         end
 
@@ -63,7 +63,7 @@ defmodule Linkhut.Archiving.Workers.Archiver do
       {:ok, %{job: job}} ->
         {:ok, job}
 
-      {:error, :archive, changeset, _} ->
+      {:error, :crawl_run, changeset, _} ->
         {:error, changeset}
 
       {:error, :job, changeset, _} ->
@@ -73,12 +73,12 @@ defmodule Linkhut.Archiving.Workers.Archiver do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
-    %{"archive_id" => archive_id} = args
+    %{"crawl_run_id" => crawl_run_id} = args
     recrawl = Map.get(args, "recrawl", false)
 
-    case Archiving.start_processing(archive_id) do
-      {:ok, archive} ->
-        Pipeline.run(archive,
+    case Archiving.start_processing(crawl_run_id) do
+      {:ok, crawl_run} ->
+        Pipeline.run(crawl_run,
           recrawl: recrawl,
           attempt: job.attempt,
           max_attempts: job.max_attempts

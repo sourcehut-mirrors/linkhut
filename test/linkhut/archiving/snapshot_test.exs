@@ -5,7 +5,9 @@ defmodule Linkhut.Archiving.SnapshotTest do
 
   describe "create_changeset/2" do
     test "valid with required fields" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, archive_id: 1})
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+
       assert changeset.valid?
     end
 
@@ -14,7 +16,7 @@ defmodule Linkhut.Archiving.SnapshotTest do
         link_id: 1,
         user_id: 1,
         job_id: 2,
-        archive_id: 3,
+        crawl_run_id: 3,
         type: "singlefile",
         state: :complete,
         storage_key: "local:/tmp/test",
@@ -31,31 +33,35 @@ defmodule Linkhut.Archiving.SnapshotTest do
     end
 
     test "invalid without link_id" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{user_id: 1, archive_id: 1})
+      changeset = Snapshot.create_changeset(%Snapshot{}, %{user_id: 1, crawl_run_id: 1})
       refute changeset.valid?
       assert %{link_id: ["can't be blank"]} = errors_on(changeset)
     end
 
     test "invalid without user_id" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, archive_id: 1})
+      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, crawl_run_id: 1})
       refute changeset.valid?
       assert %{user_id: ["can't be blank"]} = errors_on(changeset)
     end
 
-    test "invalid without archive_id" do
+    test "invalid without crawl_run_id" do
       changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1})
       refute changeset.valid?
-      assert %{archive_id: ["can't be blank"]} = errors_on(changeset)
+      assert %{crawl_run_id: ["can't be blank"]} = errors_on(changeset)
     end
 
     test "defaults state to :pending" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, archive_id: 1})
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+
       snapshot = Ecto.Changeset.apply_changes(changeset)
       assert snapshot.state == :pending
     end
 
     test "defaults retry_count to 0" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, archive_id: 1})
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+
       snapshot = Ecto.Changeset.apply_changes(changeset)
       assert snapshot.retry_count == 0
     end
@@ -64,7 +70,7 @@ defmodule Linkhut.Archiving.SnapshotTest do
       attrs = %{
         link_id: 1,
         user_id: 1,
-        archive_id: 1,
+        crawl_run_id: 1,
         crawler_meta: %{tool_name: "SingleFile", version: "1.0.0"}
       }
 
@@ -75,7 +81,9 @@ defmodule Linkhut.Archiving.SnapshotTest do
     end
 
     test "defaults crawler_meta to empty map" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, archive_id: 1})
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+
       snapshot = Ecto.Changeset.apply_changes(changeset)
       assert snapshot.crawler_meta == %{}
     end

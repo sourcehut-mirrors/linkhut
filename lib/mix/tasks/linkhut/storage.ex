@@ -171,7 +171,7 @@ defmodule Mix.Tasks.Linkhut.Storage do
              original_file_size_bytes: original_size
            }) do
       File.rm(path)
-      Archiving.recompute_archive_size_by_id(snapshot.archive_id)
+      Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
       {:ok, saved_bytes}
     else
       {:error, reason} when is_atom(reason) ->
@@ -286,7 +286,7 @@ defmodule Mix.Tasks.Linkhut.Storage do
              original_file_size_bytes: nil
            }) do
       File.rm(path)
-      Archiving.recompute_archive_size_by_id(snapshot.archive_id)
+      Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
       :ok
     else
       {:error, reason} when is_atom(reason) ->
