@@ -79,20 +79,23 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
 
     test "returns closest capture", %{context: context} do
       stub_cdx_response([
-        ["20250301120000", "https://example.com/page", "200"]
+        ["20250301120000", "https://example.com/page", "200", "text/html", "ABC123", "4567"]
       ])
 
       assert {:ok, {:external, result}} = WaybackMachine.fetch(context)
       assert result.url == "https://web.archive.org/web/20250301120000/https://example.com/page"
       assert result.timestamp == "20250301120000"
       assert result.response_code == 200
+      assert result.content_type == "text/html"
+      assert result.digest == "ABC123"
+      assert result.content_length == 4567
     end
 
     test "handles nil link_inserted_at by using current time", %{context: context} do
       context = %{context | link_inserted_at: nil}
 
       stub_cdx_response([
-        ["20250301120000", "https://example.com/page", "200"]
+        ["20250301120000", "https://example.com/page", "200", "text/html", "ABC123", "4567"]
       ])
 
       assert {:ok, {:external, _result}} = WaybackMachine.fetch(context)
@@ -144,14 +147,14 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(%{"error" => "blocked"}))
       end)
 
-      assert {:error, %{msg: "Wayback API returned invalid response"}} =
-               WaybackMachine.fetch(context)
+      assert {:error, %{msg: msg}} = WaybackMachine.fetch(context)
+      assert msg =~ "Wayback API returned invalid response"
     end
   end
 
   defp stub_cdx_response(rows) do
     Req.Test.stub(WaybackMachine, fn conn ->
-      header = ["timestamp", "original", "statuscode"]
+      header = ["timestamp", "original", "statuscode", "mimetype", "digest", "length"]
       body = Jason.encode!([header | rows])
 
       conn

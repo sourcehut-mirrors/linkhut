@@ -56,7 +56,10 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
           %{
             url: wayback_url,
             timestamp: capture.timestamp,
-            response_code: capture.status_code
+            response_code: capture.status_code,
+            content_type: capture.mimetype,
+            digest: capture.digest,
+            content_length: capture.length
           }}}
 
       :not_available ->
@@ -78,7 +81,7 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
         params: [
           url: strip_scheme(url),
           output: "json",
-          fl: "timestamp,original,statuscode",
+          fl: "timestamp,original,statuscode,mimetype,digest,length",
           filter: "statuscode:200",
           closest: timestamp,
           sort: "closest",
@@ -107,12 +110,18 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
     end
   end
 
-  defp parse_cdx_response([_header, [timestamp, original, statuscode] | _]) do
+  defp parse_cdx_response([
+         _header,
+         [timestamp, original, statuscode, mimetype, digest, length] | _
+       ]) do
     {:ok,
      %{
        timestamp: timestamp,
        original: original,
-       status_code: parse_status(statuscode)
+       status_code: parse_status(statuscode),
+       mimetype: mimetype,
+       digest: digest,
+       length: parse_length(length)
      }}
   end
 
@@ -130,11 +139,12 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
     if body == "" do
       :not_available
     else
-      {:error, "Wayback API returned invalid response"}
+      {:error, "Wayback API returned invalid response: #{String.slice(body, 0, 200)}"}
     end
   end
 
-  defp parse_cdx_response(_), do: {:error, "Wayback API returned invalid response"}
+  defp parse_cdx_response(other),
+    do: {:error, "Wayback API returned invalid response: #{inspect(other, limit: 200)}"}
 
   defp strip_scheme(url), do: String.replace(url, ~r{^https?://}, "")
 
@@ -151,6 +161,16 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
 
   defp parse_status(status) when is_integer(status), do: status
   defp parse_status(_), do: nil
+
+  defp parse_length(length) when is_binary(length) do
+    case Integer.parse(length) do
+      {n, _} -> n
+      :error -> nil
+    end
+  end
+
+  defp parse_length(length) when is_integer(length), do: length
+  defp parse_length(_), do: nil
 
   defp localhost?(host) do
     host in ["localhost", "127.0.0.1", "::1", "[::1]"] or

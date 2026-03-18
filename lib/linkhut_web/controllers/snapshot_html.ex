@@ -110,6 +110,14 @@ defmodule LinkhutWeb.SnapshotHTML do
             <th>Size</th>
             <td>{format_file_size(@snapshot.file_size_bytes)}</td>
           </tr>
+          <tr :if={wayback_content_length(@snapshot)}>
+            <th>Size</th>
+            <td>{format_file_size(wayback_content_length(@snapshot))}</td>
+          </tr>
+          <tr :if={wayback_digest(@snapshot)}>
+            <th>Digest</th>
+            <td><code>{wayback_digest(@snapshot)}</code></td>
+          </tr>
           <tr :if={@external_url}>
             <th>External URL</th>
             <td><a rel="nofollow noopener" href={@external_url} target="_blank">{@external_url}</a></td>
@@ -491,6 +499,25 @@ defmodule LinkhutWeb.SnapshotHTML do
   end
 
   def wayback_timestamp(_), do: nil
+
+  @doc """
+  Extracts the content length from Wayback Machine archive_metadata.
+  Returns nil if not available.
+  """
+  def wayback_content_length(%{archive_metadata: %{"content_length" => len}})
+      when is_integer(len),
+      do: len
+
+  def wayback_content_length(_), do: nil
+
+  @doc """
+  Extracts the digest from Wayback Machine archive_metadata.
+  Returns nil if not available.
+  """
+  def wayback_digest(%{archive_metadata: %{"digest" => digest}}) when is_binary(digest),
+    do: digest
+
+  def wayback_digest(_), do: nil
 
   defp parse_wayback_timestamp(ts) when byte_size(ts) >= 14 do
     <<y::binary-4, m::binary-2, d::binary-2, h::binary-2, mi::binary-2, s::binary-2, _::binary>> =
