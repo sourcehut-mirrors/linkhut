@@ -71,6 +71,10 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
 
   # Crawler step messages
 
+  def render(%{"msg" => "rate_limited", "crawler" => crawler}) do
+    gettext("Rate limited, retrying (%{crawler})", crawler: crawler)
+  end
+
   def render(%{"msg" => "crawling"}), do: gettext("Crawling")
 
   def render(%{"msg" => "crawling_retry", "attempt" => attempt}) do
@@ -83,6 +87,32 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
 
   def render(%{"msg" => "external_snapshot", "url" => url}) do
     gettext("External snapshot: %{url}", url: url)
+  end
+
+  def render(%{"msg" => "not_available"}), do: gettext("Not available from this source")
+
+  def render(%{"msg" => "not_archivable", "reason" => "invalid_url"}) do
+    gettext("Not archivable: invalid URL")
+  end
+
+  def render(%{"msg" => "not_archivable", "reason" => "unsupported_scheme:" <> scheme}) do
+    gettext("Not archivable: unsupported scheme (%{scheme})", scheme: scheme)
+  end
+
+  def render(%{"msg" => "not_archivable", "reason" => "reserved_address"}) do
+    gettext("Not archivable: private or reserved address")
+  end
+
+  def render(%{"msg" => "not_archivable", "reason" => "no_eligible_crawlers"}) do
+    gettext("Not archivable: unsupported content")
+  end
+
+  def render(%{"msg" => "not_archivable", "reason" => "file_too_large"}) do
+    gettext("Not archivable: file too large")
+  end
+
+  def render(%{"msg" => "not_archivable"}) do
+    gettext("Not archivable")
   end
 
   def render(%{"msg" => "partial_failure", "error" => error}) do

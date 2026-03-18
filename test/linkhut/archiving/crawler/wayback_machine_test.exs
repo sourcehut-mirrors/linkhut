@@ -23,8 +23,14 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
   end
 
   describe "queue/0" do
-    test "returns :wayback" do
-      assert WaybackMachine.queue() == :wayback
+    test "returns :crawler" do
+      assert WaybackMachine.queue() == :crawler
+    end
+  end
+
+  describe "rate_limit/0" do
+    test "returns 40 requests per minute" do
+      assert WaybackMachine.rate_limit() == {60_000, 40}
     end
   end
 
@@ -82,11 +88,20 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
       assert result.response_code == 200
     end
 
-    test "returns non-retryable error when no snapshot is available", %{context: context} do
+    test "handles nil link_inserted_at by using current time", %{context: context} do
+      context = %{context | link_inserted_at: nil}
+
+      stub_cdx_response([
+        ["20250301120000", "https://example.com/page", "200"]
+      ])
+
+      assert {:ok, {:external, _result}} = WaybackMachine.fetch(context)
+    end
+
+    test "returns :not_available when no snapshot exists", %{context: context} do
       stub_cdx_response([])
 
-      assert {:error, %{msg: "no Wayback Machine snapshot available"}, :noretry} =
-               WaybackMachine.fetch(context)
+      assert {:ok, :not_available} = WaybackMachine.fetch(context)
     end
 
     test "returns retryable error when API returns 5xx status", %{context: context} do
@@ -114,13 +129,12 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
                WaybackMachine.fetch(context)
     end
 
-    test "returns non-retryable error for empty body", %{context: context} do
+    test "returns :not_available for empty body", %{context: context} do
       Req.Test.stub(WaybackMachine, fn conn ->
         Plug.Conn.send_resp(conn, 200, "")
       end)
 
-      assert {:error, %{msg: "no Wayback Machine snapshot available"}, :noretry} =
-               WaybackMachine.fetch(context)
+      assert {:ok, :not_available} = WaybackMachine.fetch(context)
     end
 
     test "returns retryable error for unexpected JSON structure", %{context: context} do

@@ -41,53 +41,79 @@ defmodule Linkhut.Archiving.Workers.Crawler do
         update_failed(snapshot, job, :unsupported_crawler, start_time)
 
       module ->
-        crawl_detail =
-          if job.attempt > 1,
-            do: %{"msg" => "crawling_retry", "attempt" => job.attempt},
-            else: %{"msg" => "crawling"}
+        case check_rate_limit(module) do
+          :ok ->
+            do_fetch(snapshot, job, module, user_id, link_id, url, args, start_time)
 
-        {:ok, snapshot} =
-          Archiving.update_snapshot(snapshot, %{
-            state: :crawling,
-            crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "crawling", crawl_detail)
-          })
+          {:rate_limited, scale_ms} ->
+            jitter = :rand.uniform(max(div(scale_ms, 4000), 1))
+            snooze_seconds = max(div(scale_ms, 1000) + jitter, 1)
 
-        preflight_meta = decode_preflight_meta(args)
-        link_inserted_at = decode_datetime(args["link_inserted_at"])
+            {:ok, _snapshot} =
+              Archiving.update_snapshot(snapshot, %{
+                crawl_info:
+                  Steps.add_crawl_step(snapshot.crawl_info, "rate_limited", %{
+                    "msg" => "rate_limited",
+                    "crawler" => type,
+                    "snooze_seconds" => snooze_seconds
+                  })
+              })
 
-        context = %Context{
-          user_id: user_id,
-          link_id: link_id,
-          url: url,
-          snapshot_id: snapshot.id,
-          preflight_meta: preflight_meta,
-          link_inserted_at: link_inserted_at
-        }
-
-        try do
-          case module.fetch(context) do
-            {:ok, {:file, result}} ->
-              handle_file_result(snapshot, job, result, url, args, start_time)
-
-            {:ok, {:external, result}} ->
-              handle_external_result(snapshot, job, result, url, args, start_time)
-
-            {:error, error, :noretry} ->
-              update_failed_final(snapshot, job, error, start_time)
-
-            {:error, error} ->
-              update_failed(snapshot, job, error, start_time)
-          end
-        rescue
-          exception ->
-            Logger.error(
-              "Crawler #{inspect(module)} crashed for snapshot #{snapshot.id}: " <>
-                Exception.message(exception) <>
-                "\n" <> Exception.format_stacktrace(__STACKTRACE__)
-            )
-
-            update_failed(snapshot, job, Exception.message(exception), start_time)
+            {:snooze, snooze_seconds}
         end
+    end
+  end
+
+  defp do_fetch(snapshot, job, module, user_id, link_id, url, args, start_time) do
+    crawl_detail =
+      if job.attempt > 1,
+        do: %{"msg" => "crawling_retry", "attempt" => job.attempt},
+        else: %{"msg" => "crawling"}
+
+    {:ok, snapshot} =
+      Archiving.update_snapshot(snapshot, %{
+        state: :crawling,
+        crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "crawling", crawl_detail)
+      })
+
+    preflight_meta = decode_preflight_meta(args)
+    link_inserted_at = decode_datetime(args["link_inserted_at"])
+
+    context = %Context{
+      user_id: user_id,
+      link_id: link_id,
+      url: url,
+      snapshot_id: snapshot.id,
+      preflight_meta: preflight_meta,
+      link_inserted_at: link_inserted_at
+    }
+
+    try do
+      case module.fetch(context) do
+        {:ok, {:file, result}} ->
+          handle_file_result(snapshot, job, result, url, args, start_time)
+
+        {:ok, {:external, result}} ->
+          handle_external_result(snapshot, job, result, url, args, start_time)
+
+        {:ok, :not_available} ->
+          handle_not_available(snapshot, job, args, start_time)
+
+        {:error, error, :noretry} ->
+          update_failed_final(snapshot, job, error, start_time)
+
+        {:error, error} ->
+          update_failed(snapshot, job, error, start_time)
+      end
+    rescue
+      exception ->
+        Logger.error(
+          "Crawler #{inspect(module)} crashed for snapshot #{snapshot.id}: " <>
+            Exception.message(exception) <>
+            "\n" <> Exception.format_stacktrace(__STACKTRACE__)
+        )
+
+        update_failed(snapshot, job, Exception.message(exception), start_time)
     end
   end
 
@@ -186,6 +212,32 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
   end
 
+  defp handle_not_available(snapshot, _job, _args, start_time) do
+    processing_time = System.monotonic_time(:millisecond) - start_time
+
+    case Archiving.update_snapshot(snapshot, %{
+           state: :not_available,
+           processing_time_ms: processing_time,
+           crawl_info:
+             Steps.add_crawl_step(
+               snapshot.crawl_info,
+               "not_available",
+               %{"msg" => "not_available"}
+             )
+         }) do
+      {:ok, _} ->
+        :ok
+
+      {:error, changeset} ->
+        Logger.warning(
+          "Failed to update snapshot #{snapshot.id} to not_available: #{inspect(changeset.errors)}"
+        )
+    end
+
+    Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
+    :ok
+  end
+
   defp warn_on_missing_content_type(snapshot, nil),
     do: Logger.warning("Crawler result for snapshot #{snapshot.id} missing content_type")
 
@@ -215,6 +267,20 @@ defmodule Linkhut.Archiving.Workers.Crawler do
   defp resolve_crawler(type) do
     Linkhut.Config.archiving(:crawlers, [])
     |> Enum.find(fn module -> module.type() == type end)
+  end
+
+  defp check_rate_limit(module) do
+    if function_exported?(module, :rate_limit, 0) do
+      {scale_ms, limit} = module.rate_limit()
+      key = "crawler:#{module.type()}"
+
+      case Hammer.check_rate(key, scale_ms, limit) do
+        {:allow, _count} -> :ok
+        {:deny, _limit} -> {:rate_limited, scale_ms}
+      end
+    else
+      :ok
+    end
   end
 
   defp get_file_size(path) when is_binary(path) do

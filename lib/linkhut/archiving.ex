@@ -120,7 +120,7 @@ defmodule Linkhut.Archiving do
 
   defp queue_depths do
     Oban.Job
-    |> where([j], j.queue in ["archiver", "crawler", "wayback"])
+    |> where([j], j.queue in ["archiver", "crawler"])
     |> where([j], j.state in ["available", "scheduled", "executing", "retryable"])
     |> group_by([j], [j.queue, j.state])
     |> select([j], %{queue: j.queue, state: j.state, count: count()})
@@ -514,7 +514,8 @@ defmodule Linkhut.Archiving do
 
   @doc """
   Transitions a `:processing` crawl run to `:complete` when all its snapshots
-  have reached a terminal state (`:complete`, `:failed`, or `:pending_deletion`).
+  have reached a terminal state (`:complete`, `:not_available`, `:failed`,
+  or `:pending_deletion`).
 
   Uses atomic `UPDATE ... WHERE state = :processing` to prevent race conditions
   when concurrent crawlers finish simultaneously.
@@ -530,7 +531,7 @@ defmodule Linkhut.Archiving do
         )
         AND NOT EXISTS (
           SELECT 1 FROM snapshots WHERE crawl_run_id = $1
-          AND state NOT IN ('complete', 'failed', 'pending_deletion')
+          AND state NOT IN ('complete', 'not_available', 'failed', 'pending_deletion')
         )
         """,
         [crawl_run_id]

@@ -17,7 +17,15 @@ defmodule Linkhut.Archiving.Snapshot do
     field :type, :string
 
     field :state, Ecto.Enum,
-      values: [:pending, :crawling, :retryable, :complete, :failed, :pending_deletion],
+      values: [
+        :pending,
+        :crawling,
+        :retryable,
+        :complete,
+        :not_available,
+        :failed,
+        :pending_deletion
+      ],
       default: :pending
 
     field :crawl_info, :map

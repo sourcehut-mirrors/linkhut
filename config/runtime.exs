@@ -200,6 +200,7 @@ if config_env() == :prod do
   archiving_overrides =
     [
       data_dir: System.get_env("ARCHIVING_DATA_DIR"),
+      staging_dir: System.get_env("ARCHIVING_STAGING_DIR"),
       serve_host: System.get_env("ARCHIVING_SERVE_HOST"),
       user_agent_suffix: System.get_env("ARCHIVING_USER_AGENT_SUFFIX"),
       mode:

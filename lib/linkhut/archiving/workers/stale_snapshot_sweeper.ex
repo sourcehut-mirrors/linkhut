@@ -1,11 +1,18 @@
 defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
   @moduledoc """
   Periodic worker that finds snapshots stuck in non-terminal states
-  (`:crawling`, `:retryable`) for longer than the configured threshold
   and marks them as `:failed`.
 
-  This covers edge cases where the Crawler worker process is killed
-  (node crash, `kill -9`, OOM) before it can update the snapshot state.
+  Two sweep passes:
+
+  1. **Stale threshold** — snapshots in `:crawling` or `:retryable` for
+     longer than `@stale_threshold_minutes` without an active Oban job.
+     Covers node crashes, OOM kills, etc.
+
+  2. **Discarded/cancelled jobs** — snapshots in any non-terminal state
+     (`:pending`, `:crawling`, `:retryable`) whose Oban job has been
+     discarded or cancelled. Covers jobs that exhausted all attempts
+     without the crawler updating the snapshot.
   """
 
   use Oban.Worker,
@@ -27,6 +34,12 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
+    sweep_stale_snapshots()
+    sweep_discarded_jobs()
+    :ok
+  end
+
+  defp sweep_stale_snapshots do
     cutoff = DateTime.add(DateTime.utc_now(), -@stale_threshold_minutes, :minute)
 
     stale_snapshots =
@@ -47,8 +60,25 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
     stale_snapshots
     |> Enum.reject(fn s -> s.id in active_snapshot_ids end)
     |> Enum.each(&mark_failed/1)
+  end
 
-    :ok
+  defp sweep_discarded_jobs do
+    discarded_snapshot_ids =
+      from(j in Oban.Job,
+        where: j.worker == @crawler_worker,
+        where: j.state in ["discarded", "cancelled"],
+        select: fragment("(?->>'snapshot_id')::bigint", j.args)
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    if MapSet.size(discarded_snapshot_ids) > 0 do
+      Snapshot
+      |> where([s], s.id in ^MapSet.to_list(discarded_snapshot_ids))
+      |> where([s], s.state in [:pending, :crawling, :retryable])
+      |> Repo.all()
+      |> Enum.each(&mark_failed/1)
+    end
   end
 
   defp mark_failed(%Snapshot{} = snapshot) do

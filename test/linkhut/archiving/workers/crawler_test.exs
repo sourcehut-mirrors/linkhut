@@ -238,6 +238,72 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
     end
   end
 
+  describe "perform/1 — rate limiting" do
+    test "snoozes job when crawler is rate limited" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      snapshot = create_pending_snapshot(user, link, "ratelimited")
+
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.RateLimitedCrawler
+      ])
+
+      # Exhaust the rate limit bucket (limit: 1)
+      assert {:allow, _} = Hammer.check_rate("crawler:ratelimited", 60_000, 1)
+
+      job = make_job(snapshot, user, link, type: "ratelimited")
+
+      assert {:snooze, seconds} = Crawler.perform(job)
+      assert seconds >= 60
+
+      # Snapshot should still be pending (not crawling)
+      updated = Repo.get(Snapshot, snapshot.id)
+      assert updated.state == :pending
+
+      # Rate limited step should be recorded
+      steps = updated.crawl_info["steps"]
+      assert [%{"step" => "rate_limited", "detail" => %{"msg" => "rate_limited"}} | _] = steps
+    end
+  end
+
+  describe "perform/1 — not available" do
+    test "marks snapshot as :not_available and returns :ok" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      snapshot = create_pending_snapshot(user, link, "notavail")
+
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler
+      ])
+
+      job = make_job(snapshot, user, link, type: "notavail")
+
+      assert :ok = Crawler.perform(job)
+
+      updated = Repo.get(Snapshot, snapshot.id)
+      assert updated.state == :not_available
+      assert is_nil(updated.storage_key)
+      assert updated.processing_time_ms != nil
+    end
+
+    test "completes crawl run after :not_available result" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      snapshot = create_pending_snapshot(user, link, "notavail")
+
+      put_override(Linkhut.Archiving, :crawlers, [
+        Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler
+      ])
+
+      job = make_job(snapshot, user, link, type: "notavail")
+
+      Crawler.perform(job)
+
+      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      assert crawl_run.state == :complete
+    end
+  end
+
   describe "perform/1 — successful crawl" do
     test "stores file and marks snapshot as complete" do
       user = insert(:user, credential: build(:credential))
@@ -655,6 +721,60 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler do
 
   @impl true
   def fetch(_context), do: raise("kaboom!")
+end
+
+defmodule Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler do
+  @behaviour Linkhut.Archiving.Crawler
+
+  @impl true
+  def type, do: "notavail"
+
+  @impl true
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "NotAvailableCrawler", tool_version: nil, version: module_version()}
+
+  @impl true
+  def network_access, do: :third_party
+
+  @impl true
+  def queue, do: :crawler
+
+  @impl true
+  def can_handle?(_url, _meta), do: true
+
+  @impl true
+  def fetch(_context), do: {:ok, :not_available}
+end
+
+defmodule Linkhut.Archiving.Workers.CrawlerTest.RateLimitedCrawler do
+  @behaviour Linkhut.Archiving.Crawler
+
+  @impl true
+  def type, do: "ratelimited"
+
+  @impl true
+  def module_version, do: "1"
+
+  @impl true
+  def meta,
+    do: %{tool_name: "RateLimitedCrawler", tool_version: nil, version: module_version()}
+
+  @impl true
+  def network_access, do: :third_party
+
+  @impl true
+  def queue, do: :crawler
+
+  @impl true
+  def rate_limit, do: {60_000, 1}
+
+  @impl true
+  def can_handle?(_url, _meta), do: true
+
+  @impl true
+  def fetch(_context), do: {:ok, :not_available}
 end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler do

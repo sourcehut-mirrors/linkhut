@@ -45,7 +45,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   @impl true
   def fetch(%Context{url: url, link_id: link_id, preflight_meta: preflight_meta}) do
     staging_dir =
-      Path.join(System.tmp_dir!(), "linkhut_httpfetch_#{:erlang.unique_integer([:positive])}")
+      Path.join(staging_base_dir(), "linkhut_httpfetch_#{:erlang.unique_integer([:positive])}")
 
     File.mkdir_p!(staging_dir)
     path = Path.join(staging_dir, "#{link_id}")
@@ -254,4 +254,6 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
       vsn -> to_string(vsn)
     end
   end
+
+  defp staging_base_dir, do: Linkhut.Config.archiving(:staging_dir, System.tmp_dir!())
 end

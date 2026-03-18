@@ -69,8 +69,7 @@ config :linkhut, Linkhut.Mail.Mailer, adapter: Swoosh.Adapters.Local
 # Oban configuration
 config :linkhut, Oban,
   engine: Oban.Engines.Basic,
-  # wayback: 1 — single concurrency rate-limits requests to archive.org (~1 req/s)
-  queues: [default: 10, mailer: 5, archiver: 5, crawler: 5, wayback: 1],
+  queues: [default: 10, mailer: 5, archiver: 5, crawler: 5],
   repo: Linkhut.Repo,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
@@ -131,6 +130,10 @@ config :single_file,
   default: [
     args: []
   ]
+
+# Rate limiting (Hammer)
+config :hammer,
+  backend: {Hammer.Backend.ETS, [expiry_ms: 60_000 * 60, cleanup_interval_ms: 60_000 * 10]}
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

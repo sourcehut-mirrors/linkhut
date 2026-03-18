@@ -27,6 +27,17 @@
         }
     }
 
+    &.not-archivable,
+    &.not-available {
+        color: $dark-gray;
+        background-color: $light-gray;
+
+        @media (prefers-color-scheme: dark) {
+            color: $bright-gray;
+            background-color: $dark-gray;
+        }
+    }
+
     &.failed {
         color: $washed-red;
         background-color: $red;

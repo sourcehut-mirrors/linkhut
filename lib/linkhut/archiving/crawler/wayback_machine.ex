@@ -26,7 +26,10 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
   def network_access, do: :third_party
 
   @impl true
-  def queue, do: :wayback
+  def queue, do: :crawler
+
+  @impl true
+  def rate_limit, do: {60_000, 40}
 
   @impl true
   def can_handle?(url, _preflight_meta) do
@@ -55,6 +58,9 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
             timestamp: capture.timestamp,
             response_code: capture.status_code
           }}}
+
+      :not_available ->
+        {:ok, :not_available}
 
       {:error, reason, :noretry} ->
         {:error, %{msg: reason}, :noretry}
@@ -111,18 +117,18 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
   end
 
   defp parse_cdx_response([_header]) do
-    {:error, "no Wayback Machine snapshot available", :noretry}
+    :not_available
   end
 
   defp parse_cdx_response([]) do
-    {:error, "no Wayback Machine snapshot available", :noretry}
+    :not_available
   end
 
   defp parse_cdx_response(body) when is_binary(body) do
     body = String.trim(body)
 
     if body == "" do
-      {:error, "no Wayback Machine snapshot available", :noretry}
+      :not_available
     else
       {:error, "Wayback API returned invalid response"}
     end

@@ -68,11 +68,23 @@ defmodule Linkhut.Archiving.Crawler do
   @callback fetch(Context.t()) ::
               {:ok, {:file, map()}}
               | {:ok, {:external, map()}}
+              | {:ok, :not_available}
               | {:error, map()}
               | {:error, map(), :noretry}
 
   @callback network_access() :: network_access()
   @callback queue() :: atom()
+
+  @doc """
+  Optional. Returns a rate limit tuple `{scale_ms, limit}` for this crawler.
+
+  When implemented, the crawler worker checks `Hammer.check_rate/3` before
+  each fetch and returns `{:snooze, seconds}` to Oban when the limit is
+  exceeded, deferring the job without consuming an attempt.
+  """
+  @callback rate_limit() :: {scale_ms :: pos_integer(), limit :: pos_integer()}
+
+  @optional_callbacks [rate_limit: 0]
 
   @base_user_agent "LinkhutArchiver/1.0 (web page snapshot for personal archiving)"
 

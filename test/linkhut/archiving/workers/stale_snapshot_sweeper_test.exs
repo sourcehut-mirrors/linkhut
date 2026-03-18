@@ -101,6 +101,53 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
     assert updated_crawl_run.state == :complete
   end
 
+  test "marks :pending snapshot as :failed when its Oban job is discarded" do
+    user = insert(:user, credential: build(:credential))
+    link = insert(:link, user_id: user.id)
+    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :pending})
+
+    # Insert a discarded Oban job for this snapshot
+    job =
+      Linkhut.Archiving.Workers.Crawler.new(%{
+        "snapshot_id" => snapshot.id,
+        "user_id" => user.id,
+        "link_id" => link.id,
+        "url" => "https://example.com",
+        "type" => "singlefile"
+      })
+      |> Oban.insert!()
+
+    Repo.query!("UPDATE oban_jobs SET state = 'discarded' WHERE id = $1", [job.id])
+
+    assert :ok = perform_job(StaleSnapshotSweeper, %{})
+
+    updated = Repo.get(Snapshot, snapshot.id)
+    assert updated.state == :failed
+  end
+
+  test "marks :crawling snapshot as :failed when its Oban job is cancelled" do
+    user = insert(:user, credential: build(:credential))
+    link = insert(:link, user_id: user.id)
+    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
+
+    job =
+      Linkhut.Archiving.Workers.Crawler.new(%{
+        "snapshot_id" => snapshot.id,
+        "user_id" => user.id,
+        "link_id" => link.id,
+        "url" => "https://example.com",
+        "type" => "singlefile"
+      })
+      |> Oban.insert!()
+
+    Repo.query!("UPDATE oban_jobs SET state = 'cancelled' WHERE id = $1", [job.id])
+
+    assert :ok = perform_job(StaleSnapshotSweeper, %{})
+
+    updated = Repo.get(Snapshot, snapshot.id)
+    assert updated.state == :failed
+  end
+
   test "does not touch :complete or :failed snapshots" do
     user = insert(:user, credential: build(:credential))
     link = insert(:link, user_id: user.id)

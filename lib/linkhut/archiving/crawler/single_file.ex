@@ -34,7 +34,7 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   @impl true
   def fetch(%Context{link_id: link_id, url: url}) do
     staging_dir =
-      Path.join(System.tmp_dir!(), "linkhut_crawl_#{:erlang.unique_integer([:positive])}")
+      Path.join(staging_base_dir(), "linkhut_crawl_#{:erlang.unique_integer([:positive])}")
 
     File.mkdir_p!(staging_dir)
 
@@ -88,4 +88,6 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
         {:error, %{msg: error_msg, code: code}}
     end
   end
+
+  defp staging_base_dir, do: Linkhut.Config.archiving(:staging_dir, System.tmp_dir!())
 end
