@@ -50,4 +50,16 @@ defmodule Linkhut.Formatting do
   def crawler_display_name("wget"), do: "Wget"
   def crawler_display_name("wayback"), do: "Wayback Machine"
   def crawler_display_name(type), do: String.capitalize(type)
+
+  def format_display_name("webpage"), do: "Webpage"
+  def format_display_name("pdf"), do: "PDF"
+  def format_display_name("text"), do: "Text"
+  def format_display_name("reference"), do: "Reference"
+  def format_display_name(format), do: String.capitalize(format)
+
+  def source_display_name("singlefile"), do: "SingleFile"
+  def source_display_name("httpfetch"), do: "HTTP Fetch"
+  def source_display_name("wayback"), do: "Wayback Machine"
+  def source_display_name("upload"), do: "Upload"
+  def source_display_name(source), do: String.capitalize(source)
 end

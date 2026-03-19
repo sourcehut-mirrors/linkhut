@@ -3,9 +3,9 @@ defmodule Linkhut.Archiving.Crawler.SingleFileTest do
 
   alias Linkhut.Archiving.Crawler.SingleFile
 
-  describe "type/0" do
+  describe "source_type/0" do
     test "returns 'singlefile'" do
-      assert SingleFile.type() == "singlefile"
+      assert SingleFile.source_type() == "singlefile"
     end
   end
 

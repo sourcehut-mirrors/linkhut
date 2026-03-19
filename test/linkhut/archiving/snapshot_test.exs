@@ -6,7 +6,12 @@ defmodule Linkhut.Archiving.SnapshotTest do
   describe "create_changeset/2" do
     test "valid with required fields" do
       changeset =
-        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          user_id: 1,
+          format: "webpage",
+          source: "singlefile"
+        })
 
       assert changeset.valid?
     end
@@ -17,7 +22,8 @@ defmodule Linkhut.Archiving.SnapshotTest do
         user_id: 1,
         job_id: 2,
         crawl_run_id: 3,
-        type: "singlefile",
+        format: "webpage",
+        source: "singlefile",
         state: :complete,
         storage_key: "local:/tmp/test",
         file_size_bytes: 1024,
@@ -33,26 +39,61 @@ defmodule Linkhut.Archiving.SnapshotTest do
     end
 
     test "invalid without link_id" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{user_id: 1, crawl_run_id: 1})
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{
+          user_id: 1,
+          format: "webpage",
+          source: "singlefile"
+        })
+
       refute changeset.valid?
       assert %{link_id: ["can't be blank"]} = errors_on(changeset)
     end
 
     test "invalid without user_id" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, crawl_run_id: 1})
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          format: "webpage",
+          source: "singlefile"
+        })
+
       refute changeset.valid?
       assert %{user_id: ["can't be blank"]} = errors_on(changeset)
     end
 
-    test "invalid without crawl_run_id" do
-      changeset = Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1})
+    test "invalid without format" do
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          user_id: 1,
+          source: "singlefile"
+        })
+
       refute changeset.valid?
-      assert %{crawl_run_id: ["can't be blank"]} = errors_on(changeset)
+      assert %{format: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "invalid without source" do
+      changeset =
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          user_id: 1,
+          format: "webpage"
+        })
+
+      refute changeset.valid?
+      assert %{source: ["can't be blank"]} = errors_on(changeset)
     end
 
     test "defaults state to :pending" do
       changeset =
-        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          user_id: 1,
+          format: "webpage",
+          source: "singlefile"
+        })
 
       snapshot = Ecto.Changeset.apply_changes(changeset)
       assert snapshot.state == :pending
@@ -60,7 +101,12 @@ defmodule Linkhut.Archiving.SnapshotTest do
 
     test "defaults retry_count to 0" do
       changeset =
-        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          user_id: 1,
+          format: "webpage",
+          source: "singlefile"
+        })
 
       snapshot = Ecto.Changeset.apply_changes(changeset)
       assert snapshot.retry_count == 0
@@ -70,7 +116,8 @@ defmodule Linkhut.Archiving.SnapshotTest do
       attrs = %{
         link_id: 1,
         user_id: 1,
-        crawl_run_id: 1,
+        format: "webpage",
+        source: "singlefile",
         crawler_meta: %{tool_name: "SingleFile", version: "1.0.0"}
       }
 
@@ -82,10 +129,84 @@ defmodule Linkhut.Archiving.SnapshotTest do
 
     test "defaults crawler_meta to empty map" do
       changeset =
-        Snapshot.create_changeset(%Snapshot{}, %{link_id: 1, user_id: 1, crawl_run_id: 1})
+        Snapshot.create_changeset(%Snapshot{}, %{
+          link_id: 1,
+          user_id: 1,
+          format: "webpage",
+          source: "singlefile"
+        })
 
       snapshot = Ecto.Changeset.apply_changes(changeset)
       assert snapshot.crawler_meta == %{}
+    end
+  end
+
+  describe "upload_changeset/1" do
+    test "valid with required fields" do
+      attrs = %{
+        link_id: 1,
+        user_id: 1,
+        format: "pdf",
+        source: "upload",
+        state: :complete
+      }
+
+      changeset = Snapshot.upload_changeset(attrs)
+      assert changeset.valid?
+    end
+
+    test "requires source to be 'upload'" do
+      attrs = %{
+        link_id: 1,
+        user_id: 1,
+        format: "pdf",
+        source: "singlefile",
+        state: :complete
+      }
+
+      changeset = Snapshot.upload_changeset(attrs)
+      refute changeset.valid?
+      assert %{source: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "requires state to be :complete" do
+      attrs = %{
+        link_id: 1,
+        user_id: 1,
+        format: "pdf",
+        source: "upload",
+        state: :failed
+      }
+
+      changeset = Snapshot.upload_changeset(attrs)
+      refute changeset.valid?
+      assert %{state: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "invalid without format" do
+      attrs = %{
+        link_id: 1,
+        user_id: 1,
+        source: "upload",
+        state: :complete
+      }
+
+      changeset = Snapshot.upload_changeset(attrs)
+      refute changeset.valid?
+      assert %{format: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "invalid without source" do
+      attrs = %{
+        link_id: 1,
+        user_id: 1,
+        format: "pdf",
+        state: :complete
+      }
+
+      changeset = Snapshot.upload_changeset(attrs)
+      refute changeset.valid?
+      assert %{source: ["can't be blank"]} = errors_on(changeset)
     end
   end
 

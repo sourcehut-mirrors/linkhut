@@ -37,7 +37,8 @@ defmodule Mix.Tasks.Linkhut.StorageTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
-        type: "singlefile",
+        format: "webpage",
+        source: "singlefile",
         state: :complete,
         storage_key: StorageKey.local(file_path),
         file_size_bytes: byte_size(content),

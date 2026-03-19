@@ -5,7 +5,7 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
   """
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.{CrawlRun, Steps}
+  alias Linkhut.Archiving.{CrawlRun, PreflightMeta, Steps}
   alias Linkhut.Links.Link
   alias Linkhut.Repo
   alias Linkhut.Archiving.Workers.Crawler, as: CrawlerWorker
@@ -39,7 +39,7 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
         )
       end)
       |> Ecto.Multi.run(:update_crawl_run, fn _repo, _changes ->
-        crawler_names = Enum.map_join(crawlers, ", ", & &1.type())
+        crawler_names = Enum.map_join(crawlers, ", ", & &1.source_type())
 
         Archiving.update_crawl_run(crawl_run, %{
           steps:
@@ -58,7 +58,7 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
            crawlers:
              Enum.map(indexed_crawlers, fn {mod, idx} ->
                job = changes[{:job, idx}]
-               %{name: mod.type(), job_id: job.id}
+               %{name: mod.source_type(), job_id: job.id}
              end)
          }}
 
@@ -76,13 +76,15 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
          link_inserted_at,
          opts
        ) do
-    type = crawler_module.type()
+    source = crawler_module.source_type()
+    format = determine_format(source, preflight_meta)
 
     multi
     |> Ecto.Multi.run({:snapshot, idx}, fn _repo, _changes ->
       Archiving.create_snapshot(crawl_run.link_id, crawl_run.user_id, %{
         crawl_run_id: crawl_run.id,
-        type: type,
+        format: format,
+        source: source,
         state: :pending,
         crawler_meta: crawler_module.meta()
       })
@@ -96,7 +98,7 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
           "user_id" => crawl_run.user_id,
           "link_id" => crawl_run.link_id,
           "url" => crawl_run.final_url || crawl_run.url,
-          "type" => type,
+          "type" => source,
           "recrawl" => Keyword.get(opts, :recrawl, false),
           "crawl_run_id" => crawl_run.id,
           "preflight_meta" => preflight_meta,
@@ -121,4 +123,20 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
       nil -> nil
     end
   end
+
+  defp determine_format("singlefile", _), do: "webpage"
+  defp determine_format("wayback", _), do: "reference"
+  defp determine_format("httpfetch", preflight_meta), do: format_from_content_type(preflight_meta)
+  defp determine_format(_, _), do: "webpage"
+
+  defp format_from_content_type(%PreflightMeta{content_type: ct}) when is_binary(ct) do
+    cond do
+      ct =~ "application/pdf" -> "pdf"
+      ct =~ "text/plain" -> "text"
+      ct =~ "text/markdown" -> "text"
+      true -> "webpage"
+    end
+  end
+
+  defp format_from_content_type(_), do: "webpage"
 end

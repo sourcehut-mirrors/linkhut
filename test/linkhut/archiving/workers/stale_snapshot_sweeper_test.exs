@@ -11,8 +11,13 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
     crawl_run =
       insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
-    {:ok, snapshot} =
-      Archiving.create_snapshot(link.id, user.id, Map.put(attrs, :crawl_run_id, crawl_run.id))
+    attrs =
+      attrs
+      |> Map.put(:crawl_run_id, crawl_run.id)
+      |> Map.put_new(:format, "webpage")
+      |> Map.put_new(:source, "singlefile")
+
+    {:ok, snapshot} = Archiving.create_snapshot(link.id, user.id, attrs)
 
     {snapshot, crawl_run}
   end

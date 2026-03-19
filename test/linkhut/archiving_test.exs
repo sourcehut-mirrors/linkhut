@@ -154,34 +154,6 @@ defmodule Linkhut.ArchivingTest do
     end
   end
 
-  describe "mark_old_crawl_runs_for_deletion/2" do
-    test "marks archives in all states for deletion, excluding specified IDs" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      processing_crawl_run = create_crawl_run(user, link)
-
-      complete_crawl_run =
-        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
-
-      failed_crawl_run =
-        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :failed)
-
-      pending_crawl_run =
-        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :pending)
-
-      excluded_crawl_run = create_crawl_run(user, link)
-
-      :ok = Archiving.mark_old_crawl_runs_for_deletion(link.id, exclude: [excluded_crawl_run.id])
-
-      assert Repo.get(CrawlRun, processing_crawl_run.id).state == :pending_deletion
-      assert Repo.get(CrawlRun, complete_crawl_run.id).state == :pending_deletion
-      assert Repo.get(CrawlRun, failed_crawl_run.id).state == :pending_deletion
-      assert Repo.get(CrawlRun, pending_crawl_run.id).state == :pending_deletion
-      assert Repo.get(CrawlRun, excluded_crawl_run.id).state == :processing
-    end
-  end
-
   describe "create_snapshot/3" do
     test "creates a snapshot with required fields" do
       user = insert(:user, credential: build(:credential))
@@ -189,11 +161,17 @@ defmodule Linkhut.ArchivingTest do
       crawl_run = create_crawl_run(user, link)
 
       assert {:ok, %Snapshot{} = snapshot} =
-               Archiving.create_snapshot(link.id, user.id, %{crawl_run_id: crawl_run.id})
+               Archiving.create_snapshot(link.id, user.id, %{
+                 crawl_run_id: crawl_run.id,
+                 format: "webpage",
+                 source: "singlefile"
+               })
 
       assert snapshot.link_id == link.id
       assert snapshot.user_id == user.id
       assert snapshot.crawl_run_id == crawl_run.id
+      assert snapshot.format == "webpage"
+      assert snapshot.source == "singlefile"
     end
 
     test "creates a snapshot with all fields" do
@@ -203,7 +181,8 @@ defmodule Linkhut.ArchivingTest do
 
       attrs = %{
         crawl_run_id: crawl_run.id,
-        type: "singlefile",
+        format: "webpage",
+        source: "singlefile",
         state: :complete,
         storage_key: "local:/tmp/test/archive",
         file_size_bytes: 2048,
@@ -214,18 +193,21 @@ defmodule Linkhut.ArchivingTest do
       assert {:ok, %Snapshot{} = snapshot} =
                Archiving.create_snapshot(link.id, user.id, attrs)
 
-      assert snapshot.type == "singlefile"
+      assert snapshot.format == "webpage"
+      assert snapshot.source == "singlefile"
       assert snapshot.state == :complete
       assert snapshot.storage_key == "local:/tmp/test/archive"
       assert snapshot.file_size_bytes == 2048
     end
 
-    test "rejects snapshot without crawl_run_id" do
+    test "rejects snapshot without required fields" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
       assert {:error, changeset} = Archiving.create_snapshot(link.id, user.id)
-      assert %{crawl_run_id: ["can't be blank"]} = errors_on(changeset)
+      errors = errors_on(changeset)
+      assert %{format: ["can't be blank"]} = errors
+      assert %{source: ["can't be blank"]} = errors
     end
   end
 
@@ -247,7 +229,8 @@ defmodule Linkhut.ArchivingTest do
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           crawl_run_id: crawl_run.id,
           job_id: oban_job.id
         })
@@ -268,7 +251,11 @@ defmodule Linkhut.ArchivingTest do
       crawl_run = create_crawl_run(user, link)
 
       {:ok, snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{crawl_run_id: crawl_run.id})
+        Archiving.create_snapshot(link.id, user.id, %{
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
+        })
 
       assert {:ok, updated} =
                Archiving.update_snapshot(snapshot, %{
@@ -290,13 +277,17 @@ defmodule Linkhut.ArchivingTest do
       {:ok, s1} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, s2} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :pending,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert :ok = Archiving.mark_snapshots_for_deletion(link.id)
@@ -315,13 +306,17 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link1.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run1.id
+          crawl_run_id: crawl_run1.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, s2} =
         Archiving.create_snapshot(link2.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run2.id
+          crawl_run_id: crawl_run2.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       Archiving.mark_snapshots_for_deletion(link1.id)
@@ -339,13 +334,17 @@ defmodule Linkhut.ArchivingTest do
       {:ok, s1} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :pending_deletion,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, s2} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :pending_deletion,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert :ok = Archiving.enqueue_pending_deletions()
@@ -369,7 +368,9 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert :ok = Archiving.enqueue_pending_deletions()
@@ -401,7 +402,9 @@ defmodule Linkhut.ArchivingTest do
         Archiving.create_snapshot(link.id, user.id, %{
           state: :pending_deletion,
           storage_key: "local:" <> path,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert :ok = Archiving.delete_snapshot(snapshot.id)
@@ -418,7 +421,9 @@ defmodule Linkhut.ArchivingTest do
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :pending_deletion,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert :ok = Archiving.delete_snapshot(snapshot.id)
@@ -439,7 +444,9 @@ defmodule Linkhut.ArchivingTest do
         Archiving.create_snapshot(link.id, user.id, %{
           state: :pending_deletion,
           storage_key: "cloud:bucket/key",
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert {:error, :invalid_storage_key} = Archiving.delete_snapshot(snapshot.id)
@@ -462,21 +469,27 @@ defmodule Linkhut.ArchivingTest do
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
           file_size_bytes: 1000,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
           file_size_bytes: 2000,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :failed,
           file_size_bytes: 500,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert Archiving.storage_used() == 3000
@@ -496,14 +509,18 @@ defmodule Linkhut.ArchivingTest do
         Archiving.create_snapshot(link1.id, user1.id, %{
           state: :complete,
           file_size_bytes: 1000,
-          crawl_run_id: crawl_run1.id
+          crawl_run_id: crawl_run1.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link2.id, user2.id, %{
           state: :complete,
           file_size_bytes: 2000,
-          crawl_run_id: crawl_run2.id
+          crawl_run_id: crawl_run2.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert Archiving.storage_used_by_user(user1.id) == 1000
@@ -525,21 +542,27 @@ defmodule Linkhut.ArchivingTest do
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
           file_size_bytes: 1000,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
           file_size_bytes: 2000,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :failed,
           file_size_bytes: 500,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       Archiving.recompute_crawl_run_size(crawl_run)
@@ -568,7 +591,7 @@ defmodule Linkhut.ArchivingTest do
       ]
 
       snapshot = %{
-        type: "singlefile",
+        source: "singlefile",
         crawl_info: %{
           "steps" => [
             %{"step" => "crawling", "at" => "2026-02-26T10:00:03Z"},
@@ -598,7 +621,7 @@ defmodule Linkhut.ArchivingTest do
 
     test "handles snapshots without crawl_info" do
       archive_steps = [%{"step" => "created", "at" => "2026-02-26T10:00:00Z"}]
-      snapshot = %{type: "singlefile", crawl_info: nil}
+      snapshot = %{source: "singlefile", crawl_info: nil}
 
       timeline = Archiving.merge_timeline(archive_steps, [snapshot])
       assert length(timeline) == 1
@@ -611,14 +634,14 @@ defmodule Linkhut.ArchivingTest do
       ]
 
       snapshot1 = %{
-        type: "singlefile",
+        source: "singlefile",
         crawl_info: %{
           "steps" => [%{"step" => "crawling", "at" => "2026-02-26T10:00:02Z"}]
         }
       }
 
       snapshot2 = %{
-        type: "wget",
+        source: "wget",
         crawl_info: %{
           "steps" => [%{"step" => "crawling", "at" => "2026-02-26T10:00:03Z"}]
         }
@@ -640,7 +663,7 @@ defmodule Linkhut.ArchivingTest do
 
       # singlefile starts at t=02, finishes at t=15 (spans past wayback's start)
       snapshot1 = %{
-        type: "singlefile",
+        source: "singlefile",
         crawl_info: %{
           "steps" => [
             %{"step" => "crawling", "at" => "2026-02-26T10:00:02Z"},
@@ -651,7 +674,7 @@ defmodule Linkhut.ArchivingTest do
 
       # wayback starts at t=05, finishes at t=06 (between singlefile's steps)
       snapshot2 = %{
-        type: "wayback",
+        source: "wayback",
         crawl_info: %{
           "steps" => [
             %{"step" => "crawling", "at" => "2026-02-26T10:00:05Z"},
@@ -708,13 +731,17 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :failed,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "reference",
+          source: "wayback"
         })
 
       Archiving.maybe_complete_crawl_run(crawl_run.id)
@@ -739,13 +766,17 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :crawling,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "reference",
+          source: "wayback"
         })
 
       Archiving.maybe_complete_crawl_run(crawl_run.id)
@@ -768,7 +799,9 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       assert :ok = Archiving.maybe_complete_crawl_run(crawl_run.id)
@@ -811,7 +844,9 @@ defmodule Linkhut.ArchivingTest do
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
           state: :complete,
-          crawl_run_id: crawl_run.id
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
         })
 
       # Call twice — only one should add the "completed" step
@@ -850,7 +885,8 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 1000,
           crawl_run_id: crawl_run1.id,
-          type: "singlefile"
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
@@ -858,7 +894,8 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 2000,
           crawl_run_id: crawl_run2.id,
-          type: "singlefile"
+          format: "webpage",
+          source: "singlefile"
         })
 
       stats = Archiving.archive_stats_for_user(user)
@@ -882,7 +919,7 @@ defmodule Linkhut.ArchivingTest do
       assert stats.pending_links == 1
     end
 
-    test "groups snapshots by type" do
+    test "groups snapshots by format" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
       crawl_run = create_crawl_run(user, link)
@@ -892,7 +929,8 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 1000,
           crawl_run_id: crawl_run.id,
-          type: "singlefile"
+          format: "webpage",
+          source: "singlefile"
         })
 
       {:ok, _} =
@@ -900,20 +938,21 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 500,
           crawl_run_id: crawl_run.id,
-          type: "wayback"
+          format: "reference",
+          source: "wayback"
         })
 
       stats = Archiving.archive_stats_for_user(user)
 
       assert length(stats.snapshot_breakdown) == 2
 
-      sf = Enum.find(stats.snapshot_breakdown, &(&1.type == "singlefile"))
-      assert sf.total_count == 1
-      assert sf.total_size == 1000
+      wp = Enum.find(stats.snapshot_breakdown, &(&1.format == "webpage"))
+      assert wp.total_count == 1
+      assert wp.total_size == 1000
 
-      wb = Enum.find(stats.snapshot_breakdown, &(&1.type == "wayback"))
-      assert wb.total_count == 1
-      assert wb.total_size == 500
+      ref = Enum.find(stats.snapshot_breakdown, &(&1.format == "reference"))
+      assert ref.total_count == 1
+      assert ref.total_size == 500
     end
 
     test "does not count other users' data" do
@@ -928,7 +967,8 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 5000,
           crawl_run_id: crawl_run2.id,
-          type: "singlefile"
+          format: "webpage",
+          source: "singlefile"
         })
 
       stats = Archiving.archive_stats_for_user(user1)
@@ -962,7 +1002,8 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 1000,
           crawl_run_id: crawl_run.id,
-          type: "singlefile"
+          format: "webpage",
+          source: "singlefile"
         })
 
       stats = Archiving.admin_archive_stats()
@@ -972,7 +1013,7 @@ defmodule Linkhut.ArchivingTest do
              end)
 
       assert Enum.any?(stats.snapshot_breakdown, fn group ->
-               group.type == "singlefile" and
+               group.format == "webpage" and
                  Enum.any?(group.states, fn {state, count, _size} ->
                    state == :complete and count >= 1
                  end)
@@ -989,7 +1030,8 @@ defmodule Linkhut.ArchivingTest do
           state: :complete,
           file_size_bytes: 5000,
           crawl_run_id: crawl_run.id,
-          type: "singlefile"
+          format: "webpage",
+          source: "singlefile"
         })
 
       stats = Archiving.admin_archive_stats()
@@ -1099,6 +1141,179 @@ defmodule Linkhut.ArchivingTest do
       assert [first, second] = result
       assert first.id == link2.id
       assert second.id == link1.id
+    end
+  end
+
+  describe "list_reconcilable_links/2" do
+    defmodule FakeCrawlerA do
+      def source_type, do: "singlefile"
+      def module_version, do: "2"
+      def meta, do: %{tool_name: "SingleFile", tool_version: "1.0", version: module_version()}
+    end
+
+    defmodule FakeCrawlerB do
+      def source_type, do: "wayback"
+      def module_version, do: "2"
+      def meta, do: %{tool_name: "Wayback", tool_version: nil, version: module_version()}
+    end
+
+    setup do
+      put_override(Linkhut.Archiving, :crawlers, [FakeCrawlerA, FakeCrawlerB])
+      :ok
+    end
+
+    test "returns nothing for links with no crawl runs" do
+      user = insert(:user, credential: build(:credential))
+      _link = insert(:link, user_id: user.id)
+
+      assert Archiving.list_reconcilable_links(user) == []
+    end
+
+    test "returns link with all sources when no snapshots exist" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      insert(:crawl_run,
+        user_id: user.id,
+        link_id: link.id,
+        url: link.url,
+        state: :complete
+      )
+
+      result = Archiving.list_reconcilable_links(user)
+      assert [{returned_link, remaining}] = result
+      assert returned_link.id == link.id
+      assert remaining == MapSet.new(["singlefile", "wayback"])
+    end
+
+    test "does not return link when all sources are covered by current-version snapshots" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      cr =
+        insert(:crawl_run,
+          user_id: user.id,
+          link_id: link.id,
+          url: link.url,
+          state: :complete
+        )
+
+      # Both sources covered with matching module_version
+      insert(:snapshot,
+        user_id: user.id,
+        link_id: link.id,
+        crawl_run_id: cr.id,
+        format: "webpage",
+        source: "singlefile",
+        state: :complete,
+        crawler_meta: %{"version" => "2"}
+      )
+
+      insert(:snapshot,
+        user_id: user.id,
+        link_id: link.id,
+        crawl_run_id: cr.id,
+        format: "reference",
+        source: "wayback",
+        state: :complete,
+        crawler_meta: %{"version" => "2"}
+      )
+
+      assert Archiving.list_reconcilable_links(user) == []
+    end
+
+    test "returns missing sources not covered by any snapshot" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      cr =
+        insert(:crawl_run,
+          user_id: user.id,
+          link_id: link.id,
+          url: link.url,
+          state: :complete
+        )
+
+      # Only "singlefile" is covered
+      insert(:snapshot,
+        user_id: user.id,
+        link_id: link.id,
+        crawl_run_id: cr.id,
+        format: "webpage",
+        source: "singlefile",
+        state: :complete,
+        crawler_meta: %{"version" => "2"}
+      )
+
+      result = Archiving.list_reconcilable_links(user)
+      assert [{returned_link, remaining}] = result
+      assert returned_link.id == link.id
+      assert remaining == MapSet.new(["wayback"])
+    end
+
+    test "excludes sources already covered by existing snapshot" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      cr =
+        insert(:crawl_run,
+          user_id: user.id,
+          link_id: link.id,
+          url: link.url,
+          state: :complete
+        )
+
+      # "singlefile" is covered by a complete snapshot with current version
+      insert(:snapshot,
+        user_id: user.id,
+        link_id: link.id,
+        crawl_run_id: cr.id,
+        format: "webpage",
+        source: "singlefile",
+        state: :complete,
+        crawler_meta: %{"version" => "2"}
+      )
+
+      result = Archiving.list_reconcilable_links(user)
+      assert [{_link, remaining}] = result
+      assert remaining == MapSet.new(["wayback"])
+    end
+
+    test "skips links with in-flight crawl runs" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      insert(:crawl_run,
+        user_id: user.id,
+        link_id: link.id,
+        url: link.url,
+        state: :complete
+      )
+
+      # In-flight crawl run
+      insert(:crawl_run,
+        user_id: user.id,
+        link_id: link.id,
+        url: link.url,
+        state: :processing
+      )
+
+      assert Archiving.list_reconcilable_links(user) == []
+    end
+
+    test "does not return other users' links" do
+      user1 = insert(:user, credential: build(:credential))
+      user2 = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user2.id)
+
+      insert(:crawl_run,
+        user_id: user2.id,
+        link_id: link.id,
+        url: link.url,
+        state: :complete
+      )
+
+      assert Archiving.list_reconcilable_links(user1) == []
     end
   end
 end

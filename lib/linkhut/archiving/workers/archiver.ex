@@ -18,14 +18,23 @@ defmodule Linkhut.Archiving.Workers.Archiver do
     ]
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.Pipeline
+  alias Linkhut.Archiving.{Pipeline, Steps}
   alias Linkhut.Repo
 
   require Logger
 
   def enqueue(link, opts \\ []) do
     recrawl = Keyword.get(opts, :recrawl, false)
-    oban_opts = Keyword.drop(opts, [:recrawl])
+    only_types = Keyword.get(opts, :only_types)
+    reconciliation = Keyword.get(opts, :reconciliation, false)
+    oban_opts = Keyword.drop(opts, [:recrawl, :only_types, :reconciliation])
+
+    created_detail =
+      if reconciliation do
+        %{"msg" => "reconciliation", "new_types" => only_types}
+      else
+        %{"msg" => "created"}
+      end
 
     multi =
       Ecto.Multi.new()
@@ -34,13 +43,15 @@ defmodule Linkhut.Archiving.Workers.Archiver do
           link_id: link.id,
           user_id: link.user_id,
           url: link.url,
-          state: :pending
+          state: :pending,
+          steps: Steps.append_step([], "created", created_detail)
         })
       end)
       |> Oban.insert(:job, fn %{crawl_run: crawl_run} ->
         args =
           %{user_id: link.user_id, link_id: link.id, url: link.url, crawl_run_id: crawl_run.id}
           |> maybe_add_recrawl(recrawl)
+          |> maybe_add_only_types(only_types)
 
         __MODULE__.new(args, oban_opts)
       end)
@@ -75,11 +86,13 @@ defmodule Linkhut.Archiving.Workers.Archiver do
   def perform(%Oban.Job{args: args} = job) do
     %{"crawl_run_id" => crawl_run_id} = args
     recrawl = Map.get(args, "recrawl", false)
+    only_types = Map.get(args, "only_types")
 
     case Archiving.start_processing(crawl_run_id) do
       {:ok, crawl_run} ->
         Pipeline.run(crawl_run,
           recrawl: recrawl,
+          only_types: only_types,
           attempt: job.attempt,
           max_attempts: job.max_attempts
         )
@@ -89,11 +102,11 @@ defmodule Linkhut.Archiving.Workers.Archiver do
     end
   end
 
-  defp maybe_add_recrawl(args, recrawl) do
-    if recrawl do
-      Map.put(args, :recrawl, true)
-    else
-      args
-    end
-  end
+  defp maybe_add_recrawl(args, true), do: Map.put(args, :recrawl, true)
+  defp maybe_add_recrawl(args, _), do: args
+
+  defp maybe_add_only_types(args, nil), do: args
+
+  defp maybe_add_only_types(args, types) when is_list(types),
+    do: Map.put(args, :only_types, types)
 end

@@ -17,10 +17,13 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
   @cdx_url "https://web.archive.org/cdx/search/cdx"
 
   @impl true
-  def type, do: "wayback"
+  def source_type, do: "wayback"
 
   @impl true
-  def meta, do: %{tool_name: "Wayback CDX API", version: nil}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "Wayback CDX API", tool_version: nil, version: module_version()}
 
   @impl true
   def network_access, do: :third_party

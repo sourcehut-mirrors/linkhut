@@ -9,7 +9,7 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   # --- Function components ---
 
-  attr :tabs, :list, required: true, doc: "list of crawler type strings"
+  attr :tabs, :list, required: true, doc: "list of format strings"
   attr :link_id, :integer, required: true
   attr :request_path, :string, required: true
 
@@ -19,10 +19,10 @@ defmodule LinkhutWeb.SnapshotHTML do
       <h2 class="navigation-header">Archive</h2>
       <ul class="navigation-tabs">
         <.nav_link
-          :for={type <- @tabs}
+          :for={format <- @tabs}
           request_path={@request_path}
-          to={~p"/_/archive/#{@link_id}/type/#{type}"}
-          name={crawler_display_name(type)}
+          to={~p"/_/archive/#{@link_id}/type/#{format}"}
+          name={format_display_name(format)}
         />
         <.nav_link
           request_path={@request_path}
@@ -47,8 +47,8 @@ defmodule LinkhutWeb.SnapshotHTML do
         <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={@show_url} />
       </div>
       <div :if={!@external_url} class="snapshot-nav">
-        <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/full"}>full page</a>
-        <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.type}/download"}>download</a>
+        <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.format}/full"}>full page</a>
+        <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.format}/download"}>download</a>
       </div>
     </div>
     """
@@ -175,7 +175,7 @@ defmodule LinkhutWeb.SnapshotHTML do
         </div>
       </div>
       <div :if={@archive.error} class="archive-error">{@archive.error}</div>
-      <details class="archive-details" open={@archive.state in [:failed, :processing, :pending]}>
+      <details class="archive-details" open={@archive.state in [:failed, :not_archivable, :processing, :pending]}>
         <summary>Details</summary>
         <.step_timeline :if={@timeline != []} steps={@timeline} />
       </details>
@@ -206,7 +206,7 @@ defmodule LinkhutWeb.SnapshotHTML do
               <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
             </td>
             <td data-label="Actions">
-              <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/type/#{snapshot.type}"}>view</a>
+              <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/type/#{snapshot.format}"}>view</a>
             </td>
           </tr>
         </tbody>
@@ -303,6 +303,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   end
 
   defdelegate crawler_display_name(type), to: Linkhut.Formatting
+  defdelegate format_display_name(format), to: Linkhut.Formatting
 
   defp default_tool_name("singlefile"), do: "SingleFile"
   defp default_tool_name("httpfetch"), do: "Req"
@@ -365,7 +366,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   Extracts the crawler version from a snapshot's crawler_meta.
   Returns nil if not available.
   """
-  def crawler_version(%{crawler_meta: %{"version" => v}}) when not is_nil(v), do: v
+  def crawler_version(%{crawler_meta: %{"tool_version" => v}}) when not is_nil(v), do: v
   def crawler_version(_), do: nil
 
   @doc """
@@ -373,7 +374,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   E.g. "SingleFile" or "HTTP Fetch".
   """
   def crawler_label(snapshot) do
-    crawler_display_name(snapshot_type(snapshot))
+    crawler_display_name(snapshot_source(snapshot))
   end
 
   @doc """
@@ -393,7 +394,7 @@ defmodule LinkhutWeb.SnapshotHTML do
       nil ->
         case crawler_version(snapshot) do
           nil -> nil
-          version -> "#{default_tool_name(snapshot_type(snapshot))} #{version}"
+          version -> "#{default_tool_name(snapshot_source(snapshot))} #{version}"
         end
 
       name ->
@@ -412,6 +413,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   def archive_state_label(:pending), do: "Queued"
   def archive_state_label(:processing), do: "Processing"
   def archive_state_label(:complete), do: "Complete"
+  def archive_state_label(:not_archivable), do: "Not Archivable"
   def archive_state_label(:failed), do: "Failed"
   def archive_state_label(:pending_deletion), do: "Pending deletion"
   def archive_state_label(_), do: "Unknown"
@@ -422,6 +424,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   def archive_state_class(:pending), do: "pending"
   def archive_state_class(:processing), do: "processing"
   def archive_state_class(:complete), do: "complete"
+  def archive_state_class(:not_archivable), do: "not-archivable"
   def archive_state_class(:failed), do: "failed"
   def archive_state_class(:pending_deletion), do: "pending-deletion"
   def archive_state_class(_), do: ""
@@ -550,6 +553,6 @@ defmodule LinkhutWeb.SnapshotHTML do
     |> Enum.max(fn -> 0 end)
   end
 
-  defp snapshot_type(%{type: type}), do: type
-  defp snapshot_type(_), do: "unknown"
+  defp snapshot_source(%{source: source}), do: source
+  defp snapshot_source(_), do: "unknown"
 end

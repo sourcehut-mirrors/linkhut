@@ -3,8 +3,8 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
 
   import Linkhut.Factory
 
-  alias Linkhut.Archiving.Workers.Archiver
   alias Linkhut.Archiving.CrawlRun
+  alias Linkhut.Archiving.Workers.Archiver
 
   describe "enqueue/2" do
     test "inserts an Oban job with link data" do
@@ -51,10 +51,48 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
       args = stringify_keys(job.args)
       assert args["recrawl"] == true
     end
+
+    test "reconciliation enqueue uses reconciliation step" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      assert {:ok, %Oban.Job{} = job} =
+               Archiver.enqueue(link,
+                 only_types: ["singlefile"],
+                 reconciliation: true
+               )
+
+      args = stringify_keys(job.args)
+      crawl_run = Repo.get(CrawlRun, args["crawl_run_id"])
+
+      [created_step | _] = crawl_run.steps
+      assert created_step["detail"] == %{
+               "msg" => "reconciliation",
+               "new_types" => ["singlefile"]
+             }
+    end
+
+    test "includes only_types in job args when specified" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      assert {:ok, %Oban.Job{} = job} = Archiver.enqueue(link, only_types: ["singlefile"])
+      args = stringify_keys(job.args)
+      assert args["only_types"] == ["singlefile"]
+    end
+
+    test "omits only_types from job args when nil" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      assert {:ok, %Oban.Job{} = job} = Archiver.enqueue(link)
+      args = stringify_keys(job.args)
+      refute Map.has_key?(args, "only_types")
+    end
   end
 
   describe "perform/1" do
-    test "rejects local addresses" do
+    test "marks local addresses as not_archivable" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "http://localhost/test")
 
@@ -67,11 +105,14 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
         max_attempts: 4
       }
 
-      assert {:error, {:reserved_address, {:reserved, :loopback, "localhost"}}} =
-               Archiver.perform(oban_job)
+      assert {:ok, %{status: :not_archivable}} = Archiver.perform(oban_job)
+
+      args = stringify_keys(job.args)
+      crawl_run = Repo.get(CrawlRun, args["crawl_run_id"])
+      assert crawl_run.state == :not_archivable
     end
 
-    test "rejects URLs without a host" do
+    test "marks URLs without a host as not_archivable" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id, url: "not-a-url")
 
@@ -84,10 +125,14 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
         max_attempts: 4
       }
 
-      assert {:error, _} = Archiver.perform(oban_job)
+      assert {:ok, %{status: :not_archivable}} = Archiver.perform(oban_job)
+
+      args = stringify_keys(job.args)
+      crawl_run = Repo.get(CrawlRun, args["crawl_run_id"])
+      assert crawl_run.state == :not_archivable
     end
 
-    test "rejects private IP addresses" do
+    test "marks private IP addresses as not_archivable" do
       user = insert(:user, credential: build(:credential))
 
       for url <- [
@@ -105,7 +150,11 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
           max_attempts: 4
         }
 
-        assert {:error, {:reserved_address, _}} = Archiver.perform(oban_job)
+        assert {:ok, %{status: :not_archivable}} = Archiver.perform(oban_job)
+
+        args = stringify_keys(job.args)
+        crawl_run = Repo.get(CrawlRun, args["crawl_run_id"])
+        assert crawl_run.state == :not_archivable
       end
     end
 

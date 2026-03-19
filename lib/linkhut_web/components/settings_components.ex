@@ -8,6 +8,7 @@ defmodule LinkhutWeb.SettingsComponents do
 
   defdelegate format_bytes(bytes), to: Linkhut.Formatting
   defdelegate crawler_display_name(type), to: Linkhut.Formatting
+  defdelegate format_display_name(format), to: Linkhut.Formatting
 
   attr :is_admin?, :boolean, required: true, doc: "flag for whether to show admin tabs"
   attr :request_path, :string, required: true, doc: "the current path"
@@ -90,7 +91,7 @@ defmodule LinkhutWeb.SettingsComponents do
   def snapshot_breakdown_table(assigns) do
     rows =
       Enum.flat_map(assigns.groups, fn group ->
-        header = {:header, group.type, group.total_count, group.total_size}
+        header = {:header, group.format, group.total_count, group.total_size}
 
         states =
           Enum.map(group.states, fn {state, count, size} -> {:state, state, count, size} end)
@@ -112,9 +113,9 @@ defmodule LinkhutWeb.SettingsComponents do
       <tbody>
         <%= for row <- @rows do %>
           <%= case row do %>
-            <% {:header, type, count, size} -> %>
+            <% {:header, format, count, size} -> %>
               <tr class="group-header">
-                <td><strong>{crawler_display_name(type)}</strong></td>
+                <td><strong>{format_display_name(format)}</strong></td>
                 <td><strong>{count}</strong></td>
                 <td><strong>{format_bytes(size)}</strong></td>
               </tr>

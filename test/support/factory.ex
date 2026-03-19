@@ -55,16 +55,23 @@ defmodule Linkhut.Factory do
 
     {link_id, attrs} = Map.pop_lazy(attrs, :link_id, fn -> insert(:link, user_id: user_id).id end)
 
+    {crawl_run_id, attrs} =
+      Map.pop_lazy(attrs, :crawl_run_id, fn ->
+        insert(:crawl_run, user_id: user_id, link_id: link_id, state: :complete).id
+      end)
+
     snapshot = %Linkhut.Archiving.Snapshot{
       user_id: user_id,
       link_id: link_id,
-      type: "singlefile",
+      crawl_run_id: crawl_run_id,
+      format: "webpage",
+      source: "singlefile",
       state: :complete,
       storage_key: Linkhut.Archiving.StorageKey.local("/tmp/test/archive"),
       file_size_bytes: 1024,
       processing_time_ms: 500,
       response_code: 200,
-      crawler_meta: %{"tool_name" => "SingleFile", "version" => "1.0.0"}
+      crawler_meta: %{"tool_name" => "SingleFile", "tool_version" => "1.0.0", "version" => "1"}
     }
 
     merge_attributes(snapshot, attrs)

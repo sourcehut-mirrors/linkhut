@@ -23,7 +23,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
-        type: "singlefile",
+        format: "webpage",
+        source: "singlefile",
         state: :complete,
         storage_key: storage_key,
         file_size_bytes: 1024,
@@ -51,7 +52,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "redirects to first available type", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}")
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/singlefile"
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/webpage"
     end
 
     test "redirects when link not found", %{conn: conn, user: user} do
@@ -89,13 +90,13 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup :create_link_and_snapshot
 
     test "renders snapshot viewer for specific type", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage")
       assert html_response(conn, 200) =~ "snapshot"
     end
 
     test "redirects to first available type for unknown type", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}/type/nonexistent")
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/singlefile"
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/webpage"
     end
   end
 
@@ -147,7 +148,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup :create_link_and_snapshot
 
     test "redirects to serve URL with fresh token", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/full")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/full")
       location = redirected_to(conn)
       assert location =~ "/_/snapshot/"
       assert location =~ "/serve"
@@ -159,12 +160,13 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, _snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :pending,
           crawl_run_id: crawl_run.id
         })
 
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/full")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/full")
       assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
@@ -173,7 +175,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup :create_link_and_snapshot
 
     test "sends file as download", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/download")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/download")
       assert response(conn, 200) =~ "archived content"
       [disposition] = get_resp_header(conn, "content-disposition")
       assert disposition =~ "attachment"
@@ -239,7 +241,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, _snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :pending,
           crawl_run_id: crawl_run.id
         })
@@ -277,7 +280,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, _snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :pending,
           crawl_run_id: crawl_run.id
         })
@@ -338,7 +342,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :complete,
           storage_key: storage_key,
           file_size_bytes: byte_size(compressed),
@@ -404,7 +409,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       link: link,
       original_content: original_content
     } do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/singlefile/download")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/download")
       body = response(conn, 200)
       assert body == original_content
 
@@ -427,7 +432,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "wayback",
+          format: "reference",
+          source: "wayback",
           state: :complete,
           storage_key:
             StorageKey.external("https://web.archive.org/web/20250301/https://example.com"),
@@ -445,20 +451,20 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "show renders external content for wayback snapshot", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/wayback")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/reference")
       body = html_response(conn, 200)
       assert body =~ "Wayback Machine"
       assert body =~ "snapshot-content-external"
     end
 
     test "full redirects externally for wayback snapshot", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/wayback/full")
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/reference/full")
       assert redirected_to(conn) == "https://web.archive.org/web/20250301/https://example.com"
     end
 
     test "download redirects with flash for wayback snapshot", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/wayback/download")
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/wayback"
+      conn = get(conn, ~p"/_/archive/#{link.id}/type/reference/download")
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/reference"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "externally"
     end
 
@@ -534,7 +540,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, _snapshot} =
         Archiving.create_snapshot(link.id, free_user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :complete,
           storage_key: storage_key,
           file_size_bytes: 1024,
@@ -550,7 +557,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         conn
         |> recycle()
         |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/#{link.id}/type/singlefile")
+        |> get(~p"/_/archive/#{link.id}/type/webpage")
 
       assert html_response(conn, 200) =~ "snapshot"
     end
@@ -597,7 +604,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       {:ok, _snapshot} =
         Archiving.create_snapshot(link.id, free_user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :complete,
           storage_key: storage_key,
           file_size_bytes: 1024,
@@ -614,7 +622,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         conn
         |> recycle()
         |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/#{link.id}/type/singlefile")
+        |> get(~p"/_/archive/#{link.id}/type/webpage")
 
       assert html_response(view_conn, 200) =~ "snapshot"
 

@@ -4,9 +4,9 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
   alias Linkhut.Archiving.Crawler.WaybackMachine
   alias Linkhut.Archiving.Crawler.Context
 
-  describe "type/0" do
+  describe "source_type/0" do
     test "returns wayback" do
-      assert WaybackMachine.type() == "wayback"
+      assert WaybackMachine.source_type() == "wayback"
     end
   end
 
@@ -18,7 +18,8 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachineTest do
 
   describe "meta/0" do
     test "returns Wayback Machine metadata" do
-      assert %{tool_name: "Wayback CDX API", version: nil} = WaybackMachine.meta()
+      assert %{tool_name: "Wayback CDX API", tool_version: nil, version: "1"} =
+               WaybackMachine.meta()
     end
   end
 

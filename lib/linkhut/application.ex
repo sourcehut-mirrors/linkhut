@@ -62,7 +62,7 @@ defmodule Linkhut.Application do
     for module <- Linkhut.Config.archiving(:crawlers, []) do
       Code.ensure_loaded!(module)
 
-      unless function_exported?(module, :type, 0) and
+      unless function_exported?(module, :source_type, 0) and
                function_exported?(module, :can_handle?, 2) and
                function_exported?(module, :fetch, 1) do
         raise "#{inspect(module)} does not implement Linkhut.Archiving.Crawler behaviour"

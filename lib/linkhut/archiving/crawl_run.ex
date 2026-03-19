@@ -16,13 +16,12 @@ defmodule Linkhut.Archiving.CrawlRun do
     field :final_url, :string
 
     field :state, Ecto.Enum,
-      values: [:pending, :processing, :complete, :failed, :pending_deletion],
+      values: [:pending, :processing, :complete, :not_archivable, :failed, :pending_deletion],
       default: :pending
 
     field :preflight_meta, :map
     field :steps, {:array, :map}, default: []
     field :error, :string
-
     # Managed by Archiving.recompute_crawl_run_size*/1 — not in @castable_fields.
     field :total_size_bytes, :integer, default: 0
 

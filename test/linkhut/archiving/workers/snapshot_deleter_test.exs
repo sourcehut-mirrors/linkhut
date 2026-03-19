@@ -31,6 +31,8 @@ defmodule Linkhut.Archiving.Workers.SnapshotDeleterTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
+        format: "webpage",
+        source: "singlefile",
         state: :pending_deletion,
         storage_key: "local:" <> path,
         crawl_run_id: crawl_run.id
@@ -53,6 +55,8 @@ defmodule Linkhut.Archiving.Workers.SnapshotDeleterTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
+        format: "webpage",
+        source: "singlefile",
         state: :pending_deletion,
         storage_key: "local:" <> path,
         crawl_run_id: crawl_run.id
@@ -73,6 +77,8 @@ defmodule Linkhut.Archiving.Workers.SnapshotDeleterTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
+        format: "webpage",
+        source: "singlefile",
         state: :pending_deletion,
         crawl_run_id: crawl_run.id
       })
@@ -93,6 +99,8 @@ defmodule Linkhut.Archiving.Workers.SnapshotDeleterTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
+        format: "webpage",
+        source: "singlefile",
         state: :complete,
         crawl_run_id: crawl_run.id
       })
@@ -110,6 +118,8 @@ defmodule Linkhut.Archiving.Workers.SnapshotDeleterTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
+        format: "webpage",
+        source: "singlefile",
         state: :pending_deletion,
         storage_key: "cloud:bucket/key",
         crawl_run_id: crawl_run.id

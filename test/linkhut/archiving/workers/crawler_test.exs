@@ -16,19 +16,28 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
     :ok
   end
 
-  defp create_pending_snapshot(user, link, type \\ "singlefile") do
+  defp create_pending_snapshot(user, link, mock_source \\ "singlefile") do
     crawl_run =
       insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
+    # Mock crawlers use arbitrary source_type names for resolve_crawler;
+    # the DB CHECK constraint only allows real source values.
+    {db_source, db_format} = db_source_format(mock_source)
+
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
-        type: type,
+        format: db_format,
+        source: db_source,
         state: :pending,
         crawl_run_id: crawl_run.id
       })
 
     snapshot
   end
+
+  defp db_source_format("wayback"), do: {"wayback", "reference"}
+  defp db_source_format("external"), do: {"wayback", "reference"}
+  defp db_source_format(_), do: {"singlefile", "webpage"}
 
   defp make_job(snapshot, user, link, opts \\ []) do
     type = Keyword.get(opts, :type, "singlefile")
@@ -98,7 +107,8 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :complete,
           storage_key: "local:/tmp/test",
           crawl_run_id: crawl_run.id
@@ -392,21 +402,30 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       assert crawl_run.state == :complete
     end
 
-    test "marks old archives for deletion on recrawl" do
+    test "supersedes old snapshots of the same type on completion" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
-      # Create an old archive
+      # Create an old crawl run with a complete snapshot
       old_crawl_run =
-        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
 
-      # Create a new archive for the recrawl
+      {:ok, old_snapshot} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          format: "webpage",
+          source: "singlefile",
+          state: :complete,
+          crawl_run_id: old_crawl_run.id
+        })
+
+      # Create a new crawl run for the recrawl
       new_crawl_run =
         insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       {:ok, snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "singlefile",
+          format: "webpage",
+          source: "singlefile",
           state: :pending,
           crawl_run_id: new_crawl_run.id
         })
@@ -418,15 +437,16 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       job =
         make_job(snapshot, user, link,
           type: "success",
-          recrawl: true,
           crawl_run_id: new_crawl_run.id
         )
 
       Crawler.perform(job)
 
-      # Old archive should be marked for deletion
+      # Old snapshot should be marked for deletion
+      assert Repo.get(Snapshot, old_snapshot.id).state == :pending_deletion
+      # Old crawl run (now with zero non-deleted snapshots) should be pending_deletion
       assert Repo.get(Linkhut.Archiving.CrawlRun, old_crawl_run.id).state == :pending_deletion
-      # New archive should have completed (only snapshot is now :complete)
+      # New crawl run should have completed
       assert Repo.get(Linkhut.Archiving.CrawlRun, new_crawl_run.id).state == :complete
     end
 
@@ -445,14 +465,16 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       # Create two snapshots for different crawlers
       {:ok, success_snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "success",
+          format: "webpage",
+          source: "singlefile",
           state: :pending,
           crawl_run_id: crawl_run.id
         })
 
       {:ok, failing_snapshot} =
         Archiving.create_snapshot(link.id, user.id, %{
-          type: "failing",
+          format: "webpage",
+          source: "httpfetch",
           state: :pending,
           crawl_run_id: crawl_run.id
         })
@@ -598,10 +620,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "failing"
+  def source_type, do: "failing"
 
   @impl true
-  def meta, do: %{tool_name: "FailingCrawler", version: "0.0.1"}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "FailingCrawler", tool_version: "0.0.1", version: module_version()}
 
   @impl true
   def network_access, do: :target_url
@@ -620,10 +645,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "large"
+  def source_type, do: "large"
 
   @impl true
-  def meta, do: %{tool_name: "LargeCrawler", version: "1.0.0"}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "LargeCrawler", tool_version: "1.0.0", version: module_version()}
 
   @impl true
   def network_access, do: :target_url
@@ -652,10 +680,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "success"
+  def source_type, do: "success"
 
   @impl true
-  def meta, do: %{tool_name: "SuccessCrawler", version: "1.0.0"}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "SuccessCrawler", tool_version: "1.0.0", version: module_version()}
 
   @impl true
   def network_access, do: :target_url
@@ -683,10 +714,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "noretry"
+  def source_type, do: "noretry"
 
   @impl true
-  def meta, do: %{tool_name: "NoRetryCrawler", version: nil}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "NoRetryCrawler", tool_version: nil, version: module_version()}
 
   @impl true
   def network_access, do: :target_url
@@ -705,10 +739,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "raising"
+  def source_type, do: "raising"
 
   @impl true
-  def meta, do: %{tool_name: "RaisingCrawler", version: "0.0.1"}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "RaisingCrawler", tool_version: "0.0.1", version: module_version()}
 
   @impl true
   def network_access, do: :target_url
@@ -727,7 +764,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "notavail"
+  def source_type, do: "notavail"
 
   @impl true
   def module_version, do: "1"
@@ -752,7 +789,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.RateLimitedCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "ratelimited"
+  def source_type, do: "ratelimited"
 
   @impl true
   def module_version, do: "1"
@@ -781,10 +818,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler do
   @behaviour Linkhut.Archiving.Crawler
 
   @impl true
-  def type, do: "external"
+  def source_type, do: "external"
 
   @impl true
-  def meta, do: %{tool_name: "ExternalCrawler", version: nil}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: "ExternalCrawler", tool_version: nil, version: module_version()}
 
   @impl true
   def network_access, do: :third_party

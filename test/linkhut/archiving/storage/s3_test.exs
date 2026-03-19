@@ -27,7 +27,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
       assert {:ok, key, meta} =
                S3.store({:data, "hello"}, snapshot, content_type: "application/octet-stream")
 
-      assert key == "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      assert key == "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert meta.file_size_bytes == 5
       assert meta.encoding == nil
     end
@@ -38,7 +38,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
 
       assert {:ok, key, meta} = S3.store({:data, data}, snapshot, content_type: "text/html")
 
-      assert key =~ "42.singlefile"
+      assert key =~ "42.webpage"
       refute key =~ ".gz"
       assert meta.encoding == "gzip"
       assert meta.file_size_bytes < byte_size(data)
@@ -50,7 +50,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
       assert {:ok, key, meta} =
                S3.store({:data, "hello"}, snapshot, content_type: "image/png")
 
-      assert key == "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      assert key == "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert meta.encoding == nil
     end
 
@@ -85,7 +85,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
       assert {:ok, key, meta} =
                S3.store({:file, path}, snapshot, content_type: "application/octet-stream")
 
-      assert key == "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      assert key == "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert meta.file_size_bytes == byte_size("file content")
     end
 
@@ -96,7 +96,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
       assert {:ok, key, meta} =
                S3.store({:stream, stream}, snapshot, content_type: "application/octet-stream")
 
-      assert key == "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      assert key == "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert meta.file_size_bytes == byte_size("chunk1chunk2")
     end
 
@@ -121,11 +121,11 @@ defmodule Linkhut.Archiving.Storage.S3Test do
 
   describe "resolve/1" do
     test "generates presigned URL for active bucket key" do
-      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      key = "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert {:ok, {:redirect, url}} = S3.resolve(key)
       assert url =~ "s3.example.com"
       assert url =~ "test-bucket"
-      assert url =~ "1/100/10/42.singlefile"
+      assert url =~ "1/100/42.webpage"
       assert url =~ "X-Amz-Expires=300"
     end
 
@@ -140,14 +140,14 @@ defmodule Linkhut.Archiving.Storage.S3Test do
         ]
       ])
 
-      key = "s3://old.s3.example.com/old-bucket/1/100/10/42.singlefile"
+      key = "s3://old.s3.example.com/old-bucket/1/100/42.webpage"
       assert {:ok, {:redirect, url}} = S3.resolve(key)
       assert url =~ "old.s3.example.com"
       assert url =~ "old-bucket"
     end
 
     test "returns error for unknown endpoint+bucket" do
-      key = "s3://unknown.example.com/unknown-bucket/1/100/10/42.singlefile"
+      key = "s3://unknown.example.com/unknown-bucket/1/100/42.webpage"
       assert {:error, :unknown_bucket} = S3.resolve(key)
     end
 
@@ -158,7 +158,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
 
   describe "resolve/2" do
     test "includes response-content-disposition in presigned URL" do
-      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      key = "s3://s3.example.com/test-bucket/1/100/42.webpage"
 
       assert {:ok, {:redirect, url}} =
                S3.resolve(key, disposition: "attachment; filename=\"test.html\"")
@@ -173,12 +173,12 @@ defmodule Linkhut.Archiving.Storage.S3Test do
 
   describe "delete/1" do
     test "deletes object from active bucket" do
-      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      key = "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert :ok = S3.delete(key)
     end
 
     test "returns error for unknown bucket" do
-      key = "s3://unknown.example.com/unknown-bucket/1/100/10/42.singlefile"
+      key = "s3://unknown.example.com/unknown-bucket/1/100/42.webpage"
       assert {:error, :unknown_bucket} = S3.delete(key)
     end
 
@@ -199,7 +199,7 @@ defmodule Linkhut.Archiving.Storage.S3Test do
   end
 
   defp build_snapshot(overrides \\ []) do
-    defaults = [id: 42, user_id: 1, link_id: 100, crawl_run_id: 10, type: "singlefile"]
+    defaults = [id: 42, user_id: 1, link_id: 100, format: "webpage", source: "singlefile"]
     struct!(Snapshot, Keyword.merge(defaults, overrides))
   end
 

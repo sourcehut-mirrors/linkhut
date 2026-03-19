@@ -210,22 +210,20 @@ defmodule Linkhut.Archiving.Storage.S3 do
          id: id,
          user_id: user_id,
          link_id: link_id,
-         crawl_run_id: crawl_run_id,
-         type: type
+         format: format
        })
        when is_integer(id) and is_integer(user_id) and is_integer(link_id) and
-              is_integer(crawl_run_id) and is_binary(type) do
+              is_binary(format) do
     Path.join([
       Integer.to_string(user_id),
       Integer.to_string(link_id),
-      Integer.to_string(crawl_run_id),
-      "#{id}.#{type}"
+      "#{id}.#{format}"
     ])
   end
 
   defp build_prefix(opts) do
     parts =
-      [:user_id, :link_id, :crawl_run_id]
+      [:user_id, :link_id]
       |> Enum.reduce_while([], fn key, acc ->
         case Keyword.get(opts, key) do
           nil -> {:halt, acc}

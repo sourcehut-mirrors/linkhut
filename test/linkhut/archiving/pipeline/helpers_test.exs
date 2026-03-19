@@ -34,17 +34,54 @@ defmodule Linkhut.Archiving.Pipeline.HelpersTest do
     end
   end
 
+  describe "not_archivable?/1" do
+    test "returns true for invalid_url" do
+      assert Helpers.not_archivable?(:invalid_url)
+    end
+
+    test "returns true for unsupported_scheme" do
+      assert Helpers.not_archivable?({:unsupported_scheme, "ftp"})
+    end
+
+    test "returns true for no_eligible_crawlers" do
+      assert Helpers.not_archivable?(:no_eligible_crawlers)
+    end
+
+    test "returns true for reserved_address" do
+      assert Helpers.not_archivable?({:reserved_address, :loopback})
+    end
+
+    test "returns true for file_too_large" do
+      assert Helpers.not_archivable?({:file_too_large, 100_000_000})
+    end
+
+    test "returns false for other reasons" do
+      refute Helpers.not_archivable?(:preflight_failed)
+      refute Helpers.not_archivable?({:dns_failed, "example.com"})
+      refute Helpers.not_archivable?({:http_error, 404})
+    end
+  end
+
   describe "fatal?/1" do
-    test "returns true for fatal reasons" do
-      assert Helpers.fatal?(:invalid_url)
-      assert Helpers.fatal?({:unsupported_scheme, "ftp"})
-      assert Helpers.fatal?(:no_eligible_crawlers)
+    test "returns true for 4xx http errors" do
+      assert Helpers.fatal?({:http_error, 400})
+      assert Helpers.fatal?({:http_error, 403})
+      assert Helpers.fatal?({:http_error, 404})
+      assert Helpers.fatal?({:http_error, 410})
+    end
+
+    test "returns false for 429 (rate limited)" do
+      refute Helpers.fatal?({:http_error, 429})
+    end
+
+    test "returns false for 5xx http errors" do
+      refute Helpers.fatal?({:http_error, 500})
+      refute Helpers.fatal?({:http_error, 503})
     end
 
     test "returns false for retryable reasons" do
       refute Helpers.fatal?(:preflight_failed)
       refute Helpers.fatal?({:dns_failed, "example.com"})
-      refute Helpers.fatal?({:reserved_address, :loopback})
     end
   end
 end

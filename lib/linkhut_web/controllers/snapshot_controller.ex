@@ -71,13 +71,13 @@ defmodule LinkhutWeb.SnapshotController do
   end
 
   defp render_snapshot_or_redirect(conn, _user, _link, link_id, complete, nil = _type) do
-    grouped = Enum.group_by(complete, & &1.type)
+    grouped = Enum.group_by(complete, & &1.format)
     first_type = grouped |> Map.keys() |> Enum.sort() |> hd()
     redirect(conn, to: ~p"/_/archive/#{link_id}/type/#{first_type}")
   end
 
   defp render_snapshot_or_redirect(conn, user, link, link_id, complete, type) do
-    grouped = Enum.group_by(complete, & &1.type)
+    grouped = Enum.group_by(complete, & &1.format)
     tabs = grouped |> Map.keys() |> Enum.sort()
 
     if type in tabs do
@@ -234,7 +234,7 @@ defmodule LinkhutWeb.SnapshotController do
             archives
             |> Enum.flat_map(& &1.snapshots)
             |> Enum.filter(&(&1.state == :complete))
-            |> Enum.map(& &1.type)
+            |> Enum.map(& &1.format)
             |> Enum.uniq()
             |> Enum.sort()
 

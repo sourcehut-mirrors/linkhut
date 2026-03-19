@@ -26,10 +26,20 @@ defmodule Linkhut.Archiving.Pipeline.Helpers do
   end
 
   @doc """
-  Returns true if the error reason is fatal (no retries, no third-party fallback).
+  Returns true if the URL/content is fundamentally not archivable.
+  These outcomes are permanent — retrying will never succeed.
   """
-  def fatal?(:invalid_url), do: true
-  def fatal?({:unsupported_scheme, _}), do: true
-  def fatal?(:no_eligible_crawlers), do: true
+  def not_archivable?(:invalid_url), do: true
+  def not_archivable?({:unsupported_scheme, _}), do: true
+  def not_archivable?({:reserved_address, _}), do: true
+  def not_archivable?(:no_eligible_crawlers), do: true
+  def not_archivable?({:file_too_large, _}), do: true
+  def not_archivable?(_), do: false
+
+  @doc """
+  Returns true if the error reason is fatal (no retries).
+  """
+  def fatal?({:http_error, 429}), do: false
+  def fatal?({:http_error, status}) when status >= 400 and status < 500, do: true
   def fatal?(_), do: false
 end

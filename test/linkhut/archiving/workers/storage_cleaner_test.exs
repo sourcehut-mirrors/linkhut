@@ -13,6 +13,8 @@ defmodule Linkhut.Archiving.Workers.StorageCleanerTest do
 
     {:ok, snapshot} =
       Archiving.create_snapshot(link.id, user.id, %{
+        format: "webpage",
+        source: "singlefile",
         state: :pending_deletion,
         crawl_run_id: crawl_run.id
       })

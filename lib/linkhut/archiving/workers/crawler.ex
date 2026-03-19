@@ -117,7 +117,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
   end
 
-  defp handle_file_result(snapshot, job, result, url, args, start_time) do
+  defp handle_file_result(snapshot, job, result, url, _args, start_time) do
     processing_time = System.monotonic_time(:millisecond) - start_time
     file_size = get_file_size(result[:path])
     staging_dir = Path.dirname(result[:path])
@@ -162,7 +162,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
           })
 
           Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
-          maybe_mark_old_archives(args)
+          Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :complete, snapshot.source)
           Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
           :ok
 
@@ -173,7 +173,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
   end
 
-  defp handle_external_result(snapshot, _job, result, url, args, start_time) do
+  defp handle_external_result(snapshot, _job, result, url, _args, start_time) do
     processing_time = System.monotonic_time(:millisecond) - start_time
     storage_key = Linkhut.Archiving.StorageKey.external(result[:url])
 
@@ -199,7 +199,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            archive_metadata: metadata
          }) do
       {:ok, _} ->
-        maybe_mark_old_archives(args)
+        Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :complete, snapshot.source)
         Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
         :ok
 
@@ -234,6 +234,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
         )
     end
 
+    Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :not_available, snapshot.source)
     Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
     :ok
   end
@@ -256,23 +257,15 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
   end
 
-  defp maybe_mark_old_archives(args) do
-    if Map.get(args, "recrawl", false) do
-      link_id = args["link_id"]
-      crawl_run_id = Map.get(args, "crawl_run_id")
-      Archiving.mark_old_crawl_runs_for_deletion(link_id, exclude: [crawl_run_id])
-    end
-  end
-
   defp resolve_crawler(type) do
     Linkhut.Config.archiving(:crawlers, [])
-    |> Enum.find(fn module -> module.type() == type end)
+    |> Enum.find(fn module -> module.source_type() == type end)
   end
 
   defp check_rate_limit(module) do
     if function_exported?(module, :rate_limit, 0) do
       {scale_ms, limit} = module.rate_limit()
-      key = "crawler:#{module.type()}"
+      key = "crawler:#{module.source_type()}"
 
       case Hammer.check_rate(key, scale_ms, limit) do
         {:allow, _count} -> :ok
@@ -340,7 +333,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
         )
     end
 
-    maybe_mark_old_archives(job.args)
+    Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :failed, snapshot.source)
     Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
     :ok
   end
@@ -383,7 +376,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     end
 
     if final_attempt? do
-      maybe_mark_old_archives(job.args)
+      Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :failed, snapshot.source)
       Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
     end
 

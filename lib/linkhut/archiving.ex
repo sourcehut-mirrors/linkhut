@@ -10,6 +10,7 @@ defmodule Linkhut.Archiving do
 
   import Ecto.Query
 
+  alias Linkhut.Accounts
   alias Linkhut.Accounts.User
   alias Linkhut.Archiving.{CrawlRun, Snapshot, Steps, Storage, Tokens}
   alias Linkhut.Links.Link
@@ -48,6 +49,21 @@ defmodule Linkhut.Archiving do
   end
 
   def can_view_archives?(_), do: false
+
+  @doc """
+  Returns the list of users eligible for archiving based on the current mode.
+
+  - `:disabled` → empty list
+  - `:limited` → users with an active supporter subscription
+  - `:enabled` → all active users
+  """
+  def eligible_users do
+    case mode() do
+      :disabled -> []
+      :limited -> Subscriptions.list_subscribed_users([:supporter])
+      :enabled -> Accounts.list_active_users()
+    end
+  end
 
   # --- User stats ---
 
@@ -104,21 +120,21 @@ defmodule Linkhut.Archiving do
   defp snapshot_breakdown(user_id) do
     Snapshot
     |> then(fn q -> if user_id, do: where(q, user_id: ^user_id), else: q end)
-    |> group_by([s], [s.type, s.state])
+    |> group_by([s], [s.format, s.state])
     |> select([s], %{
-      type: s.type,
+      format: s.format,
       state: s.state,
       count: count(s.id),
       size: coalesce(sum(s.file_size_bytes), 0)
     })
-    |> order_by([s], [s.type, s.state])
+    |> order_by([s], [s.format, s.state])
     |> Repo.all()
     |> Enum.map(fn row -> %{row | size: to_integer(row.size)} end)
-    |> Enum.group_by(& &1.type)
-    |> Enum.sort_by(fn {type, _} -> type end)
-    |> Enum.map(fn {type, rows} ->
+    |> Enum.group_by(& &1.format)
+    |> Enum.sort_by(fn {format, _} -> format end)
+    |> Enum.map(fn {format, rows} ->
       %{
-        type: type,
+        format: format,
         states: Enum.map(rows, &{&1.state, &1.count, &1.size}),
         total_count: rows |> Enum.map(& &1.count) |> Enum.sum(),
         total_size: rows |> Enum.map(& &1.size) |> Enum.sum()
@@ -216,36 +232,82 @@ defmodule Linkhut.Archiving do
   end
 
   @doc """
-  Marks old crawl runs (and their snapshots) for deletion for a given link,
-  excluding specific crawl run IDs.
+  Cleans up older snapshots of the same `(link_id, type)` that are superseded
+  by a newly-terminal snapshot.
+
+  Quality ordering — a new state supersedes older snapshots in these states:
+
+  - `:complete`      → `:complete`, `:not_available`, `:failed`
+  - `:not_available` → `:not_available`, `:failed`
+  - `:failed`        → `:failed`
+
+  Also marks crawl runs that end up with zero remaining non-deleted snapshots
+  as `:pending_deletion`.
   """
-  def mark_old_crawl_runs_for_deletion(link_id, opts \\ []) do
-    exclude_ids = Keyword.get(opts, :exclude, []) |> Enum.reject(&is_nil/1)
+  def cleanup_superseded_snapshots(snapshot_id, link_id, format, new_state, new_source) do
+    superseded_states = superseded_states(new_state)
 
-    Repo.transaction(fn ->
-      crawl_run_query =
+    if superseded_states == [] do
+      :ok
+    else
+      do_cleanup_superseded(snapshot_id, link_id, format, superseded_states, new_source)
+    end
+  end
+
+  defp superseded_states(:complete), do: [:complete, :not_available, :failed]
+  defp superseded_states(:not_available), do: [:not_available, :failed]
+  defp superseded_states(:failed), do: [:failed]
+  defp superseded_states(_), do: []
+
+  defp do_cleanup_superseded(snapshot_id, link_id, format, superseded_states, new_source) do
+    # Mark older snapshots of the same (link_id, format) as pending_deletion.
+    # System sources don't supersede uploads (different source lineage).
+    base_query =
+      from(s in Snapshot,
+        where:
+          s.link_id == ^link_id and
+            s.format == ^format and
+            s.state in ^superseded_states and
+            s.id != ^snapshot_id
+      )
+
+    query =
+      if new_source != "upload" do
+        from(s in base_query, where: s.source != "upload")
+      else
+        base_query
+      end
+
+    {_count, affected_crawl_run_ids} =
+      from(s in query, select: s.crawl_run_id)
+      |> Repo.update_all(set: [state: :pending_deletion])
+
+    # Mark crawl runs that now have zero non-deleted snapshots
+    crawl_run_ids =
+      affected_crawl_run_ids
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    if crawl_run_ids != [] do
+      orphaned =
         from(cr in CrawlRun,
+          as: :cr,
+          where: cr.id in ^crawl_run_ids and cr.state != :pending_deletion,
           where:
-            cr.link_id == ^link_id and cr.state in [:pending, :processing, :complete, :failed]
+            not exists(
+              from(s in Snapshot,
+                where: s.crawl_run_id == parent_as(:cr).id and s.state != :pending_deletion
+              )
+            ),
+          select: cr.id
         )
+        |> Repo.all()
 
-      crawl_run_query =
-        if exclude_ids != [] do
-          from(cr in crawl_run_query, where: cr.id not in ^exclude_ids)
-        else
-          crawl_run_query
-        end
-
-      crawl_run_ids = Repo.all(from(cr in crawl_run_query, select: cr.id))
-
-      if crawl_run_ids != [] do
-        from(cr in CrawlRun, where: cr.id in ^crawl_run_ids)
-        |> Repo.update_all(set: [state: :pending_deletion])
-
-        from(s in Snapshot, where: s.crawl_run_id in ^crawl_run_ids)
+      if orphaned != [] do
+        from(cr in CrawlRun, where: cr.id in ^orphaned)
         |> Repo.update_all(set: [state: :pending_deletion])
       end
-    end)
+    end
 
     :ok
   end
@@ -255,7 +317,10 @@ defmodule Linkhut.Archiving do
   with the recrawl flag.
   """
   def schedule_recrawl(link) do
-    Linkhut.Archiving.Workers.Archiver.enqueue(link, recrawl: true, schedule_in: 10)
+    Linkhut.Archiving.Workers.Archiver.enqueue(link,
+      recrawl: true,
+      schedule_in: 10
+    )
   end
 
   # --- Snapshot functions ---
@@ -277,10 +342,10 @@ defmodule Linkhut.Archiving do
     |> Repo.all()
   end
 
-  @doc "Returns the latest complete snapshot of a given type for a link."
-  def get_latest_complete_snapshot(link_id, type) do
+  @doc "Returns the latest complete snapshot of a given format for a link."
+  def get_latest_complete_snapshot(link_id, format) do
     case Snapshot
-         |> where(link_id: ^link_id, type: ^type, state: :complete)
+         |> where(link_id: ^link_id, format: ^format, state: :complete)
          |> order_by([s], desc: s.inserted_at)
          |> limit(1)
          |> Repo.one() do
@@ -439,12 +504,105 @@ defmodule Linkhut.Archiving do
       left_join: s in Snapshot,
       on: l.id == s.link_id and s.state == :complete,
       left_join: cr in CrawlRun,
-      on: l.id == cr.link_id and cr.state in [:pending, :processing, :complete, :failed],
+      on:
+        l.id == cr.link_id and
+          cr.state in [:pending, :processing, :complete, :not_archivable, :failed],
       where: l.user_id == ^user.id and is_nil(s.id) and is_nil(cr.id),
       order_by: [desc: l.inserted_at],
       limit: ^limit
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Returns links that have configured sources not covered by a current
+  snapshot with matching version, excluding links with in-flight crawl runs.
+
+  Returns a list of `{link, remaining_sources}` tuples where `remaining_sources`
+  is a `MapSet` of crawler source type strings not yet covered by any snapshot.
+  """
+  def list_reconcilable_links(%User{} = user, limit \\ 100) do
+    configured_crawlers = Linkhut.Config.archiving(:crawlers, [])
+
+    if configured_crawlers == [] do
+      []
+    else
+      expected_sources = build_expected_sources(configured_crawlers)
+
+      user.id
+      |> fetch_uncovered_links(expected_sources)
+      |> Enum.take(limit)
+    end
+  end
+
+  defp build_expected_sources(crawlers) do
+    Enum.map(crawlers, fn module ->
+      {module.source_type(), module.module_version()}
+    end)
+  end
+
+  defp fetch_uncovered_links(user_id, expected_sources) do
+    # All links for this user that have at least one crawl run (i.e., were archived before)
+    # and have no in-flight crawl runs
+    archived_link_ids = archived_link_ids_without_inflight(user_id)
+
+    if archived_link_ids == [] do
+      []
+    else
+      do_fetch_uncovered(archived_link_ids, expected_sources)
+    end
+  end
+
+  defp archived_link_ids_without_inflight(user_id) do
+    from(l in Link,
+      join: cr in CrawlRun, on: cr.link_id == l.id,
+      left_join: inflight in CrawlRun,
+        on: inflight.link_id == l.id and inflight.state in [:pending, :processing],
+      where: l.user_id == ^user_id and is_nil(inflight.id),
+      distinct: true,
+      select: l.id
+    )
+    |> Repo.all()
+  end
+
+  defp do_fetch_uncovered(link_ids, expected_sources) do
+    # Get covered {source, version} pairs per link from existing snapshots
+    covered_by_link = covered_sources_by_link(link_ids)
+
+    expected_set = MapSet.new(expected_sources)
+
+    link_ids
+    |> Enum.map(fn link_id ->
+      covered = Map.get(covered_by_link, link_id, MapSet.new())
+      missing = MapSet.difference(expected_set, covered)
+      # Extract just the source names for the missing ones
+      missing_sources = MapSet.new(missing, fn {source, _version} -> source end)
+      {link_id, missing_sources}
+    end)
+    |> Enum.reject(fn {_link_id, missing} -> MapSet.size(missing) == 0 end)
+    |> load_links()
+  end
+
+  defp covered_sources_by_link(link_ids) when link_ids == [], do: %{}
+
+  defp covered_sources_by_link(link_ids) do
+    Snapshot
+    |> where([s], s.link_id in ^link_ids)
+    |> where([s], s.state in [:complete, :not_available, :pending, :crawling, :retryable])
+    |> select([s], {s.link_id, s.source, fragment("?->>'version'", s.crawler_meta)})
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), fn {_link_id, source, version} -> {source, version} end)
+    |> Map.new(fn {link_id, pairs} -> {link_id, MapSet.new(pairs)} end)
+  end
+
+  defp load_links(link_id_missing_pairs) do
+    link_ids = Enum.map(link_id_missing_pairs, &elem(&1, 0))
+    missing_by_id = Map.new(link_id_missing_pairs)
+
+    Link
+    |> where([l], l.id in ^link_ids)
+    |> Repo.all()
+    |> Enum.map(fn link -> {link, Map.fetch!(missing_by_id, link.id)} end)
   end
 
   @doc """
@@ -468,7 +626,7 @@ defmodule Linkhut.Archiving do
     crawler_groups =
       snapshots
       |> Enum.flat_map(fn snapshot ->
-        prefix = snapshot_type(snapshot)
+        prefix = snapshot_source(snapshot)
         steps = crawl_steps(snapshot) |> Enum.map(&Map.put(&1, "prefix", prefix))
         if steps == [], do: [], else: [{:crawler, steps}]
       end)
@@ -490,8 +648,8 @@ defmodule Linkhut.Archiving do
     assign_crawler_groups(rest, n + 1, [tagged | acc])
   end
 
-  defp snapshot_type(%{type: type}), do: type
-  defp snapshot_type(_), do: "unknown"
+  defp snapshot_source(%{source: source}), do: source
+  defp snapshot_source(_), do: "unknown"
 
   @doc "Extracts crawl steps from a snapshot's crawl_info."
   def crawl_steps(%{crawl_info: %{"steps" => steps}}) when is_list(steps), do: steps

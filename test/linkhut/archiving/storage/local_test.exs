@@ -19,7 +19,7 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
   end
 
   defp build_snapshot(overrides \\ []) do
-    defaults = [id: 1, user_id: 42, link_id: 999, crawl_run_id: 10, type: "singlefile"]
+    defaults = [id: 1, user_id: 42, link_id: 999, format: "webpage", source: "singlefile"]
     struct!(Snapshot, Keyword.merge(defaults, overrides))
   end
 
@@ -44,14 +44,14 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
       refute File.exists?(source)
     end
 
-    test "builds path with user_id/link_id/crawl_run_id/snapshot_id.type structure" do
+    test "builds path with user_id/link_id/snapshot_id.format structure" do
       source = create_temp_file("test")
 
       snapshot =
-        build_snapshot(id: 1, user_id: 42, link_id: 999, crawl_run_id: 10, type: "singlefile")
+        build_snapshot(id: 1, user_id: 42, link_id: 999, format: "webpage", source: "singlefile")
 
       assert {:ok, "local:" <> dest, _meta} = Local.store({:file, source}, snapshot)
-      assert dest =~ "/42/999/10/1.singlefile"
+      assert dest =~ "/42/999/1.webpage"
     end
   end
 
@@ -110,7 +110,7 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
 
   describe "delete/1" do
     test "deletes an existing file and returns :ok" do
-      path = Path.join(@data_dir, "1/100/10/42.singlefile")
+      path = Path.join(@data_dir, "1/100/42.webpage")
       File.mkdir_p!(Path.dirname(path))
       File.write!(path, "content")
 
@@ -119,7 +119,7 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
 
     test "returns :ok for non-existent file (idempotent)" do
-      path = Path.join(@data_dir, "1/100/10/missing.singlefile")
+      path = Path.join(@data_dir, "1/100/missing.webpage")
       assert :ok = Local.delete("local:" <> path)
     end
 
@@ -129,13 +129,12 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
 
     test "prunes empty parent directories after deletion" do
-      path = Path.join(@data_dir, "1/100/10/42.singlefile")
+      path = Path.join(@data_dir, "1/100/42.webpage")
       File.mkdir_p!(Path.dirname(path))
       File.write!(path, "content")
 
       assert :ok = Local.delete("local:" <> path)
 
-      refute File.exists?(Path.join(@data_dir, "1/100/10"))
       refute File.exists?(Path.join(@data_dir, "1/100"))
       refute File.exists?(Path.join(@data_dir, "1"))
       # data_dir itself must remain
@@ -143,9 +142,9 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
 
     test "stops pruning at first non-empty parent" do
-      # Create two files in sibling directories
-      path1 = Path.join(@data_dir, "1/100/10/42.singlefile")
-      path2 = Path.join(@data_dir, "1/100/20/43.singlefile")
+      # Create two files in sibling link directories
+      path1 = Path.join(@data_dir, "1/100/42.webpage")
+      path2 = Path.join(@data_dir, "1/200/43.webpage")
       File.mkdir_p!(Path.dirname(path1))
       File.mkdir_p!(Path.dirname(path2))
       File.write!(path1, "content1")
@@ -153,10 +152,9 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
 
       assert :ok = Local.delete("local:" <> path1)
 
-      # crawl_run_id dir should be pruned
-      refute File.exists?(Path.join(@data_dir, "1/100/10"))
-      # link_id dir should remain (still has sibling)
-      assert File.exists?(Path.join(@data_dir, "1/100"))
+      # link_id dir should be pruned
+      refute File.exists?(Path.join(@data_dir, "1/100"))
+      # user_id dir should remain (still has sibling)
       assert File.exists?(Path.join(@data_dir, "1"))
     end
   end
@@ -167,20 +165,20 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
 
     test "returns total size of all files" do
-      File.mkdir_p!(Path.join(@data_dir, "1/100/10"))
-      File.write!(Path.join(@data_dir, "1/100/10/42.singlefile"), "hello")
-      File.mkdir_p!(Path.join(@data_dir, "2/200/20"))
-      File.write!(Path.join(@data_dir, "2/200/20/43.singlefile"), "world!!")
+      File.mkdir_p!(Path.join(@data_dir, "1/100"))
+      File.write!(Path.join(@data_dir, "1/100/42.webpage"), "hello")
+      File.mkdir_p!(Path.join(@data_dir, "2/200"))
+      File.write!(Path.join(@data_dir, "2/200/43.webpage"), "world!!")
 
       assert {:ok, size} = Local.storage_used([])
       assert size == 12
     end
 
     test "with user_id returns size of that user's files only" do
-      File.mkdir_p!(Path.join(@data_dir, "1/100/10"))
-      File.write!(Path.join(@data_dir, "1/100/10/42.singlefile"), "hello")
-      File.mkdir_p!(Path.join(@data_dir, "2/200/20"))
-      File.write!(Path.join(@data_dir, "2/200/20/43.singlefile"), "world!!")
+      File.mkdir_p!(Path.join(@data_dir, "1/100"))
+      File.write!(Path.join(@data_dir, "1/100/42.webpage"), "hello")
+      File.mkdir_p!(Path.join(@data_dir, "2/200"))
+      File.write!(Path.join(@data_dir, "2/200/43.webpage"), "world!!")
 
       assert {:ok, 5} = Local.storage_used(user_id: 1)
       assert {:ok, 7} = Local.storage_used(user_id: 2)
@@ -191,23 +189,13 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
     end
 
     test "with link_id scopes to user/link directory" do
-      File.mkdir_p!(Path.join(@data_dir, "1/100/10"))
-      File.write!(Path.join(@data_dir, "1/100/10/42.singlefile"), "hello")
-      File.mkdir_p!(Path.join(@data_dir, "1/200/20"))
-      File.write!(Path.join(@data_dir, "1/200/20/43.singlefile"), "world!!")
+      File.mkdir_p!(Path.join(@data_dir, "1/100"))
+      File.write!(Path.join(@data_dir, "1/100/42.webpage"), "hello")
+      File.mkdir_p!(Path.join(@data_dir, "1/200"))
+      File.write!(Path.join(@data_dir, "1/200/43.webpage"), "world!!")
 
       assert {:ok, 5} = Local.storage_used(user_id: 1, link_id: 100)
       assert {:ok, 7} = Local.storage_used(user_id: 1, link_id: 200)
-    end
-
-    test "with crawl_run_id scopes to user/link/archive directory" do
-      File.mkdir_p!(Path.join(@data_dir, "1/100/10"))
-      File.write!(Path.join(@data_dir, "1/100/10/42.singlefile"), "hello")
-      File.mkdir_p!(Path.join(@data_dir, "1/100/20"))
-      File.write!(Path.join(@data_dir, "1/100/20/43.singlefile"), "world!!")
-
-      assert {:ok, 5} = Local.storage_used(user_id: 1, link_id: 100, crawl_run_id: 10)
-      assert {:ok, 7} = Local.storage_used(user_id: 1, link_id: 100, crawl_run_id: 20)
     end
   end
 
@@ -351,8 +339,7 @@ defmodule Linkhut.Archiving.Storage.LocalTest do
         Path.join([
           @data_dir,
           "#{snapshot.user_id}",
-          "#{snapshot.link_id}",
-          "#{snapshot.crawl_run_id}"
+          "#{snapshot.link_id}"
         ])
 
       File.mkdir_p!(dest_dir)

@@ -82,7 +82,9 @@ config :linkhut, Oban,
     # Hourly — clean up orphaned pending_deletion snapshots
     {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner},
     # Every 15 minutes — mark stale snapshots as failed
-    {"*/15 * * * *", Linkhut.Archiving.Workers.StaleSnapshotSweeper}
+    {"*/15 * * * *", Linkhut.Archiving.Workers.StaleSnapshotSweeper},
+    # Daily at 3am — reconcile links with uncovered sources
+    {"0 3 * * *", Linkhut.Archiving.Workers.Reconciler}
   ]
 
 # Archiving configuration

@@ -99,7 +99,7 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
 
     test "extracts crawler_version from crawler_meta" do
-      assert SnapshotHTML.crawler_version(%{crawler_meta: %{"version" => "1.0"}}) == "1.0"
+      assert SnapshotHTML.crawler_version(%{crawler_meta: %{"tool_version" => "1.0"}}) == "1.0"
       assert SnapshotHTML.crawler_version(%{crawler_meta: nil}) == nil
     end
 
@@ -110,12 +110,12 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   end
 
   describe "crawler_label/1" do
-    test "returns display name for known type" do
-      assert SnapshotHTML.crawler_label(%{type: "singlefile", archive_metadata: nil}) ==
+    test "returns display name for known source" do
+      assert SnapshotHTML.crawler_label(%{source: "singlefile", archive_metadata: nil}) ==
                "Web page"
     end
 
-    test "returns Unknown for missing type" do
+    test "returns Unknown for missing source" do
       assert SnapshotHTML.crawler_label(%{archive_metadata: nil}) == "Unknown"
     end
   end
@@ -123,27 +123,27 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   describe "tool_label/1" do
     test "returns tool name with version" do
       assert SnapshotHTML.tool_label(%{
-               type: "httpfetch",
-               crawler_meta: %{"tool_name" => "Req", "version" => "0.5.8"}
+               source: "httpfetch",
+               crawler_meta: %{"tool_name" => "Req", "tool_version" => "0.5.8"}
              }) == "Req 0.5.8"
     end
 
     test "returns tool name without version" do
       assert SnapshotHTML.tool_label(%{
-               type: "httpfetch",
+               source: "httpfetch",
                crawler_meta: %{"tool_name" => "Req"}
              }) == "Req"
     end
 
     test "falls back to default tool name with version when no tool_name" do
       assert SnapshotHTML.tool_label(%{
-               type: "singlefile",
-               crawler_meta: %{"version" => "1.2.3"}
+               source: "singlefile",
+               crawler_meta: %{"tool_version" => "1.2.3"}
              }) == "SingleFile 1.2.3"
     end
 
     test "returns nil when no tool_name and no version" do
-      assert SnapshotHTML.tool_label(%{type: "singlefile", crawler_meta: nil}) == nil
+      assert SnapshotHTML.tool_label(%{source: "singlefile", crawler_meta: nil}) == nil
     end
   end
 

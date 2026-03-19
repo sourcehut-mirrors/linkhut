@@ -20,23 +20,18 @@ defmodule Linkhut.Archiving.Pipeline do
   end
 
   @doc """
-  Runs the full archiving pipeline for the given archive.
+  Runs the full archiving pipeline for the given crawl run.
 
   1. Validates URL (SSRF check)
   2. Preflight request to get content_type, final_url, status
   3. SSRF check on final_url
-  4. Updates archive with preflight_meta
-  5. Selects eligible crawlers via can_handle?/2
-  6. Atomically dispatches crawler jobs + creates pending snapshots
+  4. Selects eligible crawlers via can_handle?/2
+  5. Atomically dispatches crawler jobs + creates pending snapshots
 
-  ## Flow
-
-      run/2
-        -> run_preflight/2  => {:ok, meta | nil, archive, eligible}
-                             | {:error, reason, archive}
-                             | {:fatal, reason, archive}
-        -> classify_outcome/2 => {:dispatch, ...} | {:fallback, ...} | {:fail, ...}
-        -> execute_outcome/2 => {:ok, result} | {:error, reason}
+  Always-dispatch crawlers (third-party) are selected before preflight
+  and dispatched alongside target crawlers. Not-archivable outcomes
+  (invalid URL, unsupported scheme, no eligible crawlers, file too large)
+  are finalized as `:not_archivable` — no retries.
 
   Options:
     - `:recrawl` - boolean, whether this is a re-crawl attempt
@@ -46,98 +41,86 @@ defmodule Linkhut.Archiving.Pipeline do
     attempt = Keyword.get(opts, :attempt, 1)
     crawl_run = maybe_record_retry(crawl_run, attempt)
 
-    all_crawlers = Linkhut.Config.archiving(:crawlers, [])
-    {target_crawlers, third_party_crawlers} = partition_by_network_access(all_crawlers)
+    all_crawlers =
+      Linkhut.Config.archiving(:crawlers, [])
+      |> filter_by_types(Keyword.get(opts, :only_types))
 
-    run_preflight(crawl_run, target_crawlers)
-    |> classify_outcome(third_party_crawlers)
-    |> execute_outcome(opts)
-  end
+    {target_crawlers, always_dispatch} = split_by_dispatch_phase(all_crawlers)
 
-  defp classify_outcome({:ok, _meta, crawl_run, eligible}, _tp) when eligible != [] do
-    {:dispatch, crawl_run, eligible}
-  end
+    # Select always-dispatch crawlers early (before preflight).
+    always_eligible = select_always_dispatch(crawl_run.url, always_dispatch)
 
-  # preflight_meta is nil when no target_url crawlers are configured
-  # (run_preflight skips the HTTP request entirely in that case).
-  defp classify_outcome({:ok, preflight_meta, crawl_run, _eligible}, tp) do
-    status = if preflight_meta, do: preflight_meta.status
-
-    if is_integer(status) and status >= 400 do
-      {:fallback, crawl_run, select_third_party(crawl_run.url, tp), {:http_error, status}}
-    else
-      {:fail, crawl_run, :no_eligible_crawlers}
-    end
-  end
-
-  defp classify_outcome({:error, reason, crawl_run}, tp) do
-    safe_tp =
-      select_third_party(crawl_run.url, tp)
-      |> Enum.filter(&FailureHandler.safe_after_failure?(reason, crawler_network_access(&1)))
-
-    {:fallback, crawl_run, safe_tp, reason}
-  end
-
-  defp classify_outcome({:fatal, reason, crawl_run}, _tp) do
-    {:fail, crawl_run, reason}
-  end
-
-  defp execute_outcome({:dispatch, crawl_run, crawlers}, opts) do
-    FailureHandler.dispatch_and_finalize(crawl_run, crawlers, opts)
-  end
-
-  defp execute_outcome({:fallback, crawl_run, crawlers, reason}, opts) do
-    FailureHandler.maybe_dispatch_fallback(crawl_run, crawlers, reason, opts)
-  end
-
-  defp execute_outcome({:fail, crawl_run, reason}, opts) do
-    FailureHandler.finalize_failure(crawl_run, reason, opts)
-  end
-
-  # Runs the preflight pipeline for target_url crawlers.
-  # Returns {:ok, preflight_meta, crawl_run, eligible_crawlers},
-  #         {:error, reason, crawl_run} for recoverable failures,
-  #         {:fatal, reason, crawl_run} for fatal failures.
-  defp run_preflight(crawl_run, [] = _target_crawlers) do
-    case validate_url(crawl_run) do
-      {:ok, crawl_run} -> {:ok, nil, crawl_run, []}
-      {:error, reason, crawl_run} -> classify_preflight_error(reason, crawl_run)
-    end
-  end
-
-  defp run_preflight(crawl_run, target_crawlers) do
     with {:ok, crawl_run} <- validate_url(crawl_run),
-         {:ok, preflight_meta, crawl_run} <- Preflight.run(crawl_run),
+         {:ok, preflight_meta, crawl_run} <- run_preflight(crawl_run, target_crawlers),
          {:ok, crawl_run} <- validate_final_url(crawl_run) do
-      eligible =
+      target_eligible =
         select_crawlers_from(
           crawl_run.final_url || crawl_run.url,
           preflight_meta,
           target_crawlers
         )
 
-      {:ok, preflight_meta, crawl_run, eligible}
+      dispatch_or_finalize(crawl_run, target_eligible ++ always_eligible, opts)
     else
-      {:error, reason, crawl_run} -> classify_preflight_error(reason, crawl_run)
+      {:error, reason, crawl_run} ->
+        handle_error(crawl_run, reason, always_eligible, opts)
     end
   end
 
-  defp classify_preflight_error(reason, crawl_run) do
-    if Helpers.fatal?(reason),
-      do: {:fatal, reason, crawl_run},
-      else: {:error, reason, crawl_run}
+  defp handle_error(crawl_run, reason, always_eligible, opts) do
+    if Helpers.not_archivable?(reason) do
+      FailureHandler.finalize_not_archivable(crawl_run, reason, opts)
+    else
+      dispatch_or_fail(crawl_run, reason, always_eligible, opts)
+    end
   end
 
-  # Passes nil as preflight_meta since third-party crawlers don't connect
-  # to the target URL and therefore don't need preflight data.
-  defp select_third_party(url, crawlers) do
+  defp dispatch_or_fail(crawl_run, reason, [_ | _] = crawlers, opts) do
+    crawl_run = record_validation_failure(crawl_run, reason)
+    FailureHandler.dispatch_and_finalize(crawl_run, crawlers, opts)
+  end
+
+  defp dispatch_or_fail(crawl_run, reason, [], opts) do
+    FailureHandler.finalize_failure(crawl_run, reason, opts)
+  end
+
+  defp dispatch_or_finalize(crawl_run, [], opts) do
+    FailureHandler.finalize_not_archivable(crawl_run, :no_eligible_crawlers, opts)
+  end
+
+  defp dispatch_or_finalize(crawl_run, crawlers, opts) do
+    FailureHandler.dispatch_and_finalize(crawl_run, crawlers, opts)
+  end
+
+  # Runs the preflight pipeline for target_url crawlers.
+  # When no target crawlers exist, skips the HTTP request entirely.
+  defp run_preflight(crawl_run, [] = _target_crawlers) do
+    {:ok, nil, crawl_run}
+  end
+
+  defp run_preflight(crawl_run, target_crawlers) when is_list(target_crawlers) do
+    case Preflight.run(crawl_run) do
+      {:ok, preflight_meta, crawl_run} -> {:ok, preflight_meta, crawl_run}
+      {:error, reason, crawl_run} -> {:error, reason, crawl_run}
+    end
+  end
+
+  defp record_validation_failure(crawl_run, reason) do
+    Helpers.update_crawl_run_best_effort(crawl_run, %{
+      steps:
+        Steps.append_step(crawl_run.steps, "validation_failed", %{
+          "msg" => "validation_failed",
+          "error" => inspect(reason)
+        })
+    })
+  end
+
+  defp split_by_dispatch_phase(crawlers) do
+    Enum.split_with(crawlers, &(&1.network_access() == :target_url))
+  end
+
+  defp select_always_dispatch(url, crawlers) do
     Enum.filter(crawlers, fn module -> module.can_handle?(url, nil) end)
-  end
-
-  defp crawler_network_access(module), do: module.network_access()
-
-  defp partition_by_network_access(crawlers) do
-    Enum.split_with(crawlers, &(crawler_network_access(&1) == :target_url))
   end
 
   defp validate_url(%CrawlRun{url: url} = crawl_run), do: check_host(url, crawl_run)
@@ -161,5 +144,12 @@ defmodule Linkhut.Archiving.Pipeline do
 
   defp select_crawlers_from(url, preflight_meta, crawlers) do
     Enum.filter(crawlers, fn module -> module.can_handle?(url, preflight_meta) end)
+  end
+
+  defp filter_by_types(crawlers, nil), do: crawlers
+
+  defp filter_by_types(crawlers, types) when is_list(types) do
+    type_set = MapSet.new(types)
+    Enum.filter(crawlers, &MapSet.member?(type_set, &1.source_type()))
   end
 end

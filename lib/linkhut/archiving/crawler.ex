@@ -43,15 +43,18 @@ defmodule Linkhut.Archiving.Crawler do
   @type preflight_meta :: Linkhut.Archiving.PreflightMeta.t() | nil
 
   @typedoc """
-  Static identity metadata for the crawler.
+  Static identity metadata for the crawler, stored on each snapshot.
 
-  Required keys:
+  Keys:
     - `:tool_name` -- human-readable tool name (e.g. "SingleFile", "Req")
-
-  Optional keys:
-    - `:version` -- version string, or nil if unknown
+    - `:tool_version` -- backend tool version string, or nil if unknown
+    - `:version` -- crawler module version (from `module_version/0`)
   """
-  @type crawler_meta :: %{tool_name: String.t(), version: String.t() | nil}
+  @type crawler_meta :: %{
+          tool_name: String.t(),
+          tool_version: String.t() | nil,
+          version: String.t()
+        }
 
   @typedoc """
   Indicates what network access pattern a crawler uses.
@@ -61,8 +64,18 @@ defmodule Linkhut.Archiving.Crawler do
   """
   @type network_access :: :target_url | :third_party
 
-  @callback type() :: String.t()
+  @callback source_type() :: String.t()
   @callback meta() :: crawler_meta()
+
+  @doc """
+  Returns the crawler module's own version string. Bump this when the
+  module's logic changes in a way that warrants re-crawling existing
+  bookmarks (e.g. supporting a new content type, changing fetch strategy).
+
+  This is separate from the backend tool version returned by `meta/0`.
+  """
+  @callback module_version() :: String.t()
+
   @callback can_handle?(url :: String.t(), preflight_meta()) :: boolean()
 
   @callback fetch(Context.t()) ::

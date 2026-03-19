@@ -18,10 +18,13 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   @overall_timeout_ms 300_000
 
   @impl true
-  def type, do: "httpfetch"
+  def source_type, do: "httpfetch"
 
   @impl true
-  def meta, do: %{tool_name: @tool_name, version: req_version()}
+  def module_version, do: "1"
+
+  @impl true
+  def meta, do: %{tool_name: @tool_name, tool_version: req_version(), version: module_version()}
 
   @impl true
   def network_access, do: :target_url

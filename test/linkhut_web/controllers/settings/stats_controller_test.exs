@@ -82,7 +82,8 @@ defmodule LinkhutWeb.Settings.StatsControllerTest do
         crawl_run_id: crawl_run.id,
         state: :complete,
         file_size_bytes: 5000,
-        type: "singlefile"
+        format: "webpage",
+        source: "singlefile"
       )
 
       response =
@@ -91,7 +92,7 @@ defmodule LinkhutWeb.Settings.StatsControllerTest do
         |> html_response(200)
 
       assert response =~ "Snapshots"
-      assert response =~ "Web page"
+      assert response =~ "Webpage"
     end
   end
 end

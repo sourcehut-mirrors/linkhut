@@ -4,9 +4,9 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
   alias Linkhut.Archiving.Crawler.HttpFetch
   alias Linkhut.Archiving.Crawler.Context
 
-  describe "type/0" do
+  describe "source_type/0" do
     test "returns 'httpfetch'" do
-      assert HttpFetch.type() == "httpfetch"
+      assert HttpFetch.source_type() == "httpfetch"
     end
   end
 

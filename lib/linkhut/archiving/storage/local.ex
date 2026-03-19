@@ -3,9 +3,9 @@ defmodule Linkhut.Archiving.Storage.Local do
   Local filesystem implementation of the Storage behaviour.
 
   Stores files in a directory structure like:
-  `{data_dir}/{user_id}/{link_id}/{crawl_run_id}/{snapshot_id}.{type}`
+  `{data_dir}/{user_id}/{link_id}/{snapshot_id}.{format}`
 
-  Returns storage keys prefixed with `local:`, e.g. `local:/data/archiving/42/1234/567/890.singlefile`.
+  Returns storage keys prefixed with `local:`, e.g. `local:/data/archiving/42/1234/890.webpage`.
   """
 
   alias Linkhut.Archiving.{Snapshot, StorageKey}
@@ -152,7 +152,6 @@ defmodule Linkhut.Archiving.Storage.Local do
     Linkhut.Config.archiving(:data_dir)
     |> maybe_join(Keyword.get(opts, :user_id))
     |> maybe_join(Keyword.get(opts, :link_id))
-    |> maybe_join(Keyword.get(opts, :crawl_run_id))
   end
 
   defp maybe_join(path, nil), do: path
@@ -239,17 +238,15 @@ defmodule Linkhut.Archiving.Storage.Local do
          id: id,
          user_id: user_id,
          link_id: link_id,
-         crawl_run_id: crawl_run_id,
-         type: type
+         format: format
        })
        when is_integer(id) and is_integer(user_id) and is_integer(link_id) and
-              is_integer(crawl_run_id) and is_binary(type) do
+              is_binary(format) do
     Path.join([
       Linkhut.Config.archiving(:data_dir),
       Integer.to_string(user_id),
       Integer.to_string(link_id),
-      Integer.to_string(crawl_run_id),
-      "#{id}.#{type}"
+      "#{id}.#{format}"
     ])
   end
 

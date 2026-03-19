@@ -1,10 +1,9 @@
 defmodule Linkhut.Archiving.Pipeline.FailureHandler do
   @moduledoc """
   Encapsulates the pipeline's failure strategy: retry-aware state
-  transitions, partial failure recording, and third-party fallback policy.
+  transitions and not-archivable finalization.
   """
 
-  alias Linkhut.Archiving
   alias Linkhut.Archiving.{CrawlRun, Steps}
   alias Linkhut.Archiving.Pipeline.{Dispatch, Helpers}
 
@@ -21,18 +20,31 @@ defmodule Linkhut.Archiving.Pipeline.FailureHandler do
   end
 
   @doc """
-  Attempts to dispatch fallback crawlers. If the crawler list is empty,
-  finalizes the failure instead.
-  """
-  @spec maybe_dispatch_fallback(CrawlRun.t(), [module()], term(), keyword()) ::
-          {:ok, map()} | {:error, term()}
-  def maybe_dispatch_fallback(crawl_run, [], reason, opts) do
-    finalize_failure(crawl_run, reason, opts)
-  end
+  Finalizes a crawl run as not archivable. The URL/content is fundamentally
+  incompatible with archiving — retrying will never succeed.
 
-  def maybe_dispatch_fallback(crawl_run, crawlers, reason, opts) do
-    crawl_run = record_partial_failure(crawl_run, reason)
-    dispatch_and_finalize(crawl_run, crawlers, opts)
+  Sets state to `:not_archivable`, records the reason, and returns
+  `{:ok, %{status: :not_archivable}}` so Oban treats it as success.
+  """
+  @spec finalize_not_archivable(CrawlRun.t(), term(), keyword()) ::
+          {:ok, %{crawl_run: CrawlRun.t(), status: :not_archivable}}
+  def finalize_not_archivable(crawl_run, reason, _opts) do
+    reason_string = format_not_archivable_reason(reason)
+
+    steps =
+      Steps.append_step(crawl_run.steps, "not_archivable", %{
+        "msg" => "not_archivable",
+        "reason" => reason_string
+      })
+
+    crawl_run =
+      Helpers.update_crawl_run_best_effort(crawl_run, %{
+        state: :not_archivable,
+        error: reason_string,
+        steps: steps
+      })
+
+    {:ok, %{crawl_run: crawl_run, status: :not_archivable}}
   end
 
   @doc """
@@ -69,31 +81,13 @@ defmodule Linkhut.Archiving.Pipeline.FailureHandler do
       Map.put(state_update, :steps, Steps.append_step(crawl_run.steps, "failed", failed_detail))
     )
 
-    if final_attempt? and Keyword.get(opts, :recrawl, false) do
-      Archiving.mark_old_crawl_runs_for_deletion(crawl_run.link_id, exclude: [crawl_run.id])
-    end
-
     {:error, reason}
   end
 
-  @doc """
-  Records a partial failure step and returns the updated crawl run.
-  """
-  def record_partial_failure(crawl_run, reason) do
-    Helpers.update_crawl_run_best_effort(crawl_run, %{
-      steps:
-        Steps.append_step(crawl_run.steps, "partial_failure", %{
-          "msg" => "partial_failure",
-          "error" => inspect(reason)
-        })
-    })
-  end
-
-  @doc """
-  Returns true if the given failure reason allows dispatching to a
-  third-party crawler (one that doesn't connect to the target URL).
-  """
-  def safe_after_failure?(:preflight_failed, :third_party), do: true
-  def safe_after_failure?({:dns_failed, _}, :third_party), do: true
-  def safe_after_failure?(_, _), do: false
+  defp format_not_archivable_reason(:invalid_url), do: "invalid_url"
+  defp format_not_archivable_reason({:unsupported_scheme, s}), do: "unsupported_scheme:#{s}"
+  defp format_not_archivable_reason({:reserved_address, _}), do: "reserved_address"
+  defp format_not_archivable_reason(:no_eligible_crawlers), do: "no_eligible_crawlers"
+  defp format_not_archivable_reason({:file_too_large, _}), do: "file_too_large"
+  defp format_not_archivable_reason(reason), do: inspect(reason)
 end

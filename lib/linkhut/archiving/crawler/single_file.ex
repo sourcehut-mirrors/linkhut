@@ -7,10 +7,18 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   alias Linkhut.Archiving.Crawler.Context
 
   @impl true
-  def type, do: "singlefile"
+  def source_type, do: "singlefile"
 
   @impl true
-  def meta, do: %{tool_name: "SingleFile", version: SingleFile.configured_version()}
+  def module_version, do: "1"
+
+  @impl true
+  def meta,
+    do: %{
+      tool_name: "SingleFile",
+      tool_version: SingleFile.configured_version(),
+      version: module_version()
+    }
 
   @impl true
   def network_access, do: :target_url

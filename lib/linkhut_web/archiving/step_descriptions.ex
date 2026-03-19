@@ -11,6 +11,11 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
   """
   def render(%{"msg" => "created"}), do: gettext("Archival task initiated")
 
+  def render(%{"msg" => "reconciliation", "new_types" => types})
+      when is_list(types) do
+    gettext("Reconciliation (%{crawlers})", crawlers: Enum.join(types, ", "))
+  end
+
   def render(%{"msg" => "retry", "attempt" => attempt}) do
     gettext("Attempt %{attempt}", attempt: attempt)
   end
@@ -37,6 +42,10 @@ defmodule LinkhutWeb.Archiving.StepDescriptions do
         else: parts
 
     Enum.join(parts, "; ")
+  end
+
+  def render(%{"msg" => "validation_failed", "error" => error}) do
+    gettext("Validation failed: %{error}", error: error)
   end
 
   def render(%{"msg" => "preflight_failed", "error" => error}) do

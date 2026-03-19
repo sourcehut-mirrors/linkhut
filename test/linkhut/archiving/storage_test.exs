@@ -22,7 +22,7 @@ defmodule Linkhut.Archiving.StorageTest do
       source = create_temp_file("test content")
 
       snapshot =
-        build_snapshot(id: 1, user_id: 1, link_id: 100, crawl_run_id: 10, type: "singlefile")
+        build_snapshot(id: 1, user_id: 1, link_id: 100, format: "webpage", source: "singlefile")
 
       assert {:ok, "local:" <> _, _meta} = Storage.store({:file, source}, snapshot)
     end
@@ -38,7 +38,7 @@ defmodule Linkhut.Archiving.StorageTest do
 
     test "dispatches s3:// keys to S3 module" do
       setup_s3_config()
-      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      key = "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert {:ok, {:redirect, url}} = Storage.resolve(key)
       assert url =~ "s3.example.com"
     end
@@ -55,7 +55,7 @@ defmodule Linkhut.Archiving.StorageTest do
   describe "resolve/2" do
     test "dispatches s3:// keys to S3 module with opts" do
       setup_s3_config()
-      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      key = "s3://s3.example.com/test-bucket/1/100/42.webpage"
 
       assert {:ok, {:redirect, url}} =
                Storage.resolve(key, disposition: "attachment; filename=\"test.html\"")
@@ -64,7 +64,7 @@ defmodule Linkhut.Archiving.StorageTest do
     end
 
     test "falls back to resolve/1 for non-S3 keys" do
-      path = Path.join(@data_dir, "1/100/10/42.singlefile")
+      path = Path.join(@data_dir, "1/100/42.webpage")
       key = "local:" <> path
 
       assert {:ok, {:file, ^path}} = Storage.resolve(key, disposition: "attachment")
@@ -74,7 +74,7 @@ defmodule Linkhut.Archiving.StorageTest do
   describe "delete/1" do
     test "dispatches s3:// keys to S3 module" do
       setup_s3_config()
-      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      key = "s3://s3.example.com/test-bucket/1/100/42.webpage"
       assert :ok = Storage.delete(key)
     end
 
@@ -87,6 +87,12 @@ defmodule Linkhut.Archiving.StorageTest do
     end
   end
 
+  defmodule MockAws do
+    @moduledoc false
+    def request(_operation, _config), do: {:ok, %{status_code: 200, body: ""}}
+    def stream!(_operation, _config), do: [%{size: "100"}, %{size: "50"}]
+  end
+
   defp setup_s3_config do
     put_override(S3, :bucket, "test-bucket")
     put_override(S3, :region, "eu-central-1")
@@ -96,7 +102,7 @@ defmodule Linkhut.Archiving.StorageTest do
     put_override(S3, :scheme, "https://")
     put_override(S3, :port, 443)
     put_override(S3, :presign_ttl, 300)
-    put_override(S3, :aws_module, Linkhut.Archiving.Storage.S3Test.MockAws)
+    put_override(S3, :aws_module, MockAws)
   end
 
   defp build_snapshot(attrs) do

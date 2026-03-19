@@ -14,7 +14,8 @@ defmodule Linkhut.Archiving.Snapshot do
     field :user_id, :id
     field :job_id, :id
     field :crawl_run_id, :id
-    field :type, :string
+    field :format, :string
+    field :source, :string
 
     field :state, Ecto.Enum,
       values: [
@@ -49,7 +50,6 @@ defmodule Linkhut.Archiving.Snapshot do
 
   @updatable_fields [
     :job_id,
-    :type,
     :state,
     :crawl_info,
     :response_code,
@@ -66,9 +66,21 @@ defmodule Linkhut.Archiving.Snapshot do
   @doc false
   def create_changeset(snapshot, attrs) do
     snapshot
-    |> cast(attrs, [:link_id, :user_id, :crawl_run_id, :crawler_meta] ++ @updatable_fields)
-    |> validate_required([:link_id, :user_id, :crawl_run_id])
+    |> cast(attrs, [:link_id, :user_id, :crawl_run_id, :format, :source, :crawler_meta] ++ @updatable_fields)
+    |> validate_required([:link_id, :user_id, :format, :source])
     |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawl_info, :crawler_meta])
+  end
+
+  @doc false
+  def upload_changeset(attrs) do
+    %__MODULE__{}
+    |> cast(attrs, [:link_id, :user_id, :format, :source, :state,
+                     :storage_key, :file_size_bytes, :encoding,
+                     :archive_metadata])
+    |> validate_required([:link_id, :user_id, :format, :source, :state])
+    |> validate_inclusion(:source, ["upload"])
+    |> validate_inclusion(:state, [:complete])
+    |> SchemaHelpers.normalize_json_fields([:archive_metadata])
   end
 
   @doc false

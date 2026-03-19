@@ -50,7 +50,15 @@ defmodule Linkhut.Archiving.SchedulerTest do
       user = create_paying_user()
       link = insert(:link, user_id: user.id)
 
-      insert(:snapshot, link_id: link.id, user_id: user.id, state: :complete)
+      crawl_run =
+        insert(:crawl_run, link_id: link.id, user_id: user.id, url: link.url, state: :complete)
+
+      insert(:snapshot,
+        link_id: link.id,
+        user_id: user.id,
+        crawl_run_id: crawl_run.id,
+        state: :complete
+      )
 
       assert [] = Scheduler.schedule_pending_archives()
     end

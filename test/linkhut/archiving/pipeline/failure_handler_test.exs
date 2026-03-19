@@ -44,34 +44,58 @@ defmodule Linkhut.Archiving.Pipeline.FailureHandlerTest do
     end
   end
 
-  describe "record_partial_failure/2" do
-    test "records partial_failure step and returns archive" do
+  describe "finalize_not_archivable/3" do
+    test "sets state to :not_archivable" do
       {_user, _link, crawl_run} = create_crawl_run()
 
-      result = FailureHandler.record_partial_failure(crawl_run, :some_reason)
+      assert {:ok, %{status: :not_archivable}} =
+               FailureHandler.finalize_not_archivable(crawl_run, :invalid_url, [])
 
-      assert result.id == crawl_run.id
-      partial_step = Enum.find(result.steps, &(&1["step"] == "partial_failure"))
-      assert partial_step["detail"]["msg"] == "partial_failure"
-    end
-  end
-
-  describe "safe_after_failure?/2" do
-    test "allows third-party after preflight_failed" do
-      assert FailureHandler.safe_after_failure?(:preflight_failed, :third_party)
+      updated = Repo.get(CrawlRun, crawl_run.id)
+      assert updated.state == :not_archivable
     end
 
-    test "allows third-party after dns_failed" do
-      assert FailureHandler.safe_after_failure?({:dns_failed, "example.com"}, :third_party)
+    test "records not_archivable step with reason" do
+      {_user, _link, crawl_run} = create_crawl_run()
+
+      assert {:ok, %{crawl_run: result_crawl_run}} =
+               FailureHandler.finalize_not_archivable(
+                 crawl_run,
+                 {:unsupported_scheme, "ftp"},
+                 []
+               )
+
+      updated = Repo.get(CrawlRun, crawl_run.id)
+      step = Enum.find(updated.steps, &(&1["step"] == "not_archivable"))
+      assert step["detail"]["msg"] == "not_archivable"
+      assert step["detail"]["reason"] == "unsupported_scheme:ftp"
+      assert result_crawl_run.id == crawl_run.id
     end
 
-    test "rejects target_url after preflight_failed" do
-      refute FailureHandler.safe_after_failure?(:preflight_failed, :target_url)
+    test "returns {:ok, %{status: :not_archivable}}" do
+      {_user, _link, crawl_run} = create_crawl_run()
+
+      result =
+        FailureHandler.finalize_not_archivable(crawl_run, :no_eligible_crawlers, [])
+
+      assert {:ok, %{crawl_run: _, status: :not_archivable}} = result
     end
 
-    test "rejects any network access for other reasons" do
-      refute FailureHandler.safe_after_failure?(:some_other_reason, :third_party)
-      refute FailureHandler.safe_after_failure?(:some_other_reason, :target_url)
+    test "records error string for each reason type" do
+      {_user, _link, crawl_run1} = create_crawl_run()
+      {_user, _link, crawl_run2} = create_crawl_run()
+      {_user, _link, crawl_run3} = create_crawl_run()
+      {_user, _link, crawl_run4} = create_crawl_run()
+
+      FailureHandler.finalize_not_archivable(crawl_run1, :invalid_url, [])
+      FailureHandler.finalize_not_archivable(crawl_run2, {:unsupported_scheme, "ftp"}, [])
+      FailureHandler.finalize_not_archivable(crawl_run3, :no_eligible_crawlers, [])
+      FailureHandler.finalize_not_archivable(crawl_run4, {:file_too_large, 999}, [])
+
+      assert Repo.get(CrawlRun, crawl_run1.id).error == "invalid_url"
+      assert Repo.get(CrawlRun, crawl_run2.id).error == "unsupported_scheme:ftp"
+      assert Repo.get(CrawlRun, crawl_run3.id).error == "no_eligible_crawlers"
+      assert Repo.get(CrawlRun, crawl_run4.id).error == "file_too_large"
     end
   end
 
