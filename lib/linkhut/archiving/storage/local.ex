@@ -9,32 +9,11 @@ defmodule Linkhut.Archiving.Storage.Local do
   """
 
   alias Linkhut.Archiving.{Snapshot, StorageKey}
+  alias Linkhut.Archiving.Storage.Compression
 
   @behaviour Linkhut.Archiving.Storage
 
-  @compressible_types [
-    # HTML / XML
-    "text/html",
-    "application/xhtml+xml",
-    "application/xml",
-    "text/xml",
-    "application/atom+xml",
-    "application/rss+xml",
-    # Text
-    "text/plain",
-    "text/markdown",
-    "text/css",
-    "text/csv",
-    # Script / data
-    "text/javascript",
-    "application/javascript",
-    "application/json",
-    "application/ld+json",
-    # Other
-    "application/rtf",
-    "image/svg+xml"
-  ]
-  def compressible_types, do: @compressible_types
+  defdelegate compressible_types, to: Compression
 
   @impl true
   def store(source, snapshot, opts \\ [])
@@ -194,8 +173,7 @@ defmodule Linkhut.Archiving.Storage.Local do
   end
 
   defp should_compress?(opts) do
-    compression_algo() != :none and
-      Keyword.get(opts, :content_type) in @compressible_types
+    Compression.should_compress?(compression_algo(), opts)
   end
 
   defp compression_algo do

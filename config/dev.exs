@@ -86,4 +86,15 @@ config :linkhut, Linkhut.Archiving,
   mode: :limited,
   data_dir: "/tmp/store",
   serve_host: nil,
-  storage: Linkhut.Archiving.Storage.Local
+  storage: Linkhut.Archiving.Storage.S3
+
+config :linkhut, Linkhut.Archiving.Storage.S3,
+  bucket: "linkhut-dev",
+  region: "eu-central-1",
+  endpoint: "localhost",
+  port: 9000,
+  scheme: "http://",
+  access_key_id: "miniouser",
+  secret_access_key: "miniopassword",
+  presign_ttl: 900,
+  compression: :gzip

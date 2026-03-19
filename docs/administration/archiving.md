@@ -1,8 +1,9 @@
 # Archiving
 
 Linkhut can capture point-in-time snapshots of bookmarked pages using
-[SingleFile](https://github.com/nicktogo/single-file-cli). Snapshots are stored
-locally and can be viewed, downloaded, or listed per bookmark.
+[SingleFile](https://github.com/nicktogo/single-file-cli). Snapshots can be
+stored on the local filesystem or in S3-compatible object storage, and can be
+viewed, downloaded, or listed per bookmark.
 
 ## Configuration
 
@@ -16,11 +17,34 @@ Archiving is configured under `config :linkhut, Linkhut.Archiving, [...]`.
 | `storage`          | module     | `Storage.Local` | Storage backend module. |
 | `legacy_data_dirs` | list       | `[]`       | Additional directories to accept when resolving or deleting existing snapshots (useful during data directory migrations). |
 
-Additional configuration under `config :linkhut, Linkhut.Archiving.Storage.Local, [...]`:
+### Local storage
+
+Configuration under `config :linkhut, Linkhut.Archiving.Storage.Local, [...]`:
 
 | Key            | Type | Default | Description |
 |----------------|------|---------|-------------|
 | `compression`  | atom | `:none` | Compression algorithm for new snapshots (`:none` or `:gzip`). |
+
+### S3 storage
+
+Configuration under `config :linkhut, Linkhut.Archiving.Storage.S3, [...]`:
+
+| Key                  | Type    | Default          | Description |
+|----------------------|---------|------------------|-------------|
+| `bucket`             | string  | (required)       | S3 bucket name. |
+| `region`             | string  | `"eu-central-1"` | AWS region. |
+| `endpoint`           | string  | (required)       | S3 endpoint hostname (e.g. `s3.eu-central-1.amazonaws.com` or a MinIO host). |
+| `access_key_id`      | string  | (required)       | AWS access key ID. |
+| `secret_access_key`  | string  | (required)       | AWS secret access key. |
+| `scheme`             | string  | `"https://"`     | URL scheme for the endpoint. |
+| `port`               | integer | `443`            | Port for the endpoint. |
+| `presign_ttl`        | integer | `900`            | Presigned URL expiry in seconds. |
+| `compression`        | atom    | `:gzip`          | Compression algorithm for new snapshots (`:none` or `:gzip`). |
+
+To use S3 storage, set `storage: Linkhut.Archiving.Storage.S3` in the
+`Linkhut.Archiving` config. Both backends can coexist — the dispatch layer
+routes resolve and delete operations based on the storage key prefix regardless
+of the active backend.
 
 ### Modes
 
@@ -41,6 +65,15 @@ In `runtime.exs`, the following environment variables are read:
 | `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
 | `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
 | `ARCHIVING_STORAGE_COMPRESSION` | `compression` (under `Storage.Local`) | `"none"` or `"gzip"` | `"none"` | Compression for new local snapshots. |
+| `S3_BUCKET` | `:bucket` (under `Storage.S3`) | string | (none) | S3 bucket name. Enables S3 config when set. |
+| `S3_REGION` | `:region` | string | `"eu-central-1"` | AWS region. |
+| `S3_ENDPOINT` | `:endpoint` | hostname string | (required) | S3 endpoint hostname. |
+| `S3_ACCESS_KEY_ID` | `:access_key_id` | string | (none) | AWS access key ID. |
+| `S3_SECRET_ACCESS_KEY` | `:secret_access_key` | string | (none) | AWS secret access key. |
+| `S3_SCHEME` | `:scheme` | `"https://"` or `"http://"` | `"https://"` | URL scheme for the endpoint. |
+| `S3_PORT` | `:port` | integer | `443` | Port for the endpoint. |
+| `S3_PRESIGN_TTL` | `:presign_ttl` | integer (seconds) | `900` | Presigned URL expiry. |
+| `S3_COMPRESSION` | `:compression` | `"none"` or `"gzip"` | `"gzip"` | Compression for new S3 snapshots. |
 
 ### Compression
 
@@ -49,9 +82,11 @@ types are gzip-compressed at rest.
 
 - Compressed files are served with `Content-Encoding: gzip`, so browsers
   decompress them transparently.
-- Downloads are decompressed before sending.
+- For local storage, downloads are decompressed before sending. For S3
+  storage, downloads are served via presigned URL.
 - Existing snapshots are not affected by the setting change. Use
-  `mix linkhut.storage local.compress` to compress them retroactively.
+  `mix linkhut.storage local.compress` to compress local snapshots
+  retroactively.
 
 ## Security considerations
 

@@ -241,4 +241,45 @@ if config_env() == :prod do
              local_storage_overrides
            )
   end
+
+  # S3 storage config
+  if System.get_env("S3_BUCKET") do
+    s3_endpoint =
+      System.get_env("S3_ENDPOINT") ||
+        raise "S3_ENDPOINT must be set when S3_BUCKET is configured"
+
+    s3_overrides =
+      [
+        bucket: System.get_env("S3_BUCKET"),
+        region: System.get_env("S3_REGION", "eu-central-1"),
+        endpoint: s3_endpoint,
+        access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
+        secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY"),
+        scheme: System.get_env("S3_SCHEME", "https://"),
+        port:
+          case System.get_env("S3_PORT") do
+            nil -> nil
+            val -> String.to_integer(val)
+          end,
+        presign_ttl:
+          case System.get_env("S3_PRESIGN_TTL") do
+            nil -> nil
+            val -> String.to_integer(val)
+          end,
+        compression:
+          case System.get_env("S3_COMPRESSION") do
+            "none" -> :none
+            "gzip" -> :gzip
+            _ -> nil
+          end
+      ]
+      |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+
+    config :linkhut,
+           Linkhut.Archiving.Storage.S3,
+           Keyword.merge(
+             Application.get_env(:linkhut, Linkhut.Archiving.Storage.S3, []),
+             s3_overrides
+           )
+  end
 end

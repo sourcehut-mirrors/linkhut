@@ -17,6 +17,18 @@ defmodule Linkhut.Archiving.StorageKeyTest do
     end
   end
 
+  describe "s3/3" do
+    test "produces correct URI string" do
+      assert StorageKey.s3("s3.eu-central-1.amazonaws.com", "my-bucket", "1/2/3/4.singlefile") ==
+               "s3://s3.eu-central-1.amazonaws.com/my-bucket/1/2/3/4.singlefile"
+    end
+
+    test "handles custom endpoints" do
+      assert StorageKey.s3("minio.example.com", "archives", "obj/key") ==
+               "s3://minio.example.com/archives/obj/key"
+    end
+  end
+
   describe "parse/1" do
     test "parses local key" do
       assert StorageKey.parse("local:/data/archive/1/2/3.singlefile") ==
@@ -28,6 +40,11 @@ defmodule Linkhut.Archiving.StorageKeyTest do
                {:ok, {:external, "https://web.archive.org/web/123/https://example.com"}}
     end
 
+    test "parses s3 key" do
+      assert StorageKey.parse("s3://s3.eu-central-1.amazonaws.com/my-bucket/1/2/3/4.singlefile") ==
+               {:ok, {:s3, "s3.eu-central-1.amazonaws.com/my-bucket/1/2/3/4.singlefile"}}
+    end
+
     test "round-trips with local/1" do
       key = StorageKey.local("/some/path")
       assert {:ok, {:local, "/some/path"}} = StorageKey.parse(key)
@@ -36,6 +53,11 @@ defmodule Linkhut.Archiving.StorageKeyTest do
     test "round-trips with external/1" do
       key = StorageKey.external("https://example.com")
       assert {:ok, {:external, "https://example.com"}} = StorageKey.parse(key)
+    end
+
+    test "round-trips with s3/3" do
+      key = StorageKey.s3("endpoint.example.com", "bucket", "path/to/object")
+      assert {:ok, {:s3, "endpoint.example.com/bucket/path/to/object"}} = StorageKey.parse(key)
     end
 
     test "rejects unknown prefix" do

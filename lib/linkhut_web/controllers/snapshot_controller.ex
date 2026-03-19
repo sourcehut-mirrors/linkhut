@@ -296,6 +296,31 @@ defmodule LinkhutWeb.SnapshotController do
   end
 
   defp serve_download(conn, link, snapshot, link_id, type, user) do
+    case StorageKey.parse(snapshot.storage_key) do
+      {:ok, {:s3, _}} ->
+        serve_s3_download(conn, link, snapshot, user)
+
+      _ ->
+        serve_local_download(conn, link, snapshot, link_id, type, user)
+    end
+  end
+
+  defp serve_s3_download(conn, link, snapshot, user) do
+    filename = download_filename(link.title, snapshot.inserted_at, snapshot)
+    disposition = "attachment; filename=\"#{filename}\""
+
+    case Archiving.Storage.resolve(snapshot.storage_key, disposition: disposition) do
+      {:ok, {:redirect, url}} ->
+        redirect(conn, external: url)
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Snapshot not found")
+        |> redirect(to: ~p"/~#{user.username}")
+    end
+  end
+
+  defp serve_local_download(conn, link, snapshot, link_id, type, user) do
     case Archiving.Storage.resolve(snapshot.storage_key) do
       {:ok, {:file, path}} ->
         filename = download_filename(link.title, snapshot.inserted_at, snapshot)

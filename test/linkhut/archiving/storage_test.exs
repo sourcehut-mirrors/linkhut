@@ -1,7 +1,10 @@
 defmodule Linkhut.Archiving.StorageTest do
   use ExUnit.Case, async: true
 
+  import Linkhut.Config, only: [put_override: 3]
+
   alias Linkhut.Archiving.{Snapshot, Storage}
+  alias Linkhut.Archiving.Storage.S3
 
   @data_dir Linkhut.Config.archiving(:data_dir)
 
@@ -33,6 +36,13 @@ defmodule Linkhut.Archiving.StorageTest do
       assert {:ok, {:file, ^path}} = Storage.resolve(key)
     end
 
+    test "dispatches s3:// keys to S3 module" do
+      setup_s3_config()
+      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      assert {:ok, {:redirect, url}} = Storage.resolve(key)
+      assert url =~ "s3.example.com"
+    end
+
     test "returns error for unknown key prefixes" do
       assert {:error, :invalid_storage_key} = Storage.resolve("cloud:bucket/key")
     end
@@ -40,6 +50,53 @@ defmodule Linkhut.Archiving.StorageTest do
     test "returns error for empty key" do
       assert {:error, :invalid_storage_key} = Storage.resolve("")
     end
+  end
+
+  describe "resolve/2" do
+    test "dispatches s3:// keys to S3 module with opts" do
+      setup_s3_config()
+      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+
+      assert {:ok, {:redirect, url}} =
+               Storage.resolve(key, disposition: "attachment; filename=\"test.html\"")
+
+      assert url =~ "response-content-disposition"
+    end
+
+    test "falls back to resolve/1 for non-S3 keys" do
+      path = Path.join(@data_dir, "1/100/10/42.singlefile")
+      key = "local:" <> path
+
+      assert {:ok, {:file, ^path}} = Storage.resolve(key, disposition: "attachment")
+    end
+  end
+
+  describe "delete/1" do
+    test "dispatches s3:// keys to S3 module" do
+      setup_s3_config()
+      key = "s3://s3.example.com/test-bucket/1/100/10/42.singlefile"
+      assert :ok = Storage.delete(key)
+    end
+
+    test "returns :ok for external: keys" do
+      assert :ok = Storage.delete("external:https://example.com/archive")
+    end
+
+    test "returns error for unknown key prefixes" do
+      assert {:error, :invalid_storage_key} = Storage.delete("cloud:bucket/key")
+    end
+  end
+
+  defp setup_s3_config do
+    put_override(S3, :bucket, "test-bucket")
+    put_override(S3, :region, "eu-central-1")
+    put_override(S3, :endpoint, "s3.example.com")
+    put_override(S3, :access_key_id, "test-key")
+    put_override(S3, :secret_access_key, "test-secret")
+    put_override(S3, :scheme, "https://")
+    put_override(S3, :port, 443)
+    put_override(S3, :presign_ttl, 300)
+    put_override(S3, :aws_module, Linkhut.Archiving.Storage.S3Test.MockAws)
   end
 
   defp build_snapshot(attrs) do

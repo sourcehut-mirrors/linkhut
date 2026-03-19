@@ -8,7 +8,7 @@ defmodule Linkhut.Archiving.Storage do
   """
 
   alias Linkhut.Archiving.{Snapshot, StorageKey}
-  alias Linkhut.Archiving.Storage.Local
+  alias Linkhut.Archiving.Storage.{Local, S3}
 
   @typedoc """
   The source of archive content to store.
@@ -39,7 +39,7 @@ defmodule Linkhut.Archiving.Storage do
   How the stored content should be served to the client.
 
   - `{:file, path}` — serve directly from the local filesystem
-  - `{:redirect, url}` — redirect the client to an external URL (e.g. signed S3-like URL) *(Note: not implemented)*
+  - `{:redirect, url}` — redirect the client to an external URL (e.g. presigned S3 URL)
   """
   @type serve_instruction :: {:file, Path.t()} | {:redirect, String.t()}
 
@@ -48,6 +48,14 @@ defmodule Linkhut.Archiving.Storage do
   """
   @callback resolve(storage_key :: String.t()) ::
               {:ok, serve_instruction()} | {:error, term()}
+
+  @doc """
+  Resolves a storage key with additional options (e.g. content disposition for downloads).
+  """
+  @callback resolve(storage_key :: String.t(), opts :: keyword()) ::
+              {:ok, serve_instruction()} | {:error, term()}
+
+  @optional_callbacks [resolve: 2]
 
   @doc "Deletes the content identified by the given storage key."
   @callback delete(storage_key :: String.t()) :: :ok | {:error, term()}
@@ -75,8 +83,24 @@ defmodule Linkhut.Archiving.Storage do
           do: {:ok, {:redirect, url}},
           else: {:error, :invalid_storage_key}
 
+      {:ok, {:s3, _}} ->
+        S3.resolve(key)
+
       {:error, _} ->
         {:error, :invalid_storage_key}
+    end
+  end
+
+  @doc """
+  Resolves a storage key with additional options.
+
+  Currently only S3 supports options (e.g. `:disposition` for downloads).
+  Other backends fall back to `resolve/1`.
+  """
+  def resolve(key, opts) do
+    case StorageKey.parse(key) do
+      {:ok, {:s3, _}} -> S3.resolve(key, opts)
+      _ -> resolve(key)
     end
   end
 
@@ -84,6 +108,7 @@ defmodule Linkhut.Archiving.Storage do
     case StorageKey.parse(key) do
       {:ok, {:local, _}} -> Local.delete(key)
       {:ok, {:external, _}} -> :ok
+      {:ok, {:s3, _}} -> S3.delete(key)
       {:error, _} -> {:error, :invalid_storage_key}
     end
   end
