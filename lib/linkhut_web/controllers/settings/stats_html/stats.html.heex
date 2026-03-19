@@ -17,14 +17,16 @@
   <section :if={@archive_stats} class="settings">
     <h4>Archiving</h4>
     <dl>
-      <dt>Archived</dt>
+      <dt>Links archived</dt>
       <dd>{@archive_stats.archived_links}</dd>
-      <dt>In progress</dt>
+      <dt>Links queued</dt>
       <dd>{@archive_stats.pending_links}</dd>
+      <dt>Total snapshots</dt>
+      <dd>{@archive_stats.total_snapshots}</dd>
       <dt>Total storage</dt>
       <dd>{format_bytes(@archive_stats.total_storage_bytes)}</dd>
     </dl>
-    <h4 :if={@archive_stats.snapshots_by_type != []}>Snapshots by type</h4>
-    <.snapshot_type_table :if={@archive_stats.snapshots_by_type != []} rows={@archive_stats.snapshots_by_type} />
+    <h4 :if={@archive_stats.snapshot_breakdown != []}>Snapshots</h4>
+    <.snapshot_breakdown_table :if={@archive_stats.snapshot_breakdown != []} groups={@archive_stats.snapshot_breakdown} />
   </section>
 </div>

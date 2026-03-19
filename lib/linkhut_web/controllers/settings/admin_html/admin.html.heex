@@ -13,16 +13,13 @@
     <dt>Total storage</dt>
     <dd>{format_bytes(@archive_stats.total_storage_bytes)}</dd>
   </dl>
-  <div :if={@archive_stats.archives_by_state != []}>
-    <h4>Archives by State</h4>
-    <.state_table rows={@archive_stats.archives_by_state} />
+  <div :if={@archive_stats.crawls_by_state != []}>
+    <h4>Crawls by State</h4>
+    <.state_table rows={@archive_stats.crawls_by_state} />
   </div>
-  <div :if={@archive_stats.snapshots_by_state != [] || @archive_stats.snapshots_by_type != []}>
+  <div :if={@archive_stats.snapshot_breakdown != []}>
     <h4>Snapshots</h4>
-    <h5 :if={@archive_stats.snapshots_by_state != []}>By state</h5>
-    <.state_table :if={@archive_stats.snapshots_by_state != []} rows={@archive_stats.snapshots_by_state} />
-    <h5 :if={@archive_stats.snapshots_by_type != []}>By type</h5>
-    <.snapshot_type_table :if={@archive_stats.snapshots_by_type != []} rows={@archive_stats.snapshots_by_type} />
+    <.snapshot_breakdown_table groups={@archive_stats.snapshot_breakdown} />
   </div>
   <div :if={@archive_stats.queue_depths != []}>
     <h4>Queue Health</h4>
@@ -64,12 +61,16 @@
   </div>
   <div>
     <h4>Stale Work</h4>
-    <dl>
-      <dt>Archives stuck processing (&gt; 1h)</dt>
-      <dd>{@archive_stats.stale_work.stale_archives}</dd>
-      <dt>Snapshots stuck crawling (&gt; 1h)</dt>
-      <dd>{@archive_stats.stale_work.stale_snapshots}</dd>
-    </dl>
+    <%= if @archive_stats.stale_work.stale_crawls == 0 and @archive_stats.stale_work.stale_snapshots == 0 do %>
+      <p><span class="state complete">No stale work</span></p>
+    <% else %>
+      <dl>
+        <dt>Crawls stuck processing (&gt; 1h)</dt>
+        <dd>{@archive_stats.stale_work.stale_crawls}</dd>
+        <dt>Snapshots stuck crawling (&gt; 1h)</dt>
+        <dd>{@archive_stats.stale_work.stale_snapshots}</dd>
+      </dl>
+    <% end %>
   </div>
 </section>
 <.moderation_dashboard form={@form} banned_users={@banned_users} />

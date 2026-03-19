@@ -42,22 +42,90 @@ defmodule LinkhutWeb.SettingsComponents do
 
   attr :rows, :list, required: true
 
-  def snapshot_type_table(assigns) do
+  def state_table(assigns) do
     ~H"""
     <table>
       <thead>
         <tr>
-          <th>Type</th>
+          <th>State</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={{state, count} <- @rows}>
+          <td>{state}</td>
+          <td>{count}</td>
+        </tr>
+      </tbody>
+    </table>
+    """
+  end
+
+  attr :rows, :list, required: true
+
+  def queue_table(assigns) do
+    ~H"""
+    <table>
+      <thead>
+        <tr>
+          <th>Queue</th>
+          <th>State</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={row <- @rows}>
+          <td>{row.queue}</td>
+          <td>{row.state}</td>
+          <td>{row.count}</td>
+        </tr>
+      </tbody>
+    </table>
+    """
+  end
+
+  @doc "Grouped breakdown of snapshots: by type, then by state within each type."
+  attr :groups, :list, required: true
+
+  def snapshot_breakdown_table(assigns) do
+    rows =
+      Enum.flat_map(assigns.groups, fn group ->
+        header = {:header, group.type, group.total_count, group.total_size}
+
+        states =
+          Enum.map(group.states, fn {state, count, size} -> {:state, state, count, size} end)
+
+        [header | states]
+      end)
+
+    assigns = assign(assigns, :rows, rows)
+
+    ~H"""
+    <table>
+      <thead>
+        <tr>
+          <th>Type / State</th>
           <th>Count</th>
           <th>Size</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={row <- @rows}>
-          <td>{crawler_display_name(row.type)}</td>
-          <td>{row.count}</td>
-          <td>{format_bytes(row.size)}</td>
-        </tr>
+        <%= for row <- @rows do %>
+          <%= case row do %>
+            <% {:header, type, count, size} -> %>
+              <tr class="group-header">
+                <td><strong>{crawler_display_name(type)}</strong></td>
+                <td><strong>{count}</strong></td>
+                <td><strong>{format_bytes(size)}</strong></td>
+              </tr>
+            <% {:state, state, count, size} -> %>
+              <tr>
+                <td style="padding-left: 1.5em;">{state}</td>
+                <td>{count}</td>
+                <td>{format_bytes(size)}</td>
+              </tr>
+          <% end %>
+        <% end %>
       </tbody>
     </table>
     """

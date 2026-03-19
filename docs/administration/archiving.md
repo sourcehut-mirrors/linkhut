@@ -23,7 +23,7 @@ Configuration under `config :linkhut, Linkhut.Archiving.Storage.Local, [...]`:
 
 | Key            | Type | Default | Description |
 |----------------|------|---------|-------------|
-| `compression`  | atom | `:none` | Compression algorithm for new snapshots (`:none` or `:gzip`). |
+| `compression`  | atom | `:gzip` | Compression algorithm for new snapshots (`:none` or `:gzip`). |
 
 ### S3 storage
 
@@ -64,7 +64,7 @@ In `runtime.exs`, the following environment variables are read:
 | `ARCHIVING_SERVE_HOST` | `:serve_host` | hostname string | (none) | Dedicated hostname for serving archived HTML. |
 | `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
 | `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
-| `ARCHIVING_STORAGE_COMPRESSION` | `compression` (under `Storage.Local`) | `"none"` or `"gzip"` | `"none"` | Compression for new local snapshots. |
+| `ARCHIVING_STORAGE_COMPRESSION` | `compression` (under `Storage.Local`) | `"none"` or `"gzip"` | `"gzip"` | Compression for new local snapshots. |
 | `S3_BUCKET` | `:bucket` (under `Storage.S3`) | string | (none) | S3 bucket name. Enables S3 config when set. |
 | `S3_REGION` | `:region` | string | `"eu-central-1"` | AWS region. |
 | `S3_ENDPOINT` | `:endpoint` | hostname string | (required) | S3 endpoint hostname. |

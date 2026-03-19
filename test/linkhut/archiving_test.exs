@@ -834,7 +834,7 @@ defmodule Linkhut.ArchivingTest do
       assert stats.archived_links == 0
       assert stats.pending_links == 0
       assert stats.total_storage_bytes == 0
-      assert stats.snapshots_by_type == []
+      assert stats.snapshot_breakdown == []
     end
 
     test "counts links and archived links correctly" do
@@ -905,15 +905,15 @@ defmodule Linkhut.ArchivingTest do
 
       stats = Archiving.archive_stats_for_user(user)
 
-      assert length(stats.snapshots_by_type) == 2
+      assert length(stats.snapshot_breakdown) == 2
 
-      sf = Enum.find(stats.snapshots_by_type, &(&1.type == "singlefile"))
-      assert sf.count == 1
-      assert sf.size == 1000
+      sf = Enum.find(stats.snapshot_breakdown, &(&1.type == "singlefile"))
+      assert sf.total_count == 1
+      assert sf.total_size == 1000
 
-      wb = Enum.find(stats.snapshots_by_type, &(&1.type == "wayback"))
-      assert wb.count == 1
-      assert wb.size == 500
+      wb = Enum.find(stats.snapshot_breakdown, &(&1.type == "wayback"))
+      assert wb.total_count == 1
+      assert wb.total_size == 500
     end
 
     test "does not count other users' data" do
@@ -944,9 +944,8 @@ defmodule Linkhut.ArchivingTest do
 
       assert Map.has_key?(stats, :mode)
       assert Map.has_key?(stats, :total_storage_bytes)
-      assert Map.has_key?(stats, :archives_by_state)
-      assert Map.has_key?(stats, :snapshots_by_state)
-      assert Map.has_key?(stats, :snapshots_by_type)
+      assert Map.has_key?(stats, :crawls_by_state)
+      assert Map.has_key?(stats, :snapshot_breakdown)
       assert Map.has_key?(stats, :queue_depths)
       assert Map.has_key?(stats, :recent_failures)
       assert Map.has_key?(stats, :top_users)
@@ -968,12 +967,15 @@ defmodule Linkhut.ArchivingTest do
 
       stats = Archiving.admin_archive_stats()
 
-      assert Enum.any?(stats.archives_by_state, fn {state, count} ->
+      assert Enum.any?(stats.crawls_by_state, fn {state, count} ->
                state == :processing and count >= 1
              end)
 
-      assert Enum.any?(stats.snapshots_by_state, fn {state, count} ->
-               state == :complete and count >= 1
+      assert Enum.any?(stats.snapshot_breakdown, fn group ->
+               group.type == "singlefile" and
+                 Enum.any?(group.states, fn {state, count, _size} ->
+                   state == :complete and count >= 1
+                 end)
              end)
     end
 
@@ -996,7 +998,7 @@ defmodule Linkhut.ArchivingTest do
 
     test "stale_work returns counts" do
       stats = Archiving.admin_archive_stats()
-      assert stats.stale_work.stale_archives == 0
+      assert stats.stale_work.stale_crawls == 0
       assert stats.stale_work.stale_snapshots == 0
     end
   end

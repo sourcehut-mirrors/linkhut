@@ -146,7 +146,7 @@ defmodule Linkhut.Archiving.Storage.S3 do
   end
 
   defp should_compress?(content_type) do
-    compression = Config.all(__MODULE__) |> Keyword.get(:compression, :none)
+    compression = Config.all(__MODULE__) |> Keyword.get(:compression, :gzip)
     Compression.should_compress?(compression, content_type: content_type)
   end
 

@@ -53,13 +53,14 @@ defmodule Linkhut.Archiving do
 
   @doc "Returns archive statistics for a user."
   def archive_stats_for_user(%User{} = user) do
-    snapshots_by_type = snapshot_stats_by_type(user.id)
+    breakdown = snapshot_breakdown(user.id)
 
     %{
       archived_links: archived_links(user.id),
       pending_links: pending_links(user.id),
-      snapshots_by_type: snapshots_by_type,
-      total_storage_bytes: snapshots_by_type |> Enum.map(& &1.size) |> Enum.sum()
+      total_snapshots: breakdown |> Enum.map(& &1.total_count) |> Enum.sum(),
+      snapshot_breakdown: breakdown,
+      total_storage_bytes: breakdown |> Enum.map(& &1.total_size) |> Enum.sum()
     }
   end
 
@@ -77,16 +78,6 @@ defmodule Linkhut.Archiving do
     |> Repo.one()
   end
 
-  defp snapshot_stats_by_type(user_id \\ nil) do
-    Snapshot
-    |> where(state: :complete)
-    |> then(fn q -> if user_id, do: where(q, user_id: ^user_id), else: q end)
-    |> group_by(:type)
-    |> select([s], {s.type, count(s.id), coalesce(sum(s.file_size_bytes), 0)})
-    |> Repo.all()
-    |> Enum.map(fn {type, count, size} -> %{type: type, count: count, size: to_integer(size)} end)
-  end
-
   # --- Admin stats ---
 
   @doc "Returns comprehensive archive statistics for the admin dashboard."
@@ -94,9 +85,8 @@ defmodule Linkhut.Archiving do
     %{
       mode: mode(),
       total_storage_bytes: storage_used(),
-      archives_by_state: archives_by_state(),
-      snapshots_by_state: snapshots_by_state(),
-      snapshots_by_type: snapshot_stats_by_type(),
+      crawls_by_state: crawls_by_state(),
+      snapshot_breakdown: snapshot_breakdown(nil),
       queue_depths: queue_depths(),
       recent_failures: recent_failure_summary(),
       top_users: top_users_by_storage(10),
@@ -104,18 +94,36 @@ defmodule Linkhut.Archiving do
     }
   end
 
-  defp archives_by_state do
+  defp crawls_by_state do
     CrawlRun
     |> group_by(:state)
     |> select([a], {a.state, count(a.id)})
     |> Repo.all()
   end
 
-  defp snapshots_by_state do
+  defp snapshot_breakdown(user_id) do
     Snapshot
-    |> group_by(:state)
-    |> select([s], {s.state, count(s.id)})
+    |> then(fn q -> if user_id, do: where(q, user_id: ^user_id), else: q end)
+    |> group_by([s], [s.type, s.state])
+    |> select([s], %{
+      type: s.type,
+      state: s.state,
+      count: count(s.id),
+      size: coalesce(sum(s.file_size_bytes), 0)
+    })
+    |> order_by([s], [s.type, s.state])
     |> Repo.all()
+    |> Enum.map(fn row -> %{row | size: to_integer(row.size)} end)
+    |> Enum.group_by(& &1.type)
+    |> Enum.sort_by(fn {type, _} -> type end)
+    |> Enum.map(fn {type, rows} ->
+      %{
+        type: type,
+        states: Enum.map(rows, &{&1.state, &1.count, &1.size}),
+        total_count: rows |> Enum.map(& &1.count) |> Enum.sum(),
+        total_size: rows |> Enum.map(& &1.size) |> Enum.sum()
+      }
+    end)
   end
 
   defp queue_depths do
@@ -153,7 +161,7 @@ defmodule Linkhut.Archiving do
   end
 
   defp stale_work_counts do
-    stale_archives =
+    stale_crawls =
       CrawlRun
       |> where([a], a.state == :processing and a.updated_at < ago(1, "hour"))
       |> Repo.aggregate(:count)
@@ -163,7 +171,7 @@ defmodule Linkhut.Archiving do
       |> where([s], s.state == :crawling and s.updated_at < ago(1, "hour"))
       |> Repo.aggregate(:count)
 
-    %{stale_archives: stale_archives, stale_snapshots: stale_snapshots}
+    %{stale_crawls: stale_crawls, stale_snapshots: stale_snapshots}
   end
 
   @doc "Generates a short-lived token for serving a snapshot."

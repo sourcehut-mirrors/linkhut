@@ -63,8 +63,8 @@ defmodule LinkhutWeb.Settings.StatsControllerTest do
         |> html_response(200)
 
       assert response =~ "Archiving"
-      assert response =~ "Archived"
-      assert response =~ "In progress"
+      assert response =~ "Links archived"
+      assert response =~ "Links queued"
       assert response =~ "Total storage"
     end
 
@@ -90,7 +90,7 @@ defmodule LinkhutWeb.Settings.StatsControllerTest do
         |> get(~p"/_/stats")
         |> html_response(200)
 
-      assert response =~ "Snapshots by type"
+      assert response =~ "Snapshots"
       assert response =~ "Web page"
     end
   end

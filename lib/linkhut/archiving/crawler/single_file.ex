@@ -20,8 +20,8 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
   @html_content_types ~w(text/html application/xhtml+xml)
 
-  # 1 minute timeout
-  @timeout_ms 60_000
+  # 2 minute timeout
+  @timeout_ms 120_000
 
   @impl true
   def can_handle?(_url, %{content_type: content_type, status: status})

@@ -178,7 +178,7 @@ defmodule Linkhut.Archiving.Storage.Local do
 
   defp compression_algo do
     Application.get_env(:linkhut, __MODULE__, [])
-    |> Keyword.get(:compression, :none)
+    |> Keyword.get(:compression, :gzip)
   end
 
   defp store_compressed(content, dest_path) do
