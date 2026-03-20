@@ -326,6 +326,120 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
   end
 
+  describe "GET /archive/:link_id/snapshot/:id/delete" do
+    setup :create_link_and_snapshot
+
+    test "renders confirmation page", %{conn: conn, link: link, snapshot: snapshot} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/snapshot/#{snapshot.id}/delete")
+      assert html_response(conn, 200) =~ "Remove snapshot"
+      assert html_response(conn, 200) =~ "Are you sure?"
+    end
+
+    test "returns not found for another user's snapshot", %{conn: conn, link: link} do
+      other_user = insert(:user)
+      other_link = insert(:link, user_id: other_user.id)
+      crawl_run = insert(:crawl_run, link_id: other_link.id, user_id: other_user.id, url: other_link.url, state: :complete)
+
+      {:ok, other_snapshot} =
+        Archiving.create_snapshot(other_link.id, other_user.id, %{
+          format: "webpage",
+          source: "singlefile",
+          state: :complete,
+          crawl_run_id: crawl_run.id
+        })
+
+      conn = get(conn, ~p"/_/archive/#{link.id}/snapshot/#{other_snapshot.id}/delete")
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not found"
+    end
+  end
+
+  describe "DELETE /archive/:link_id/snapshot/:id" do
+    setup :create_link_and_snapshot
+
+    test "marks snapshot as pending_deletion when confirmed", %{
+      conn: conn,
+      link: link,
+      snapshot: snapshot
+    } do
+      conn = delete(conn, ~p"/_/archive/#{link.id}/snapshot/#{snapshot.id}", %{snapshot: %{"are_you_sure?" => "true"}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Snapshot deleted"
+
+      updated = Archiving.get_snapshot_by_id(snapshot.id)
+      assert updated.state == :pending_deletion
+    end
+
+    test "redirects to confirmation page when not confirmed", %{
+      conn: conn,
+      link: link,
+      snapshot: snapshot
+    } do
+      conn = delete(conn, ~p"/_/archive/#{link.id}/snapshot/#{snapshot.id}")
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/snapshot/#{snapshot.id}/delete"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "confirm"
+    end
+
+    test "rejects deletion of active snapshot", %{conn: conn, user: user} do
+      link = insert(:link, user_id: user.id)
+      crawl_run = insert(:crawl_run, link_id: link.id, user_id: user.id, url: link.url)
+
+      {:ok, snapshot} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          format: "webpage",
+          source: "singlefile",
+          state: :pending,
+          crawl_run_id: crawl_run.id
+        })
+
+      conn = delete(conn, ~p"/_/archive/#{link.id}/snapshot/#{snapshot.id}", %{snapshot: %{"are_you_sure?" => "true"}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "still being processed"
+
+      unchanged = Archiving.get_snapshot_by_id(snapshot.id)
+      assert unchanged.state == :pending
+    end
+
+    test "returns not found for non-existent snapshot", %{conn: conn, link: link} do
+      conn = delete(conn, ~p"/_/archive/#{link.id}/snapshot/999999", %{snapshot: %{"are_you_sure?" => "true"}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not found"
+    end
+
+    test "returns not found for another user's snapshot", %{conn: conn, link: link} do
+      other_user = insert(:user)
+      other_link = insert(:link, user_id: other_user.id)
+
+      crawl_run =
+        insert(:crawl_run,
+          link_id: other_link.id,
+          user_id: other_user.id,
+          url: other_link.url,
+          state: :complete
+        )
+
+      {:ok, other_snapshot} =
+        Archiving.create_snapshot(other_link.id, other_user.id, %{
+          format: "webpage",
+          source: "singlefile",
+          state: :complete,
+          crawl_run_id: crawl_run.id
+        })
+
+      conn = delete(conn, ~p"/_/archive/#{link.id}/snapshot/#{other_snapshot.id}", %{snapshot: %{"are_you_sure?" => "true"}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not found"
+
+      unchanged = Archiving.get_snapshot_by_id(other_snapshot.id)
+      assert unchanged.state == :complete
+    end
+
+    test "redirects when link not found", %{conn: conn, user: user} do
+      conn = delete(conn, ~p"/_/archive/999999/snapshot/1", %{snapshot: %{"are_you_sure?" => "true"}})
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+    end
+  end
+
   describe "compressed snapshots" do
     setup %{user: user} do
       link = insert(:link, user_id: user.id)
@@ -565,6 +679,25 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         |> get(~p"/_/archive/#{link.id}/webpage")
 
       assert html_response(conn, 200) =~ "snapshot"
+    end
+
+    test "free user cannot delete snapshot in limited mode", %{conn: conn} do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      free_user =
+        Linkhut.AccountsFixtures.user_fixture()
+        |> Linkhut.AccountsFixtures.activate_user()
+
+      link = insert(:link, user_id: free_user.id)
+
+      conn =
+        conn
+        |> recycle()
+        |> LinkhutWeb.ConnCase.log_in_user(free_user)
+        |> delete(~p"/_/archive/#{link.id}/snapshot/1")
+
+      assert redirected_to(conn) == ~p"/~#{free_user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available"
     end
 
     test "free user cannot recrawl in limited mode", %{conn: conn} do

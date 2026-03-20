@@ -2,7 +2,7 @@
 <div class="bookmark-header">
   <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={LinkhutWeb.LinkComponents.show_url?(assigns)} />
 </div>
-<.current_snapshots snapshots={@current_snapshots} link={@link} />
+<.current_snapshots snapshots={@current_snapshots} link={@link} can_delete={@can_delete} />
 <section class="settings">
   <h3>Crawl history</h3>
   <.crawl_run_group :for={archive <- @archives} archive={archive} link={@link} />

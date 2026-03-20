@@ -158,6 +158,8 @@ defmodule LinkhutWeb.Router do
     get "/archive/:link_id", SnapshotController, :show
     get "/archive/:link_id/all", SnapshotController, :index
     post "/archive/:link_id/recrawl", SnapshotController, :recrawl
+    get "/archive/:link_id/snapshot/:id/delete", SnapshotController, :remove_snapshot
+    delete "/archive/:link_id/snapshot/:id", SnapshotController, :delete
     get "/archive/:link_id/:format/full", SnapshotController, :full
     get "/archive/:link_id/:format/download", SnapshotController, :download
     get "/archive/:link_id/:format/:source/full", SnapshotController, :full

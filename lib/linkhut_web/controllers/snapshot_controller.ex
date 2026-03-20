@@ -6,7 +6,7 @@ defmodule LinkhutWeb.SnapshotController do
   alias LinkhutWeb.Breadcrumb
 
   plug :require_can_view_archives when action in [:show, :full, :download, :index]
-  plug :require_can_create_archives when action in [:recrawl]
+  plug :require_can_create_archives when action in [:recrawl, :remove_snapshot, :delete]
 
   defp require_can_view_archives(conn, _opts) do
     if Archiving.can_view_archives?(conn.assigns.current_user) do
@@ -258,6 +258,7 @@ defmodule LinkhutWeb.SnapshotController do
             current_snapshots: current_snapshots,
             tabs: tabs,
             crawlers: configured_crawler_types(),
+            can_delete: Archiving.can_create_archives?(user),
             breadcrumb: %Breadcrumb{user: user, url: link.url}
           })
         end
@@ -297,6 +298,87 @@ defmodule LinkhutWeb.SnapshotController do
         |> put_flash(:error, "Not found")
         |> redirect(to: ~p"/~#{user.username}")
     end
+  end
+
+  @doc """
+  Shows the snapshot deletion confirmation page.
+  """
+  def remove_snapshot(conn, %{"link_id" => link_id, "id" => id}) do
+    user = conn.assigns.current_user
+
+    user_id = user.id
+
+    with {:ok, link_id} <- parse_link_id(link_id),
+         {:ok, snapshot_id} <- parse_link_id(id),
+         {:ok, link} <- Links.get_user_link(link_id, user.id) do
+      case Archiving.get_snapshot_by_id(snapshot_id) do
+        %{user_id: ^user_id} = snapshot ->
+          render(conn, :remove_snapshot, %{
+            link: link,
+            snapshot: snapshot,
+            breadcrumb: %Breadcrumb{user: user, url: link.url}
+          })
+
+        _ ->
+          conn
+          |> put_flash(:error, "Snapshot not found")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+      end
+    else
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+
+      :error ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+    end
+  end
+
+  @doc """
+  Deletes a snapshot (marks it as pending_deletion).
+  """
+  def delete(conn, %{"link_id" => link_id, "id" => id, "snapshot" => %{"are_you_sure?" => "true"}}) do
+    user = conn.assigns.current_user
+
+    with {:ok, link_id} <- parse_link_id(link_id),
+         {:ok, snapshot_id} <- parse_link_id(id),
+         {:ok, _link} <- Links.get_user_link(link_id, user.id) do
+      case Archiving.request_snapshot_deletion(snapshot_id, user.id) do
+        {:ok, _snapshot} ->
+          conn
+          |> put_flash(:info, "Snapshot deleted")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+
+        {:error, :active} ->
+          conn
+          |> put_flash(:error, "Cannot delete a snapshot that is still being processed")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+
+        {:error, :not_found} ->
+          conn
+          |> put_flash(:error, "Snapshot not found")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+      end
+    else
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+
+      :error ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+    end
+  end
+
+  def delete(conn, %{"link_id" => link_id, "id" => id}) do
+    conn
+    |> put_flash(:error, "Please confirm you want to delete this snapshot")
+    |> redirect(to: ~p"/_/archive/#{link_id}/snapshot/#{id}/delete")
   end
 
   defp redirect_to_snapshot(conn, snapshot) do

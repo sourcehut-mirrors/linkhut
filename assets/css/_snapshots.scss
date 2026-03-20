@@ -235,6 +235,18 @@ table.snapshot-table {
 
 }
 
+.snapshot-actions-cell {
+    a:not(:first-child)::before {
+        content: "·";
+        color: $muted;
+        margin-right: $spacing-tiny;
+
+        @media (prefers-color-scheme: dark) {
+            color: $muted-dark;
+        }
+    }
+}
+
 // Snapshot actions (index page)
 
 .snapshot-actions {

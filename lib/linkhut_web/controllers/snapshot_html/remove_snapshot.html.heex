@@ -1,0 +1,33 @@
+<div>
+  <h3>Remove snapshot</h3>
+  <div class="bookmark">
+    <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} />
+  </div>
+  <table class="details-table">
+    <tbody>
+      <tr>
+        <th>Format</th>
+        <td>{LinkhutWeb.SnapshotHTML.format_display_name(@snapshot.format)}</td>
+      </tr>
+      <tr>
+        <th>Source</th>
+        <td>{LinkhutWeb.SnapshotHTML.source_display_name(@snapshot.source)}</td>
+      </tr>
+      <tr>
+        <th>Captured</th>
+        <td>{LinkhutWeb.SnapshotHTML.format_datetime(@snapshot.inserted_at)}</td>
+      </tr>
+      <tr :if={@snapshot.file_size_bytes}>
+        <th>Size</th>
+        <td>{LinkhutWeb.SnapshotHTML.format_file_size(@snapshot.file_size_bytes)}</td>
+      </tr>
+    </tbody>
+  </table>
+  <hr />
+  <.form :let={f} for={%{}} as={:snapshot} action={~p"/_/archive/#{@link.id}/snapshot/#{@snapshot.id}"} method="delete">
+    <fieldset>
+      <.input field={f[:are_you_sure?]} label="Are you sure?" type="checkbox" />
+      <.button type="submit">Delete</.button>
+    </fieldset>
+  </.form>
+</div>

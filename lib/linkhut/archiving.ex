@@ -452,6 +452,31 @@ defmodule Linkhut.Archiving do
     |> to_integer()
   end
 
+  @active_states [:pending, :crawling, :retryable]
+
+  @doc """
+  Marks a single snapshot as pending deletion.
+
+  Returns `{:ok, snapshot}` on success, `{:error, :active}` if the snapshot
+  is in an active state (pending/crawling/retryable), `{:error, :not_found}`
+  if the snapshot doesn't exist or doesn't belong to the user.
+  """
+  def request_snapshot_deletion(snapshot_id, user_id) do
+    case Repo.get_by(Snapshot, id: snapshot_id, user_id: user_id) do
+      nil ->
+        {:error, :not_found}
+
+      %Snapshot{state: state} when state in @active_states ->
+        {:error, :active}
+
+      %Snapshot{state: :pending_deletion} = snapshot ->
+        {:ok, snapshot}
+
+      snapshot ->
+        update_snapshot(snapshot, %{state: :pending_deletion})
+    end
+  end
+
   @doc "Marks all snapshots and crawl runs for a link as pending deletion."
   def mark_snapshots_for_deletion(link_id) do
     Repo.transaction(fn ->

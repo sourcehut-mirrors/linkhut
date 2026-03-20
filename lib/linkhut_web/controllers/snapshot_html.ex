@@ -174,10 +174,11 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :snapshots, :list, required: true
   attr :link, :map, required: true
+  attr :can_delete, :boolean, default: false
 
   def current_snapshots(assigns) do
     ~H"""
-    <div :if={@snapshots != []} class="current-snapshots">
+    <section :if={@snapshots != []} class="current-snapshots">
       <table class="snapshot-table">
         <thead>
           <tr>
@@ -206,13 +207,14 @@ defmodule LinkhutWeb.SnapshotHTML do
             <td data-label="State">
               <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
             </td>
-            <td data-label="Actions">
+            <td data-label="Actions" class="snapshot-actions-cell">
               <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/#{snapshot.format}"}>view</a>
+              <a :if={@can_delete} href={~p"/_/archive/#{@link.id}/snapshot/#{snapshot.id}/delete"}>delete</a>
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </section>
     """
   end
 
