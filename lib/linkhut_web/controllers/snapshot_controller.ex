@@ -6,7 +6,7 @@ defmodule LinkhutWeb.SnapshotController do
   alias LinkhutWeb.Breadcrumb
 
   plug :require_can_view_archives when action in [:show, :full, :download, :index]
-  plug :require_can_create_archives when action in [:recrawl, :remove_snapshot, :delete]
+  plug :require_can_create_archives when action in [:recrawl, :upload, :remove_snapshot, :delete]
 
   defp require_can_view_archives(conn, _opts) do
     if Archiving.can_view_archives?(conn.assigns.current_user) do
@@ -329,6 +329,66 @@ defmodule LinkhutWeb.SnapshotController do
         conn
         |> put_flash(:error, "Not found")
         |> redirect(to: ~p"/~#{user.username}")
+
+      :error ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+    end
+  end
+
+  @doc """
+  Uploads a user-provided snapshot for a link.
+  """
+  def upload(conn, %{"link_id" => link_id, "upload" => %{"file" => %Plug.Upload{} = upload}}) do
+    user = conn.assigns.current_user
+
+    with {:ok, link_id} <- parse_link_id(link_id),
+         {:ok, _link} <- Links.get_user_link(link_id, user.id) do
+      case Archiving.upload_snapshot(link_id, user.id, upload) do
+        {:ok, _snapshot} ->
+          conn
+          |> put_flash(:info, "Snapshot uploaded")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+
+        {:error, :unsupported_format} ->
+          conn
+          |> put_flash(:error, "Unsupported file type. Accepted: HTML, PDF, plain text.")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+
+        {:error, :file_too_large} ->
+          max = Linkhut.Config.archiving(:max_file_size)
+
+          conn
+          |> put_flash(:error, "File too large (max #{Linkhut.Formatting.format_bytes(max)})")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+
+        {:error, _reason} ->
+          conn
+          |> put_flash(:error, "Upload failed")
+          |> redirect(to: ~p"/_/archive/#{link_id}/all")
+      end
+    else
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+
+      :error ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+    end
+  end
+
+  def upload(conn, %{"link_id" => link_id}) do
+    user = conn.assigns.current_user
+
+    case parse_link_id(link_id) do
+      {:ok, link_id} ->
+        conn
+        |> put_flash(:error, "No file selected")
+        |> redirect(to: ~p"/_/archive/#{link_id}/all")
 
       :error ->
         conn

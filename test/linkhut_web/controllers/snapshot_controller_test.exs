@@ -440,6 +440,79 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
   end
 
+  describe "POST /archive/:link_id/upload" do
+    setup :create_link_and_snapshot
+
+    defp upload_fixture(filename, content_type, content) do
+      path = Path.join(System.tmp_dir!(), filename)
+      File.write!(path, content)
+
+      %Plug.Upload{
+        path: path,
+        filename: filename,
+        content_type: content_type
+      }
+    end
+
+    test "uploads HTML file and creates snapshot", %{conn: conn, link: link} do
+      upload = upload_fixture("page.html", "text/html", "<html>uploaded</html>")
+
+      conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Snapshot uploaded"
+
+      snapshots = Archiving.get_complete_snapshots_by_link(link.id)
+      upload_snapshot = Enum.find(snapshots, &(&1.source == "upload"))
+      assert upload_snapshot
+      assert upload_snapshot.format == "webpage"
+      assert upload_snapshot.state == :complete
+    end
+
+    test "uploads PDF file and creates snapshot", %{conn: conn, link: link} do
+      upload = upload_fixture("doc.pdf", "application/pdf", "%PDF-1.4 test content")
+
+      conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Snapshot uploaded"
+
+      snapshots = Archiving.get_complete_snapshots_by_link(link.id)
+      pdf_snapshot = Enum.find(snapshots, &(&1.format == "pdf"))
+      assert pdf_snapshot
+      assert pdf_snapshot.source == "upload"
+    end
+
+    test "rejects unsupported file type", %{conn: conn, link: link} do
+      upload = upload_fixture("image.png", "image/png", "PNG data")
+
+      conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Unsupported file type"
+    end
+
+    test "rejects file exceeding max size", %{conn: conn, link: link} do
+      # Create a file larger than max_file_size
+      max = Linkhut.Config.archiving(:max_file_size)
+      content = String.duplicate("x", max + 1)
+      upload = upload_fixture("big.html", "text/html", content)
+
+      conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "too large"
+    end
+
+    test "redirects with error when no file selected", %{conn: conn, link: link} do
+      conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{})
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "No file"
+    end
+
+    test "redirects when link not found", %{conn: conn, user: user} do
+      upload = upload_fixture("page.html", "text/html", "<html>test</html>")
+      conn = post(conn, ~p"/_/archive/999999/upload", %{upload: %{file: upload}})
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+    end
+  end
+
   describe "compressed snapshots" do
     setup %{user: user} do
       link = insert(:link, user_id: user.id)

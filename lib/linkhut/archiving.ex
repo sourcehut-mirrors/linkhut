@@ -422,6 +422,74 @@ defmodule Linkhut.Archiving do
     |> Repo.insert()
   end
 
+  @doc """
+  Uploads a user-provided snapshot for a link.
+
+  Validates file size, detects format from content type, stores the file,
+  creates a snapshot record, and runs supersession cleanup.
+
+  Returns `{:ok, snapshot}` on success, `{:error, reason}` on failure.
+  """
+  def upload_snapshot(link_id, user_id, %Plug.Upload{} = upload) do
+    content_type = upload.content_type || MIME.from_path(upload.filename)
+    max_file_size = Linkhut.Config.archiving(:max_file_size)
+
+    with {:ok, format} <- detect_upload_format(content_type),
+         {:ok, file_size} <- validate_upload_size(upload.path, max_file_size),
+         {:ok, snapshot} <- create_upload_snapshot(link_id, user_id, format),
+         {:ok, storage_key, store_meta} <-
+           Storage.store({:file, upload.path}, snapshot, content_type: content_type) do
+      case update_snapshot(snapshot, %{
+             storage_key: storage_key,
+             file_size_bytes: store_meta.file_size_bytes,
+             encoding: store_meta.encoding,
+             original_file_size_bytes: if(store_meta.encoding, do: file_size, else: nil),
+             archive_metadata: %{content_type: content_type, original_filename: upload.filename}
+           }) do
+        {:ok, snapshot} ->
+          cleanup_superseded_snapshots(snapshot.id, link_id, format, :complete, "upload")
+          {:ok, snapshot}
+
+        {:error, changeset} ->
+          {:error, changeset}
+      end
+    end
+  end
+
+  @upload_content_types ~w(text/html application/xhtml+xml application/pdf text/plain text/markdown)
+
+  @doc "Returns the list of content types accepted for snapshot uploads."
+  def accepted_upload_types, do: @upload_content_types
+
+  defp detect_upload_format(content_type) do
+    cond do
+      content_type in ~w(text/html application/xhtml+xml) -> {:ok, "webpage"}
+      content_type == "application/pdf" -> {:ok, "pdf"}
+      content_type in ~w(text/plain text/markdown) -> {:ok, "text"}
+      true -> {:error, :unsupported_format}
+    end
+  end
+
+  defp validate_upload_size(path, max_file_size) do
+    case File.stat(path) do
+      {:ok, %{size: size}} when size <= max_file_size -> {:ok, size}
+      {:ok, %{size: _size}} -> {:error, :file_too_large}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp create_upload_snapshot(link_id, user_id, format) do
+    %{
+      link_id: link_id,
+      user_id: user_id,
+      format: format,
+      source: "upload",
+      state: :complete
+    }
+    |> Snapshot.upload_changeset()
+    |> Repo.insert()
+  end
+
   @doc "Returns a snapshot by link_id and job_id, or nil."
   def get_snapshot(link_id, job_id) do
     Snapshot

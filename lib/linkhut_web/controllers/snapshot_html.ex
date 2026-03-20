@@ -218,6 +218,8 @@ defmodule LinkhutWeb.SnapshotHTML do
     """
   end
 
+  defp accepted_upload_types, do: Enum.join(Linkhut.Archiving.accepted_upload_types(), ",")
+
   defdelegate source_display_name(source), to: Linkhut.Formatting
 
   # --- Archive-centric components ---
