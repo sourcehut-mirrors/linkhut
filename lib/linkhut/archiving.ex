@@ -13,6 +13,7 @@ defmodule Linkhut.Archiving do
   alias Linkhut.Accounts
   alias Linkhut.Accounts.User
   alias Linkhut.Archiving.{CrawlRun, Snapshot, Steps, Storage, Tokens}
+  alias Linkhut.Formatting
   alias Linkhut.Links.Link
   alias Linkhut.{Repo, Subscriptions}
 
@@ -316,11 +317,17 @@ defmodule Linkhut.Archiving do
   Schedules a re-crawl for a link by enqueueing a new Archiver job
   with the recrawl flag.
   """
-  def schedule_recrawl(link) do
-    Linkhut.Archiving.Workers.Archiver.enqueue(link,
-      recrawl: true,
-      schedule_in: 10
-    )
+  def schedule_recrawl(link, opts \\ []) do
+    enqueue_opts = [recrawl: true, schedule_in: 10]
+
+    enqueue_opts =
+      case Keyword.get(opts, :only_types) do
+        nil -> enqueue_opts
+        [] -> enqueue_opts
+        types -> Keyword.put(enqueue_opts, :only_types, types)
+      end
+
+    Linkhut.Archiving.Workers.Archiver.enqueue(link, enqueue_opts)
   end
 
   # --- Snapshot functions ---
@@ -342,10 +349,32 @@ defmodule Linkhut.Archiving do
     |> Repo.all()
   end
 
+  @doc "Returns all complete snapshots for a link, ordered by format locality then recency."
+  def get_current_snapshots_by_link(link_id) do
+    Snapshot
+    |> where([s], s.link_id == ^link_id and s.state in [:complete, :not_available])
+    |> order_by([s], asc: s.format, desc: s.inserted_at)
+    |> preload(:crawl_run)
+    |> Repo.all()
+    |> Enum.sort_by(&Formatting.format_sort_key(&1.format))
+  end
+
   @doc "Returns the latest complete snapshot of a given format for a link."
   def get_latest_complete_snapshot(link_id, format) do
     case Snapshot
          |> where(link_id: ^link_id, format: ^format, state: :complete)
+         |> order_by([s], desc: s.inserted_at)
+         |> limit(1)
+         |> Repo.one() do
+      nil -> {:error, :not_found}
+      snapshot -> {:ok, snapshot}
+    end
+  end
+
+  @doc "Returns the latest complete snapshot of a given format and source for a link."
+  def get_latest_complete_snapshot(link_id, format, source) do
+    case Snapshot
+         |> where(link_id: ^link_id, format: ^format, source: ^source, state: :complete)
          |> order_by([s], desc: s.inserted_at)
          |> limit(1)
          |> Repo.one() do

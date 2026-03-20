@@ -105,7 +105,7 @@ defmodule LinkhutWeb.SettingsComponents do
     <table>
       <thead>
         <tr>
-          <th>Type / State</th>
+          <th>Format / State</th>
           <th>Count</th>
           <th>Size</th>
         </tr>

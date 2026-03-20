@@ -66,9 +66,9 @@
                 </.form>
               </li>
             <% end %>
-            <%= if @can_view_archives? && @link.has_archive? do %>
+            <%= if @can_view_archives? do %>
               <li>
-                <a href={~p"/_/archive/#{@link.id}"}>{gettext("view archive")}</a>
+                <a href={~p"/_/archive/#{@link.id}"}>{gettext("archive")}</a>
               </li>
             <% end %>
           <% else %>

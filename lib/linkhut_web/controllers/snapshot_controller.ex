@@ -31,27 +31,31 @@ defmodule LinkhutWeb.SnapshotController do
   end
 
   @doc """
-  Shows the snapshot viewer page with tabs for each crawler type.
-  Default tab (no type param) selects the first available type.
+  Shows the snapshot viewer page with tabs for each format.
+  Default tab (no format param) selects the first available format.
   """
-  def show(conn, %{"link_id" => link_id, "type" => type}), do: show_snapshot(conn, link_id, type)
-  def show(conn, %{"link_id" => link_id}), do: show_snapshot(conn, link_id, nil)
+  def show(conn, %{"link_id" => link_id, "format" => format, "source" => source}) do
+    show_snapshot(conn, link_id, format, source)
+  end
 
-  defp show_snapshot(conn, link_id, type) do
+  def show(conn, %{"link_id" => link_id, "format" => format}) do
+    show_snapshot(conn, link_id, format, nil)
+  end
+
+  def show(conn, %{"link_id" => link_id}), do: show_snapshot(conn, link_id, nil, nil)
+
+  defp show_snapshot(conn, link_id, format, source) do
     user = conn.assigns.current_user
 
-    case parse_link_id(link_id) do
-      {:ok, link_id} ->
-        case Links.get_user_link(link_id, user.id) do
-          {:ok, link} ->
-            complete = Archiving.get_complete_snapshots_by_link(link_id)
-            render_snapshot_or_redirect(conn, user, link, link_id, complete, type)
-
-          {:error, :not_found} ->
-            conn
-            |> put_flash(:error, "Snapshot not found")
-            |> redirect(to: ~p"/~#{user.username}")
-        end
+    with {:ok, link_id} <- parse_link_id(link_id),
+         {:ok, link} <- Links.get_user_link(link_id, user.id) do
+      complete = Archiving.get_complete_snapshots_by_link(link_id)
+      render_snapshot_or_redirect(conn, user, link, link_id, complete, format, source)
+    else
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "Snapshot not found")
+        |> redirect(to: ~p"/~#{user.username}")
 
       :error ->
         conn
@@ -60,7 +64,7 @@ defmodule LinkhutWeb.SnapshotController do
     end
   end
 
-  defp render_snapshot_or_redirect(conn, user, _link, link_id, [], _type) do
+  defp render_snapshot_or_redirect(conn, user, _link, link_id, [], _format, _source) do
     if Archiving.get_crawl_runs_by_link(link_id) == [] do
       conn
       |> put_flash(:info, "Archive is being prepared, check back soon.")
@@ -70,46 +74,47 @@ defmodule LinkhutWeb.SnapshotController do
     end
   end
 
-  defp render_snapshot_or_redirect(conn, _user, _link, link_id, complete, nil = _type) do
-    grouped = Enum.group_by(complete, & &1.format)
-    first_type = grouped |> Map.keys() |> Enum.sort() |> hd()
-    redirect(conn, to: ~p"/_/archive/#{link_id}/type/#{first_type}")
+  defp render_snapshot_or_redirect(conn, _user, _link, link_id, complete, nil, _source) do
+    first = Enum.min_by(complete, &Linkhut.Formatting.format_sort_key(&1.format))
+    redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
   end
 
-  defp render_snapshot_or_redirect(conn, user, link, link_id, complete, type) do
-    grouped = Enum.group_by(complete, & &1.format)
-    tabs = grouped |> Map.keys() |> Enum.sort()
+  defp render_snapshot_or_redirect(conn, user, link, link_id, complete, format, source) do
+    snapshot = find_snapshot(complete, format, source)
 
-    if type in tabs do
-      snapshot = grouped[type] |> hd()
+    if snapshot == nil do
+      first = Enum.min_by(complete, &Linkhut.Formatting.format_sort_key(&1.format))
+      redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
+    else
+      tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete, link_id)
+
+      base = %{
+        link: link,
+        snapshot: snapshot,
+        tabs: tabs,
+        breadcrumb: %Breadcrumb{user: user, url: link.url}
+      }
 
       assigns =
         case StorageKey.parse(snapshot.storage_key) do
           {:ok, {:external, url}} ->
-            %{
-              link: link,
-              snapshot: snapshot,
-              tabs: tabs,
-              external_url: url,
-              breadcrumb: %Breadcrumb{user: user, url: link.url}
-            }
+            Map.put(base, :external_url, url)
 
           _ ->
             token = Archiving.generate_token(snapshot.id)
-
-            %{
-              link: link,
-              snapshot: snapshot,
-              tabs: tabs,
-              serve_url: serve_url(conn, token),
-              breadcrumb: %Breadcrumb{user: user, url: link.url}
-            }
+            Map.put(base, :serve_url, serve_url(conn, token))
         end
 
       render(conn, :show, assigns)
-    else
-      redirect(conn, to: ~p"/_/archive/#{link_id}/type/#{hd(tabs)}")
     end
+  end
+
+  defp find_snapshot(complete, format, source) do
+    complete
+    |> Enum.filter(&(&1.format == format))
+    |> then(fn matching ->
+      if source, do: Enum.find(matching, &(&1.source == source)), else: List.first(matching)
+    end)
   end
 
   @doc """
@@ -156,13 +161,13 @@ defmodule LinkhutWeb.SnapshotController do
   @doc """
   Generates a fresh serve token and redirects to the serve URL.
   """
-  def full(conn, %{"link_id" => link_id, "type" => type}) do
+  def full(conn, %{"link_id" => link_id, "format" => format} = params) do
     user = conn.assigns.current_user
 
     case parse_link_id(link_id) do
       {:ok, link_id} ->
         with {:ok, _link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <- Archiving.get_latest_complete_snapshot(link_id, type) do
+             {:ok, snapshot} <- resolve_snapshot(link_id, format, params["source"]) do
           redirect_to_snapshot(conn, snapshot)
         else
           {:error, :not_found} ->
@@ -181,14 +186,14 @@ defmodule LinkhutWeb.SnapshotController do
   @doc """
   Downloads the snapshot archive file.
   """
-  def download(conn, %{"link_id" => link_id, "type" => type}) do
+  def download(conn, %{"link_id" => link_id, "format" => format} = params) do
     user = conn.assigns.current_user
 
     case parse_link_id(link_id) do
       {:ok, link_id} ->
         with {:ok, link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <- Archiving.get_latest_complete_snapshot(link_id, type) do
-          serve_download(conn, link, snapshot, link_id, type, user)
+             {:ok, snapshot} <- resolve_snapshot(link_id, format, params["source"]) do
+          serve_download(conn, link, snapshot, link_id, format, user)
         else
           {:error, :not_found} ->
             conn
@@ -201,6 +206,17 @@ defmodule LinkhutWeb.SnapshotController do
         |> put_flash(:error, "Not found")
         |> redirect(to: ~p"/~#{user.username}")
     end
+  end
+
+  defp resolve_snapshot(link_id, format, source) when is_binary(source) do
+    case Archiving.get_latest_complete_snapshot(link_id, format, source) do
+      {:ok, _} = result -> result
+      _ -> {:error, :not_found}
+    end
+  end
+
+  defp resolve_snapshot(link_id, format, _) do
+    Archiving.get_latest_complete_snapshot(link_id, format)
   end
 
   @doc """
@@ -230,20 +246,18 @@ defmodule LinkhutWeb.SnapshotController do
           |> put_flash(:info, "Archive is being prepared, check back soon.")
           |> redirect(to: ~p"/~#{user.username}")
         else
-          tabs =
-            archives
-            |> Enum.flat_map(& &1.snapshots)
-            |> Enum.filter(&(&1.state == :complete))
-            |> Enum.map(& &1.format)
-            |> Enum.uniq()
-            |> Enum.sort()
+          current_snapshots = Archiving.get_current_snapshots_by_link(link_id)
+          complete_snapshots = Enum.filter(current_snapshots, &(&1.state == :complete))
+          tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete_snapshots, link_id)
 
           conn
           |> maybe_auto_refresh(archives)
           |> render(:index, %{
             link: link,
             archives: archives,
+            current_snapshots: current_snapshots,
             tabs: tabs,
+            crawlers: configured_crawler_types(),
             breadcrumb: %Breadcrumb{user: user, url: link.url}
           })
         end
@@ -258,14 +272,15 @@ defmodule LinkhutWeb.SnapshotController do
   @doc """
   Schedules a re-crawl for a link.
   """
-  def recrawl(conn, %{"link_id" => link_id}) do
+  def recrawl(conn, %{"link_id" => link_id} = params) do
     user = conn.assigns.current_user
 
     case parse_link_id(link_id) do
       {:ok, link_id} ->
         case Links.get_user_link(link_id, user.id) do
           {:ok, link} ->
-            Archiving.schedule_recrawl(link)
+            recrawl_opts = recrawl_opts(params)
+            Archiving.schedule_recrawl(link, recrawl_opts)
 
             conn
             |> put_flash(:info, "Re-crawl scheduled")
@@ -335,13 +350,31 @@ defmodule LinkhutWeb.SnapshotController do
       {:ok, {:redirect, _url}} ->
         conn
         |> put_flash(:info, "This snapshot is hosted externally and cannot be downloaded.")
-        |> redirect(to: ~p"/_/archive/#{link_id}/type/#{type}")
+        |> redirect(to: ~p"/_/archive/#{link_id}/#{type}")
 
       {:error, :invalid_storage_key} ->
         conn
         |> put_flash(:error, "Snapshot not found")
         |> redirect(to: ~p"/~#{user.username}")
     end
+  end
+
+  defp recrawl_opts(%{"crawlers" => crawlers}) when is_list(crawlers) do
+    configured = configured_crawler_types()
+    selected = Enum.filter(crawlers, &(&1 in configured))
+
+    if selected == [] or length(selected) == length(configured) do
+      []
+    else
+      [only_types: selected]
+    end
+  end
+
+  defp recrawl_opts(_), do: []
+
+  defp configured_crawler_types do
+    Linkhut.Config.archiving(:crawlers, [])
+    |> Enum.map(& &1.source_type())
   end
 
   defp parse_link_id(link_id_string) do

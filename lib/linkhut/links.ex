@@ -360,22 +360,6 @@ defmodule Linkhut.Links do
   defp select_field({:current_user_id, user_id}, fields) do
     fields
     |> Map.put(
-      :has_archive?,
-      dynamic(
-        [l],
-        fragment(
-          """
-          CASE WHEN ? = ? THEN
-            EXISTS(SELECT 1 FROM crawl_runs WHERE link_id = ? AND state != 'pending_deletion')
-          ELSE FALSE END
-          """,
-          l.user_id,
-          ^user_id,
-          l.id
-        )
-      )
-    )
-    |> Map.put(
       :saved_by_current_user?,
       dynamic(
         [l],

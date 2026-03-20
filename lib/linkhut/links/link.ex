@@ -25,7 +25,6 @@ defmodule Linkhut.Links.Link do
     field :is_unread, :boolean, default: false
     field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
-    field :has_archive?, :boolean, virtual: true, default: false
     field :saved_by_current_user?, :boolean, virtual: true, default: false
 
     embeds_one :metadata, LinkMetadata, on_replace: :update do

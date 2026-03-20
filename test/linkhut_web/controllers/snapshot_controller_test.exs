@@ -50,9 +50,9 @@ defmodule LinkhutWeb.SnapshotControllerTest do
   describe "GET /archive/:link_id (show - default tab)" do
     setup :create_link_and_snapshot
 
-    test "redirects to first available type", %{conn: conn, link: link} do
+    test "redirects to first available format and source", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}")
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/webpage"
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/webpage/singlefile"
     end
 
     test "redirects when link not found", %{conn: conn, user: user} do
@@ -86,17 +86,22 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
   end
 
-  describe "GET /archive/:link_id/type/:type (show - specific tab)" do
+  describe "GET /archive/:link_id/:format/:source (show - specific tab)" do
     setup :create_link_and_snapshot
 
-    test "renders snapshot viewer for specific type", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage")
+    test "renders snapshot viewer for format and source", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage/singlefile")
       assert html_response(conn, 200) =~ "snapshot"
     end
 
-    test "redirects to first available type for unknown type", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/nonexistent")
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/webpage"
+    test "renders snapshot viewer for format without source", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage")
+      assert html_response(conn, 200) =~ "snapshot"
+    end
+
+    test "redirects to first available format for unknown format", %{conn: conn, link: link} do
+      conn = get(conn, ~p"/_/archive/#{link.id}/nonexistent")
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/webpage/singlefile"
     end
   end
 
@@ -144,11 +149,11 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
   end
 
-  describe "GET /archive/:link_id/type/:type/full (full)" do
+  describe "GET /archive/:link_id/:format/full (full)" do
     setup :create_link_and_snapshot
 
     test "redirects to serve URL with fresh token", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/full")
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage/full")
       location = redirected_to(conn)
       assert location =~ "/_/snapshot/"
       assert location =~ "/serve"
@@ -166,16 +171,16 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           crawl_run_id: crawl_run.id
         })
 
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/full")
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage/full")
       assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
 
-  describe "GET /archive/:link_id/type/:type/download (download)" do
+  describe "GET /archive/:link_id/:format/download (download)" do
     setup :create_link_and_snapshot
 
     test "sends file as download", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/download")
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage/download")
       assert response(conn, 200) =~ "archived content"
       [disposition] = get_resp_header(conn, "content-disposition")
       assert disposition =~ "attachment"
@@ -190,7 +195,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "lists archives grouped for a link", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
       body = html_response(conn, 200)
-      assert body =~ "archive-group"
+      assert body =~ "crawl-run"
     end
 
     test "shows failed archive with error message", %{conn: conn, user: user} do
@@ -409,7 +414,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       link: link,
       original_content: original_content
     } do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/webpage/download")
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage/download")
       body = response(conn, 200)
       assert body == original_content
 
@@ -451,20 +456,20 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "show renders external content for wayback snapshot", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/reference")
+      conn = get(conn, ~p"/_/archive/#{link.id}/reference")
       body = html_response(conn, 200)
       assert body =~ "Wayback Machine"
       assert body =~ "snapshot-content-external"
     end
 
     test "full redirects externally for wayback snapshot", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/reference/full")
+      conn = get(conn, ~p"/_/archive/#{link.id}/reference/full")
       assert redirected_to(conn) == "https://web.archive.org/web/20250301/https://example.com"
     end
 
     test "download redirects with flash for wayback snapshot", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/type/reference/download")
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/type/reference"
+      conn = get(conn, ~p"/_/archive/#{link.id}/reference/download")
+      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/reference"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "externally"
     end
 
@@ -557,7 +562,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         conn
         |> recycle()
         |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/#{link.id}/type/webpage")
+        |> get(~p"/_/archive/#{link.id}/webpage")
 
       assert html_response(conn, 200) =~ "snapshot"
     end
@@ -622,7 +627,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         conn
         |> recycle()
         |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/#{link.id}/type/webpage")
+        |> get(~p"/_/archive/#{link.id}/webpage")
 
       assert html_response(view_conn, 200) =~ "snapshot"
 

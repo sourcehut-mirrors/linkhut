@@ -2,12 +2,24 @@
 <div class="bookmark-header">
   <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={LinkhutWeb.LinkComponents.show_url?(assigns)} />
 </div>
-<div class="snapshot-list">
-  <.archive_group :for={archive <- @archives} archive={archive} link={@link} />
-  <div :if={!any_processing?(@archives)} class="snapshot-actions">
+<.current_snapshots snapshots={@current_snapshots} link={@link} />
+<section class="settings">
+  <h3>Crawl history</h3>
+  <.crawl_run_group :for={archive <- @archives} archive={archive} link={@link} />
+</section>
+<section :if={!any_processing?(@archives)} class="snapshot-actions">
+  <div class="snapshot-action-card">
+    <h4>Re-crawl</h4>
+    <p class="snapshot-action-description">Fetch fresh snapshots for this link using the selected crawlers.</p>
     <form method="post" action={~p"/_/archive/#{@link.id}/recrawl"}>
       <input type="hidden" name="_csrf_token" value={Phoenix.Controller.get_csrf_token()} />
+      <fieldset class="crawler-selection">
+        <label :for={crawler <- @crawlers}>
+          <input type="checkbox" name="crawlers[]" value={crawler} checked />
+          {LinkhutWeb.SnapshotHTML.source_display_name(crawler)}
+        </label>
+      </fieldset>
       <button type="submit" class="btn btn-small">Re-crawl</button>
     </form>
   </div>
-</div>
+</section>

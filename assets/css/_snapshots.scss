@@ -162,6 +162,15 @@ table.snapshot-table {
         @media (prefers-color-scheme: dark) {
             border-bottom-color: $dark-gray;
         }
+
+        &:empty::after {
+            content: "—";
+            color: $muted;
+
+            @media (prefers-color-scheme: dark) {
+                color: $muted-dark;
+            }
+        }
     }
 
     & > tbody > tr.final-url-row > td {
@@ -203,6 +212,10 @@ table.snapshot-table {
             border-bottom: none;
             padding: 1px $spacing-small;
 
+            &:empty {
+                display: none;
+            }
+
             &::before {
                 content: attr(data-label);
                 font-weight: bold;
@@ -222,9 +235,61 @@ table.snapshot-table {
 
 }
 
-// Archive groups (index page)
+// Snapshot actions (index page)
 
-.archive-group {
+.snapshot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-small;
+    margin-top: $spacing-small;
+}
+
+.snapshot-action-card {
+    flex: 1;
+    min-width: 15em;
+    border: 1px solid $light-gray;
+    padding: $spacing-small;
+    background-color: $card-background;
+
+    @media (prefers-color-scheme: dark) {
+        border-color: $dark-gray;
+        background-color: $card-background-dark;
+    }
+
+    & > h4 {
+        margin: 0 0 $spacing-tiny 0;
+    }
+}
+
+.snapshot-action-description {
+    color: $muted;
+    font-size: $font-small;
+    margin: 0 0 $spacing-tiny 0;
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
+    }
+}
+
+.crawler-selection {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    margin-bottom: $spacing-tiny;
+    border: none;
+    padding: 0;
+
+    & > label {
+        display: inline-flex;
+        align-items: center;
+        gap: $spacing-tiny;
+        font-size: $font-small;
+    }
+}
+
+// Crawl run entries (index page)
+
+.crawl-run {
     border: 1px solid $light-gray;
     border-left-width: 3px;
     margin-bottom: $spacing-small;
@@ -269,7 +334,7 @@ table.snapshot-table {
     }
 }
 
-.archive-header {
+.crawl-run-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -281,7 +346,7 @@ table.snapshot-table {
     }
 }
 
-.archive-error {
+.crawl-run-error {
     color: $red;
     padding: $spacing-tiny $spacing-small;
     font-size: $font-small;
@@ -422,23 +487,13 @@ table.details-table {
     }
 }
 
-// Archive header retries badge
-
-.archive-header-right {
+.crawl-run-header-right {
     display: flex;
     align-items: center;
     gap: $spacing-tiny;
 }
 
-.archive-size {
-    color: $muted;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
-}
-
-.archive-retries {
+.crawl-run-retries {
     font-size: $font-small;
     color: $muted;
 

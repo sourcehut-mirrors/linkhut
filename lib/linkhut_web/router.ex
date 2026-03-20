@@ -154,13 +154,16 @@ defmodule LinkhutWeb.Router do
     get "/delete", LinkController, :remove
     put "/delete", LinkController, :delete
 
-    # Archive routes (link-scoped, type-based)
+    # Archive routes (link-scoped, format/source-based)
     get "/archive/:link_id", SnapshotController, :show
-    get "/archive/:link_id/type/:type", SnapshotController, :show, as: :archive_type
-    get "/archive/:link_id/type/:type/full", SnapshotController, :full
-    get "/archive/:link_id/type/:type/download", SnapshotController, :download
     get "/archive/:link_id/all", SnapshotController, :index
     post "/archive/:link_id/recrawl", SnapshotController, :recrawl
+    get "/archive/:link_id/:format/full", SnapshotController, :full
+    get "/archive/:link_id/:format/download", SnapshotController, :download
+    get "/archive/:link_id/:format/:source/full", SnapshotController, :full
+    get "/archive/:link_id/:format/:source/download", SnapshotController, :download
+    get "/archive/:link_id/:format/:source", SnapshotController, :show
+    get "/archive/:link_id/:format", SnapshotController, :show, as: :archive_format
 
     delete "/logout", Auth.SessionController, :delete
   end

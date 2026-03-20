@@ -9,7 +9,7 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   # --- Function components ---
 
-  attr :tabs, :list, required: true, doc: "list of format strings"
+  attr :tabs, :list, required: true, doc: "list of %{name: string, to: string} maps"
   attr :link_id, :integer, required: true
   attr :request_path, :string, required: true
 
@@ -19,20 +19,42 @@ defmodule LinkhutWeb.SnapshotHTML do
       <h2 class="navigation-header">Archive</h2>
       <ul class="navigation-tabs">
         <.nav_link
-          :for={format <- @tabs}
+          :for={tab <- @tabs}
           request_path={@request_path}
-          to={~p"/_/archive/#{@link_id}/type/#{format}"}
-          name={format_display_name(format)}
+          to={tab.to}
+          name={tab.name}
         />
         <.nav_link
           request_path={@request_path}
           to={~p"/_/archive/#{@link_id}/all"}
-          name="Archive history"
+          name="All"
         />
       </ul>
     </div>
     <hr />
     """
+  end
+
+  @doc """
+  Builds tab entries from a list of complete snapshots.
+  Each tab links to /:format/:source for stable, source-based URLs.
+  Disambiguates labels with source name when multiple snapshots share a format.
+  """
+  def build_tabs(snapshots, link_id) do
+    format_counts = Enum.frequencies_by(snapshots, & &1.format)
+
+    snapshots
+    |> Enum.sort_by(&Linkhut.Formatting.format_sort_key(&1.format))
+    |> Enum.map(fn snapshot ->
+      name =
+        if format_counts[snapshot.format] > 1 do
+          "#{format_display_name(snapshot.format)} (#{source_display_name(snapshot.source)})"
+        else
+          format_display_name(snapshot.format)
+        end
+
+      %{name: name, to: ~p"/_/archive/#{link_id}/#{snapshot.format}/#{snapshot.source}"}
+    end)
   end
 
   attr :link, :map, required: true
@@ -47,8 +69,8 @@ defmodule LinkhutWeb.SnapshotHTML do
         <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={@show_url} />
       </div>
       <div :if={!@external_url} class="snapshot-nav">
-        <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.format}/full"}>full page</a>
-        <a href={~p"/_/archive/#{@link.id}/type/#{@snapshot.format}/download"}>download</a>
+        <a href={~p"/_/archive/#{@link.id}/#{@snapshot.format}/#{@snapshot.source}/full"}>full page</a>
+        <a href={~p"/_/archive/#{@link.id}/#{@snapshot.format}/#{@snapshot.source}/download"}>download</a>
       </div>
     </div>
     """
@@ -87,10 +109,14 @@ defmodule LinkhutWeb.SnapshotHTML do
             <td>{format_datetime(@snapshot.inserted_at)}</td>
           </tr>
           <tr>
-            <th>Type</th>
-            <td>{crawler_label(@snapshot)}</td>
+            <th>Format</th>
+            <td>{format_display_name(@snapshot.format)}</td>
           </tr>
-          <tr :if={tool_label(@snapshot)}>
+          <tr>
+            <th>Source</th>
+            <td>{source_display_name(@snapshot.source)}</td>
+          </tr>
+          <tr :if={tool_name(@snapshot) || crawler_version(@snapshot)}>
             <th>Tool</th>
             <td>{tool_label(@snapshot)}</td>
           </tr>
@@ -144,12 +170,60 @@ defmodule LinkhutWeb.SnapshotHTML do
     """
   end
 
+  # --- Current snapshots component ---
+
+  attr :snapshots, :list, required: true
+  attr :link, :map, required: true
+
+  def current_snapshots(assigns) do
+    ~H"""
+    <div :if={@snapshots != []} class="current-snapshots">
+      <table class="snapshot-table">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Source</th>
+            <th>Captured</th>
+            <th>Tool</th>
+            <th>Response</th>
+            <th>Processing time</th>
+            <th>Size</th>
+            <th>State</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={snapshot <- @snapshots}>
+            <td data-label="Format">{format_display_name(snapshot.format)}</td>
+            <td data-label="Source">{source_display_name(snapshot.source)}</td>
+            <td data-label="Captured" title={format_relative_datetime(snapshot.inserted_at)}>
+              {format_datetime(snapshot.inserted_at)}
+            </td>
+            <td data-label="Tool">{tool_label(snapshot)}</td>
+            <td data-label="Response">{format_response_code(snapshot.response_code)}</td>
+            <td data-label="Processing time">{format_processing_time(snapshot.processing_time_ms)}</td>
+            <td data-label="Size">{format_file_size(snapshot.file_size_bytes)}</td>
+            <td data-label="State">
+              <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
+            </td>
+            <td data-label="Actions">
+              <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/#{snapshot.format}"}>view</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
+  defdelegate source_display_name(source), to: Linkhut.Formatting
+
   # --- Archive-centric components ---
 
   attr :archive, :map, required: true
   attr :link, :map, required: true
 
-  def archive_group(assigns) do
+  def crawl_run_group(assigns) do
     assigns =
       assigns
       |> assign(:max_retry_count, max_retry_count(assigns.archive.snapshots))
@@ -159,58 +233,20 @@ defmodule LinkhutWeb.SnapshotHTML do
       )
 
     ~H"""
-    <div class={"archive-group #{archive_state_class(@archive.state)}"}>
-      <div class="archive-header">
-        <span class="archive-time" title={format_relative_datetime(@archive.inserted_at)}>
+    <div class={"crawl-run #{archive_state_class(@archive.state)}"}>
+      <div class="crawl-run-header">
+        <span class="crawl-run-time" title={format_relative_datetime(@archive.inserted_at)}>
           {format_datetime(@archive.inserted_at)}
         </span>
-        <div class="archive-header-right">
-          <span :if={@archive.total_size_bytes > 0} class="archive-size">
-            {format_file_size(@archive.total_size_bytes)}
-          </span>
-          <span :if={@archive.state == :failed && @max_retry_count > 0} class="archive-retries">
+        <div class="crawl-run-header-right">
+          <span :if={@archive.state == :failed && @max_retry_count > 0} class="crawl-run-retries">
             {ngettext("1 retry", "%{count} retries", @max_retry_count)}
           </span>
           <.state_badge state={@archive.state}>{archive_state_label(@archive.state)}</.state_badge>
         </div>
       </div>
-      <div :if={@archive.error} class="archive-error">{@archive.error}</div>
-      <details class="archive-details" open={@archive.state in [:failed, :not_archivable, :processing, :pending]}>
-        <summary>Details</summary>
-        <.step_timeline :if={@timeline != []} steps={@timeline} />
-      </details>
-      <table :if={@archive.snapshots != []} class="snapshot-table">
-        <thead>
-          <tr>
-            <th>Captured</th>
-            <th>Type</th>
-            <th>Tool</th>
-            <th>Response</th>
-            <th>Processing time</th>
-            <th>Size</th>
-            <th>State</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody :for={snapshot <- @archive.snapshots}>
-          <tr class={state_class(snapshot.state)}>
-            <td data-label="Captured" title={format_relative_datetime(snapshot.inserted_at)}>
-              {format_datetime(snapshot.inserted_at)}
-            </td>
-            <td data-label="Type">{crawler_label(snapshot)}</td>
-            <td data-label="Tool">{tool_label(snapshot)}</td>
-            <td data-label="Response">{format_response_code(snapshot.response_code)}</td>
-            <td data-label="Processing time">{format_processing_time(snapshot.processing_time_ms)}</td>
-            <td data-label="Size">{if snapshot.file_size_bytes, do: format_file_size(snapshot.file_size_bytes), else: "N/A"}</td>
-            <td data-label="State">
-              <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
-            </td>
-            <td data-label="Actions">
-              <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/type/#{snapshot.format}"}>view</a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div :if={@archive.error} class="crawl-run-error">{@archive.error}</div>
+      <.step_timeline :if={@timeline != []} steps={@timeline} />
     </div>
     """
   end
@@ -265,7 +301,7 @@ defmodule LinkhutWeb.SnapshotHTML do
         </tbody>
       </table>
       <a href={@external_url} rel="nofollow noopener" target="_blank" class="button">
-        View on {crawler_label(@snapshot)}
+        View on {source_display_name(snapshot_source(@snapshot))}
       </a>
     </div>
     """
@@ -276,6 +312,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Formats a file size in bytes to a human-readable format.
   """
+  def format_file_size(nil), do: nil
   defdelegate format_file_size(bytes), to: Linkhut.Formatting, as: :format_bytes
 
   @doc """
@@ -292,7 +329,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Formats processing time from milliseconds to a readable format.
   """
-  def format_processing_time(nil), do: "Unknown"
+  def format_processing_time(nil), do: nil
 
   def format_processing_time(ms) when is_integer(ms) do
     cond do
@@ -322,7 +359,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Returns a human-readable label for an HTTP response code.
   """
-  def format_response_code(nil), do: "Unknown"
+  def format_response_code(nil), do: nil
   def format_response_code(200), do: "200 OK"
   def format_response_code(301), do: "301 Moved"
   def format_response_code(302), do: "302 Found"
@@ -387,7 +424,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   @doc """
   Returns a combined tool label with name and optional version.
   E.g. "Req 0.5.8" or "SingleFile 1.2.3".
-  Returns nil if tool name is not available.
+  Returns nil if neither tool name nor version is available.
   """
   def tool_label(snapshot) do
     case tool_name(snapshot) do
@@ -552,6 +589,7 @@ defmodule LinkhutWeb.SnapshotHTML do
     |> Enum.map(&(Map.get(&1, :retry_count) || 0))
     |> Enum.max(fn -> 0 end)
   end
+
 
   defp snapshot_source(%{source: source}), do: source
   defp snapshot_source(_), do: "unknown"

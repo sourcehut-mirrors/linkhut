@@ -4,8 +4,8 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   alias LinkhutWeb.SnapshotHTML
 
   describe "format_file_size/1" do
-    test "returns 'Unknown' for nil" do
-      assert SnapshotHTML.format_file_size(nil) == "Unknown"
+    test "returns nil for nil" do
+      assert SnapshotHTML.format_file_size(nil) == nil
     end
 
     test "formats bytes" do
@@ -41,8 +41,8 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
   end
 
   describe "format_processing_time/1" do
-    test "returns 'Unknown' for nil" do
-      assert SnapshotHTML.format_processing_time(nil) == "Unknown"
+    test "returns nil for nil" do
+      assert SnapshotHTML.format_processing_time(nil) == nil
     end
 
     test "formats milliseconds" do
