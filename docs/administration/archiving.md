@@ -57,23 +57,37 @@ of the active backend.
 
 In `runtime.exs`, the following environment variables are read:
 
+**General:**
+
 | Variable | Config key | Type | Default | Description |
-|---------------------------------|---|---|---|---|
+|---|---|---|---|---|
 | `ARCHIVING_MODE` | `:mode` | `"enabled"`, `"limited"`, or `"disabled"` | `"disabled"` | Controls who can use archiving. |
-| `ARCHIVING_DATA_DIR` | `:data_dir` | path string | (none) | Directory where snapshot files are stored. |
+| `ARCHIVING_STORAGE` | `:storage` | `"local"` or `"s3"` | `"local"` | Storage backend for new snapshots. |
+| `ARCHIVING_DATA_DIR` | `:data_dir` | path string | (none) | Directory where local snapshot files are stored. |
+| `ARCHIVING_STAGING_DIR` | `:staging_dir` | path string | (none) | Temporary directory for crawler output before storage. Defaults to `data_dir` if unset. |
 | `ARCHIVING_SERVE_HOST` | `:serve_host` | hostname string | (none) | Dedicated hostname for serving archived HTML. |
 | `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
 | `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
-| `ARCHIVING_STORAGE_COMPRESSION` | `compression` (under `Storage.Local`) | `"none"` or `"gzip"` | `"gzip"` | Compression for new local snapshots. |
-| `S3_BUCKET` | `:bucket` (under `Storage.S3`) | string | (none) | S3 bucket name. Enables S3 config when set. |
-| `S3_REGION` | `:region` | string | `"eu-central-1"` | AWS region. |
-| `S3_ENDPOINT` | `:endpoint` | hostname string | (required) | S3 endpoint hostname. |
-| `S3_ACCESS_KEY_ID` | `:access_key_id` | string | (none) | AWS access key ID. |
-| `S3_SECRET_ACCESS_KEY` | `:secret_access_key` | string | (none) | AWS secret access key. |
-| `S3_SCHEME` | `:scheme` | `"https://"` or `"http://"` | `"https://"` | URL scheme for the endpoint. |
-| `S3_PORT` | `:port` | integer | `443` | Port for the endpoint. |
-| `S3_PRESIGN_TTL` | `:presign_ttl` | integer (seconds) | `900` | Presigned URL expiry. |
-| `S3_COMPRESSION` | `:compression` | `"none"` or `"gzip"` | `"gzip"` | Compression for new S3 snapshots. |
+
+**Local storage:**
+
+| Variable | Config key | Type | Default | Description |
+|---|---|---|---|---|
+| `ARCHIVING_LOCAL_COMPRESSION` | `:compression` | `"none"` or `"gzip"` | `"gzip"` | Compression for new local snapshots. |
+
+**S3 storage:**
+
+| Variable | Config key | Type | Default | Description |
+|---|---|---|---|---|
+| `ARCHIVING_S3_BUCKET` | `:bucket` | string | (none) | S3 bucket name. Enables S3 config when set. |
+| `ARCHIVING_S3_ENDPOINT` | `:endpoint` | hostname string | (required) | S3 endpoint hostname. |
+| `ARCHIVING_S3_REGION` | `:region` | string | `"eu-central-1"` | AWS region. |
+| `ARCHIVING_S3_ACCESS_KEY_ID` | `:access_key_id` | string | (none) | AWS access key ID. |
+| `ARCHIVING_S3_SECRET_ACCESS_KEY` | `:secret_access_key` | string | (none) | AWS secret access key. |
+| `ARCHIVING_S3_SCHEME` | `:scheme` | `"https://"` or `"http://"` | `"https://"` | URL scheme for the endpoint. |
+| `ARCHIVING_S3_PORT` | `:port` | integer | `443` | Port for the endpoint. |
+| `ARCHIVING_S3_PRESIGN_TTL` | `:presign_ttl` | integer (seconds) | `900` | Presigned URL expiry. |
+| `ARCHIVING_S3_COMPRESSION` | `:compression` | `"none"` or `"gzip"` | `"gzip"` | Compression for new S3 snapshots. |
 
 ### Compression
 

@@ -210,6 +210,12 @@ if config_env() == :prod do
           "disabled" -> :disabled
           _ -> nil
         end,
+      storage:
+        case System.get_env("ARCHIVING_STORAGE") do
+          "s3" -> Linkhut.Archiving.Storage.S3
+          "local" -> Linkhut.Archiving.Storage.Local
+          _ -> nil
+        end,
       max_file_size:
         case System.get_env("ARCHIVING_MAX_FILE_SIZE") do
           nil -> nil
@@ -225,7 +231,7 @@ if config_env() == :prod do
   local_storage_overrides =
     [
       compression:
-        case System.get_env("ARCHIVING_STORAGE_COMPRESSION") do
+        case System.get_env("ARCHIVING_LOCAL_COMPRESSION") do
           "none" -> :none
           "gzip" -> :gzip
           _ -> nil
@@ -243,31 +249,31 @@ if config_env() == :prod do
   end
 
   # S3 storage config
-  if System.get_env("S3_BUCKET") do
+  if System.get_env("ARCHIVING_S3_BUCKET") do
     s3_endpoint =
-      System.get_env("S3_ENDPOINT") ||
-        raise "S3_ENDPOINT must be set when S3_BUCKET is configured"
+      System.get_env("ARCHIVING_S3_ENDPOINT") ||
+        raise "ARCHIVING_S3_ENDPOINT must be set when ARCHIVING_S3_BUCKET is configured"
 
     s3_overrides =
       [
-        bucket: System.get_env("S3_BUCKET"),
-        region: System.get_env("S3_REGION", "eu-central-1"),
+        bucket: System.get_env("ARCHIVING_S3_BUCKET"),
+        region: System.get_env("ARCHIVING_S3_REGION", "eu-central-1"),
         endpoint: s3_endpoint,
-        access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
-        secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY"),
-        scheme: System.get_env("S3_SCHEME", "https://"),
+        access_key_id: System.get_env("ARCHIVING_S3_ACCESS_KEY_ID"),
+        secret_access_key: System.get_env("ARCHIVING_S3_SECRET_ACCESS_KEY"),
+        scheme: System.get_env("ARCHIVING_S3_SCHEME", "https://"),
         port:
-          case System.get_env("S3_PORT") do
+          case System.get_env("ARCHIVING_S3_PORT") do
             nil -> nil
             val -> String.to_integer(val)
           end,
         presign_ttl:
-          case System.get_env("S3_PRESIGN_TTL") do
+          case System.get_env("ARCHIVING_S3_PRESIGN_TTL") do
             nil -> nil
             val -> String.to_integer(val)
           end,
         compression:
-          case System.get_env("S3_COMPRESSION") do
+          case System.get_env("ARCHIVING_S3_COMPRESSION") do
             "none" -> :none
             "gzip" -> :gzip
             _ -> nil
