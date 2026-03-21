@@ -4,7 +4,7 @@ defmodule Linkhut.Archiving.CleanupTest do
   import Linkhut.Factory
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.{CrawlRun, Snapshot}
+  alias Linkhut.Archiving.Snapshot
 
   defp create_setup do
     user = insert(:user, credential: build(:credential))
@@ -130,70 +130,6 @@ defmodule Linkhut.Archiving.CleanupTest do
       )
 
       assert Repo.get(Snapshot, wayback_snapshot.id).state == :complete
-    end
-
-    test "marks crawl runs with no remaining snapshots as pending_deletion" do
-      {user, link} = create_setup()
-
-      # Old crawl run has only one snapshot of source "singlefile"
-      {old_cr, _old_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-
-      # New crawl run
-      {new_cr, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :complete,
-        "singlefile"
-      )
-
-      assert Repo.get(CrawlRun, old_cr.id).state == :pending_deletion
-      assert Repo.get(CrawlRun, new_cr.id).state == :complete
-    end
-
-    test "does not mark crawl run if it still has other non-deleted snapshots" do
-      {user, link} = create_setup()
-
-      # Old crawl run with two snapshots of different sources
-      old_cr =
-        insert(:crawl_run,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :complete
-        )
-
-      {:ok, _old_sf} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete,
-          crawl_run_id: old_cr.id
-        })
-
-      {:ok, _old_wb} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "reference",
-          source: "wayback",
-          state: :complete,
-          crawl_run_id: old_cr.id
-        })
-
-      # New crawl run with a new singlefile snapshot
-      {_new_cr, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :complete,
-        "singlefile"
-      )
-
-      # Old crawl run still has the wayback snapshot, so should NOT be deleted
-      assert Repo.get(CrawlRun, old_cr.id).state == :complete
     end
 
     test "is a no-op for non-terminal states" do

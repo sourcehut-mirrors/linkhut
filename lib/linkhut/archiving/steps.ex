@@ -7,6 +7,10 @@ defmodule Linkhut.Archiving.Steps do
   enables i18n via gettext while keeping details machine-readable.
   """
 
+  alias Linkhut.Repo
+
+  require Logger
+
   @doc """
   Appends a step entry to an archive's steps list.
 
@@ -17,11 +21,28 @@ defmodule Linkhut.Archiving.Steps do
   end
 
   @doc """
-  Appends a step entry to a snapshot's crawl_info steps list.
+  Atomically appends a step to a crawl_run's steps array.
+  Uses raw SQL to bypass optimistic locking. Defensive — never crashes.
   """
-  def add_crawl_step(crawl_info, step, detail \\ nil) do
-    steps = get_in(crawl_info || %{}, ["steps"]) || []
-    Map.put(crawl_info || %{}, "steps", steps ++ [build_entry(step, detail, [])])
+  def append_to_crawl_run(crawl_run_id, step, detail, opts \\ [])
+  def append_to_crawl_run(nil, _step, _detail, _opts), do: :ok
+
+  def append_to_crawl_run(crawl_run_id, step, detail, opts) do
+    entry =
+      build_entry(step, detail, opts)
+      |> maybe_put("snapshot_id", opts[:snapshot_id])
+      |> maybe_put("source", opts[:source])
+
+    Repo.query!(
+      "UPDATE crawl_runs SET steps = array_append(steps, $2::jsonb), updated_at = NOW() WHERE id = $1",
+      [crawl_run_id, entry]
+    )
+
+    :ok
+  rescue
+    error ->
+      Logger.warning("Failed to append step to crawl_run #{crawl_run_id}: #{inspect(error)}")
+      :error
   end
 
   defp build_entry(step, nil, opts) do
@@ -37,4 +58,7 @@ defmodule Linkhut.Archiving.Steps do
     |> Keyword.get(:at, DateTime.utc_now())
     |> DateTime.to_iso8601()
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, val), do: Map.put(map, key, val)
 end

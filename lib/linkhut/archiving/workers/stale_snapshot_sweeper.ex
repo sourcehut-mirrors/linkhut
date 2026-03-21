@@ -87,16 +87,16 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
     case Archiving.update_snapshot(snapshot, %{
            state: :failed,
            failed_at: DateTime.utc_now(),
-           crawl_info:
-             Steps.add_crawl_step(snapshot.crawl_info, "failed", %{
-               "msg" => "stale_snapshot_swept",
-               "previous_state" => to_string(snapshot.state)
-             }),
            archive_metadata: %{
              error: "snapshot stuck in #{snapshot.state}, marked failed by sweeper"
            }
          }) do
       {:ok, _} ->
+        Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", %{
+          "msg" => "stale_snapshot_swept",
+          "previous_state" => to_string(snapshot.state)
+        }, snapshot_id: snapshot.id, source: snapshot.source)
+
         Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
 
       {:error, changeset} ->

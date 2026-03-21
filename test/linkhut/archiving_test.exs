@@ -377,6 +377,53 @@ defmodule Linkhut.ArchivingTest do
 
       refute_enqueued(worker: Linkhut.Archiving.Workers.SnapshotDeleter)
     end
+
+    test "deletes terminal crawl runs with zero remaining snapshots" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      for state <- [:complete, :failed, :not_archivable] do
+        cr = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: state)
+        # No snapshots — should be cleaned up
+        assert Linkhut.Repo.get(CrawlRun, cr.id)
+      end
+
+      assert :ok = Archiving.enqueue_pending_deletions()
+
+      # All terminal crawl runs with zero snapshots should be deleted
+      assert Linkhut.Repo.all(from(cr in CrawlRun, where: cr.link_id == ^link.id)) == []
+    end
+
+    test "does not delete crawl runs that still have snapshots" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+      crawl_run = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
+
+      {:ok, _} =
+        Archiving.create_snapshot(link.id, user.id, %{
+          state: :complete,
+          crawl_run_id: crawl_run.id,
+          format: "webpage",
+          source: "singlefile"
+        })
+
+      assert :ok = Archiving.enqueue_pending_deletions()
+
+      assert Linkhut.Repo.get(CrawlRun, crawl_run.id)
+    end
+
+    test "does not delete processing or pending crawl runs even with zero snapshots" do
+      user = insert(:user, credential: build(:credential))
+      link = insert(:link, user_id: user.id)
+
+      pending_cr = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :pending)
+      processing_cr = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+
+      assert :ok = Archiving.enqueue_pending_deletions()
+
+      assert Linkhut.Repo.get(CrawlRun, pending_cr.id)
+      assert Linkhut.Repo.get(CrawlRun, processing_cr.id)
+    end
   end
 
   describe "delete_snapshot/1" do
@@ -582,136 +629,56 @@ defmodule Linkhut.ArchivingTest do
     end
   end
 
-  describe "merge_timeline/2" do
-    test "merges archive and crawler steps chronologically" do
-      archive_steps = [
+  describe "steps_for_snapshot/2" do
+    test "returns all steps when none have snapshot_id (orchestration only)" do
+      steps = [
         %{"step" => "created", "at" => "2026-02-26T10:00:00Z"},
-        %{"step" => "preflight", "detail" => "text/html; 200", "at" => "2026-02-26T10:00:01Z"},
-        %{"step" => "dispatched", "detail" => "singlefile", "at" => "2026-02-26T10:00:02Z"}
+        %{"step" => "preflight", "at" => "2026-02-26T10:00:01Z"}
       ]
 
-      snapshot = %{
-        source: "singlefile",
-        crawl_info: %{
-          "steps" => [
-            %{"step" => "crawling", "at" => "2026-02-26T10:00:03Z"},
-            %{"step" => "complete", "detail" => "Stored 1.5MB", "at" => "2026-02-26T10:00:10Z"}
-          ]
-        }
-      }
-
-      timeline = Archiving.merge_timeline(archive_steps, [snapshot])
-
-      assert length(timeline) == 5
-      step_names = Enum.map(timeline, & &1["step"])
-      assert step_names == ["created", "preflight", "dispatched", "crawling", "complete"]
-
-      # Crawler steps should have prefix
-      assert Enum.at(timeline, 3)["prefix"] == "singlefile"
-      assert Enum.at(timeline, 4)["prefix"] == "singlefile"
-
-      # Archive steps should not have prefix
-      refute Enum.at(timeline, 0)["prefix"]
-
-      # Crawler steps share a group starting at 1, archive steps have no group
-      refute Enum.at(timeline, 0)["group"]
-      assert Enum.at(timeline, 3)["group"] == 1
-      assert Enum.at(timeline, 4)["group"] == 1
+      result = Archiving.steps_for_snapshot(steps, 1)
+      assert length(result) == 2
+      assert Enum.map(result, & &1["step"]) == ["created", "preflight"]
     end
 
-    test "handles snapshots without crawl_info" do
-      archive_steps = [%{"step" => "created", "at" => "2026-02-26T10:00:00Z"}]
-      snapshot = %{source: "singlefile", crawl_info: nil}
-
-      timeline = Archiving.merge_timeline(archive_steps, [snapshot])
-      assert length(timeline) == 1
-    end
-
-    test "merges steps from multiple snapshots with prefixes" do
-      archive_steps = [
+    test "filters to orchestration + matching snapshot_id" do
+      steps = [
         %{"step" => "created", "at" => "2026-02-26T10:00:00Z"},
-        %{"step" => "dispatched", "at" => "2026-02-26T10:00:01Z"}
+        %{"step" => "crawling", "at" => "2026-02-26T10:00:03Z", "snapshot_id" => 1, "source" => "singlefile"},
+        %{"step" => "crawling", "at" => "2026-02-26T10:00:04Z", "snapshot_id" => 2, "source" => "wayback"},
+        %{"step" => "completed", "at" => "2026-02-26T10:00:10Z"}
       ]
 
-      snapshot1 = %{
-        source: "singlefile",
-        crawl_info: %{
-          "steps" => [%{"step" => "crawling", "at" => "2026-02-26T10:00:02Z"}]
-        }
-      }
-
-      snapshot2 = %{
-        source: "wget",
-        crawl_info: %{
-          "steps" => [%{"step" => "crawling", "at" => "2026-02-26T10:00:03Z"}]
-        }
-      }
-
-      timeline = Archiving.merge_timeline(archive_steps, [snapshot1, snapshot2])
-      assert length(timeline) == 4
-
-      prefixes = Enum.map(timeline, & &1["prefix"])
-      assert prefixes == [nil, nil, "singlefile", "wget"]
+      result = Archiving.steps_for_snapshot(steps, 1)
+      assert length(result) == 3
+      assert Enum.map(result, & &1["step"]) == ["created", "crawling", "completed"]
+      assert Enum.at(result, 1)["source"] == "singlefile"
     end
 
-    test "keeps crawler groups together when interleaved with archive steps" do
-      archive_steps = [
-        %{"step" => "created", "at" => "2026-02-26T10:00:00Z"},
-        %{"step" => "dispatched", "at" => "2026-02-26T10:00:01Z"},
-        %{"step" => "complete", "at" => "2026-02-26T10:00:20Z"}
+    test "excludes steps for other snapshot_ids" do
+      steps = [
+        %{"step" => "crawling", "at" => "2026-02-26T10:00:03Z", "snapshot_id" => 1, "source" => "singlefile"},
+        %{"step" => "complete", "at" => "2026-02-26T10:00:04Z", "snapshot_id" => 2, "source" => "wayback"}
       ]
 
-      # singlefile starts at t=02, finishes at t=15 (spans past wayback's start)
-      snapshot1 = %{
-        source: "singlefile",
-        crawl_info: %{
-          "steps" => [
-            %{"step" => "crawling", "at" => "2026-02-26T10:00:02Z"},
-            %{"step" => "stored", "at" => "2026-02-26T10:00:15Z"}
-          ]
-        }
-      }
+      result = Archiving.steps_for_snapshot(steps, 1)
+      assert length(result) == 1
+      assert hd(result)["snapshot_id"] == 1
+    end
 
-      # wayback starts at t=05, finishes at t=06 (between singlefile's steps)
-      snapshot2 = %{
-        source: "wayback",
-        crawl_info: %{
-          "steps" => [
-            %{"step" => "crawling", "at" => "2026-02-26T10:00:05Z"},
-            %{"step" => "complete", "at" => "2026-02-26T10:00:06Z"}
-          ]
-        }
-      }
+    test "handles nil steps" do
+      assert Archiving.steps_for_snapshot(nil, 1) == []
+    end
 
-      timeline = Archiving.merge_timeline(archive_steps, [snapshot1, snapshot2])
+    test "sorts by timestamp" do
+      steps = [
+        %{"step" => "completed", "at" => "2026-02-26T10:00:10Z"},
+        %{"step" => "created", "at" => "2026-02-26T10:00:00Z"},
+        %{"step" => "crawling", "at" => "2026-02-26T10:00:05Z", "snapshot_id" => 1}
+      ]
 
-      step_names = Enum.map(timeline, & &1["step"])
-      prefixes = Enum.map(timeline, & &1["prefix"])
-
-      # singlefile group (t=02) sorts before wayback group (t=05),
-      # both after dispatched (t=01) and before complete (t=20)
-      assert step_names == [
-               "created",
-               "dispatched",
-               "crawling",
-               "stored",
-               "crawling",
-               "complete",
-               "complete"
-             ]
-
-      assert prefixes == [nil, nil, "singlefile", "singlefile", "wayback", "wayback", nil]
-
-      # Archive steps have no group
-      refute Enum.at(timeline, 0)["group"]
-      refute Enum.at(timeline, 1)["group"]
-      refute Enum.at(timeline, 6)["group"]
-
-      # singlefile is group 1, wayback is group 2
-      assert Enum.at(timeline, 2)["group"] == 1
-      assert Enum.at(timeline, 3)["group"] == 1
-      assert Enum.at(timeline, 4)["group"] == 2
-      assert Enum.at(timeline, 5)["group"] == 2
+      result = Archiving.steps_for_snapshot(steps, 1)
+      assert Enum.map(result, & &1["step"]) == ["created", "crawling", "completed"]
     end
   end
 

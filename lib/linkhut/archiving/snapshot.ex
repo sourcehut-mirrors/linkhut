@@ -29,7 +29,6 @@ defmodule Linkhut.Archiving.Snapshot do
       ],
       default: :pending
 
-    field :crawl_info, :map
     field :response_code, :integer
     field :file_size_bytes, :integer
     field :processing_time_ms, :integer
@@ -51,7 +50,6 @@ defmodule Linkhut.Archiving.Snapshot do
   @updatable_fields [
     :job_id,
     :state,
-    :crawl_info,
     :response_code,
     :file_size_bytes,
     :processing_time_ms,
@@ -68,7 +66,7 @@ defmodule Linkhut.Archiving.Snapshot do
     snapshot
     |> cast(attrs, [:link_id, :user_id, :crawl_run_id, :format, :source, :crawler_meta] ++ @updatable_fields)
     |> validate_required([:link_id, :user_id, :format, :source])
-    |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawl_info, :crawler_meta])
+    |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawler_meta])
   end
 
   @doc false
@@ -87,6 +85,6 @@ defmodule Linkhut.Archiving.Snapshot do
   def update_changeset(snapshot, attrs) do
     snapshot
     |> cast(attrs, @updatable_fields)
-    |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawl_info])
+    |> SchemaHelpers.normalize_json_fields([:archive_metadata])
   end
 end

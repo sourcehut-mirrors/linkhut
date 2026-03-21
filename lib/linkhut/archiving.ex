@@ -279,36 +279,8 @@ defmodule Linkhut.Archiving do
         base_query
       end
 
-    {_count, affected_crawl_run_ids} =
-      from(s in query, select: s.crawl_run_id)
-      |> Repo.update_all(set: [state: :pending_deletion])
-
-    # Mark crawl runs that now have zero non-deleted snapshots
-    crawl_run_ids =
-      affected_crawl_run_ids
-      |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
-
-    if crawl_run_ids != [] do
-      orphaned =
-        from(cr in CrawlRun,
-          as: :cr,
-          where: cr.id in ^crawl_run_ids and cr.state != :pending_deletion,
-          where:
-            not exists(
-              from(s in Snapshot,
-                where: s.crawl_run_id == parent_as(:cr).id and s.state != :pending_deletion
-              )
-            ),
-          select: cr.id
-        )
-        |> Repo.all()
-
-      if orphaned != [] do
-        from(cr in CrawlRun, where: cr.id in ^orphaned)
-        |> Repo.update_all(set: [state: :pending_deletion])
-      end
-    end
+    from(s in query)
+    |> Repo.update_all(set: [state: :pending_deletion])
 
     :ok
   end
@@ -560,7 +532,7 @@ defmodule Linkhut.Archiving do
 
   @doc """
   Enqueues a `SnapshotDeleter` job for each snapshot in `pending_deletion` state.
-  Also cleans up orphaned archives in `pending_deletion` state.
+  Also deletes orphaned crawl runs (terminal state with no remaining snapshots).
   """
   def enqueue_pending_deletions do
     snapshot_ids =
@@ -573,12 +545,12 @@ defmodule Linkhut.Archiving do
     |> Enum.map(&Linkhut.Archiving.Workers.SnapshotDeleter.new(%{"snapshot_id" => &1}))
     |> Oban.insert_all()
 
-    # Clean up orphaned crawl runs (pending_deletion with no remaining snapshots)
+    # Clean up orphaned crawl runs (non-active with no remaining snapshots)
     orphaned_crawl_run_ids =
       from(cr in CrawlRun,
-        where: cr.state == :pending_deletion,
+        where: cr.state not in [:pending, :processing],
         left_join: s in Snapshot,
-        on: s.crawl_run_id == cr.id and s.state != :pending_deletion,
+        on: s.crawl_run_id == cr.id,
         where: is_nil(s.id),
         select: cr.id
       )
@@ -728,54 +700,19 @@ defmodule Linkhut.Archiving do
   end
 
   @doc """
-  Merges archive pipeline steps with crawler steps from snapshots into a
-  single chronological timeline, sorted by timestamp.
-
-  Each crawler step is annotated with a `"prefix"` key (the crawler type,
-  e.g. "singlefile") so the timeline component can show which crawler a
-  step belongs to. Archive-level steps have no prefix.
-
-  Steps from the same crawler are kept together as a group — sorted among
-  archive steps by the timestamp of the group's first entry. Crawler
-  steps receive a `"group"` integer (starting at 1) identifying their
-  group; archive steps have no `"group"` key.
+  Returns steps relevant to a single snapshot: orchestration steps
+  (no snapshot_id) plus steps matching the given snapshot_id.
+  Sorted by timestamp.
   """
-  def merge_timeline(archive_steps, snapshots) when is_list(snapshots) do
-    archive_groups =
-      (archive_steps || [])
-      |> Enum.map(&{:archive, [&1]})
-
-    crawler_groups =
-      snapshots
-      |> Enum.flat_map(fn snapshot ->
-        prefix = snapshot_source(snapshot)
-        steps = crawl_steps(snapshot) |> Enum.map(&Map.put(&1, "prefix", prefix))
-        if steps == [], do: [], else: [{:crawler, steps}]
-      end)
-
-    (archive_groups ++ crawler_groups)
-    |> Enum.sort_by(fn {_, [first | _]} -> first["at"] || "" end)
-    |> assign_crawler_groups(1, [])
-    |> List.flatten()
+  def steps_for_snapshot(steps, snapshot_id) when is_list(steps) do
+    steps
+    |> Enum.filter(fn step ->
+      is_nil(step["snapshot_id"]) or step["snapshot_id"] == snapshot_id
+    end)
+    |> Enum.sort_by(& &1["at"])
   end
 
-  defp assign_crawler_groups([], _n, acc), do: Enum.reverse(acc)
-
-  defp assign_crawler_groups([{:archive, steps} | rest], n, acc) do
-    assign_crawler_groups(rest, n, [steps | acc])
-  end
-
-  defp assign_crawler_groups([{:crawler, steps} | rest], n, acc) do
-    tagged = Enum.map(steps, &Map.put(&1, "group", n))
-    assign_crawler_groups(rest, n + 1, [tagged | acc])
-  end
-
-  defp snapshot_source(%{source: source}), do: source
-  defp snapshot_source(_), do: "unknown"
-
-  @doc "Extracts crawl steps from a snapshot's crawl_info."
-  def crawl_steps(%{crawl_info: %{"steps" => steps}}) when is_list(steps), do: steps
-  def crawl_steps(_), do: []
+  def steps_for_snapshot(_, _), do: []
 
   @doc """
   Atomically recomputes the `total_size_bytes` for a single crawl run

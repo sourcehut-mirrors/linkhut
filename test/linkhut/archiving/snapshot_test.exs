@@ -30,7 +30,6 @@ defmodule Linkhut.Archiving.SnapshotTest do
         processing_time_ms: 500,
         response_code: 200,
         retry_count: 0,
-        crawl_info: %{"cmd" => "single-file"},
         archive_metadata: %{"original_url" => "https://example.com"}
       }
 

@@ -270,8 +270,9 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       updated = Repo.get(Snapshot, snapshot.id)
       assert updated.state == :pending
 
-      # Rate limited step should be recorded
-      steps = updated.crawl_info["steps"]
+      # Rate limited step should be recorded on the crawl_run
+      crawl_run = Repo.get!(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
+      steps = Enum.filter(crawl_run.steps, &(&1["snapshot_id"] == snapshot.id))
       assert [%{"step" => "rate_limited", "detail" => %{"msg" => "rate_limited"}} | _] = steps
     end
   end
@@ -444,10 +445,6 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       # Old snapshot should be marked for deletion
       assert Repo.get(Snapshot, old_snapshot.id).state == :pending_deletion
-      # Old crawl run (now with zero non-deleted snapshots) should be pending_deletion
-      assert Repo.get(Linkhut.Archiving.CrawlRun, old_crawl_run.id).state == :pending_deletion
-      # New crawl run should have completed
-      assert Repo.get(Linkhut.Archiving.CrawlRun, new_crawl_run.id).state == :complete
     end
 
     test "does not prematurely complete archive when sibling crawler has retries remaining" do

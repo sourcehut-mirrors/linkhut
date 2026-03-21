@@ -165,18 +165,6 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "crawl_steps/1" do
-    test "extracts steps from string-keyed crawl_info" do
-      steps = [%{"step" => "fetch", "at" => "2026-02-26T14:30:45Z"}]
-      assert SnapshotHTML.crawl_steps(%{crawl_info: %{"steps" => steps}}) == steps
-    end
-
-    test "returns empty list for missing crawl_info" do
-      assert SnapshotHTML.crawl_steps(%{crawl_info: nil}) == []
-      assert SnapshotHTML.crawl_steps(%{}) == []
-    end
-  end
-
   describe "step_display_name/1" do
     test "humanizes underscored step names" do
       assert SnapshotHTML.step_display_name(%{"step" => "head_preflight"}) == "Head preflight"

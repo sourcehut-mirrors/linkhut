@@ -49,15 +49,11 @@ defmodule Linkhut.Archiving.Workers.Crawler do
             jitter = :rand.uniform(max(div(scale_ms, 4000), 1))
             snooze_seconds = max(div(scale_ms, 1000) + jitter, 1)
 
-            {:ok, _snapshot} =
-              Archiving.update_snapshot(snapshot, %{
-                crawl_info:
-                  Steps.add_crawl_step(snapshot.crawl_info, "rate_limited", %{
-                    "msg" => "rate_limited",
-                    "crawler" => type,
-                    "snooze_seconds" => snooze_seconds
-                  })
-              })
+            Steps.append_to_crawl_run(snapshot.crawl_run_id, "rate_limited", %{
+              "msg" => "rate_limited",
+              "crawler" => type,
+              "snooze_seconds" => snooze_seconds
+            }, snapshot_id: snapshot.id, source: snapshot.source)
 
             {:snooze, snooze_seconds}
         end
@@ -71,10 +67,10 @@ defmodule Linkhut.Archiving.Workers.Crawler do
         else: %{"msg" => "crawling"}
 
     {:ok, snapshot} =
-      Archiving.update_snapshot(snapshot, %{
-        state: :crawling,
-        crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "crawling", crawl_detail)
-      })
+      Archiving.update_snapshot(snapshot, %{state: :crawling})
+
+    Steps.append_to_crawl_run(snapshot.crawl_run_id, "crawling", crawl_detail,
+      snapshot_id: snapshot.id, source: snapshot.source)
 
     preflight_meta = decode_preflight_meta(args)
     link_inserted_at = decode_datetime(args["link_inserted_at"])
@@ -148,18 +144,16 @@ defmodule Linkhut.Archiving.Workers.Crawler do
             encoding: store_meta.encoding,
             original_file_size_bytes: if(store_meta.encoding, do: file_size, else: nil),
             response_code: result[:response_code] || 200,
-            crawl_info:
-              Steps.add_crawl_step(
-                snapshot.crawl_info,
-                "complete",
-                build_stored_msg(store_meta, file_size)
-              ),
             archive_metadata: %{
               content_type: result[:content_type],
               original_url: url,
               final_url: result[:final_url] || url
             }
           })
+
+          Steps.append_to_crawl_run(snapshot.crawl_run_id, "complete",
+            build_stored_msg(store_meta, file_size),
+            snapshot_id: snapshot.id, source: snapshot.source)
 
           Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
           Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :complete, snapshot.source)
@@ -190,15 +184,13 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            processing_time_ms: processing_time,
            file_size_bytes: nil,
            response_code: result[:response_code],
-           crawl_info:
-             Steps.add_crawl_step(
-               snapshot.crawl_info,
-               "complete",
-               %{"msg" => "external_snapshot", "url" => result[:url]}
-             ),
            archive_metadata: metadata
          }) do
       {:ok, _} ->
+        Steps.append_to_crawl_run(snapshot.crawl_run_id, "complete",
+          %{"msg" => "external_snapshot", "url" => result[:url]},
+          snapshot_id: snapshot.id, source: snapshot.source)
+
         Archiving.cleanup_superseded_snapshots(snapshot.id, snapshot.link_id, snapshot.format, :complete, snapshot.source)
         Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
         :ok
@@ -217,16 +209,12 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
     case Archiving.update_snapshot(snapshot, %{
            state: :not_available,
-           processing_time_ms: processing_time,
-           crawl_info:
-             Steps.add_crawl_step(
-               snapshot.crawl_info,
-               "not_available",
-               %{"msg" => "not_available"}
-             )
+           processing_time_ms: processing_time
          }) do
       {:ok, _} ->
-        :ok
+        Steps.append_to_crawl_run(snapshot.crawl_run_id, "not_available",
+          %{"msg" => "not_available"},
+          snapshot_id: snapshot.id, source: snapshot.source)
 
       {:error, changeset} ->
         Logger.warning(
@@ -321,11 +309,11 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            retry_count: job.attempt - 1,
            failed_at: DateTime.utc_now(),
            processing_time_ms: processing_time,
-           crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "failed", failed_detail),
            archive_metadata: %{error: format_error(error)}
          }) do
       {:ok, _} ->
-        :ok
+        Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", failed_detail,
+          snapshot_id: snapshot.id, source: snapshot.source)
 
       {:error, changeset} ->
         Logger.warning(
@@ -363,11 +351,11 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            retry_count: job.attempt - 1,
            failed_at: DateTime.utc_now(),
            processing_time_ms: processing_time,
-           crawl_info: Steps.add_crawl_step(snapshot.crawl_info, "failed", failed_detail),
            archive_metadata: %{error: format_error(error)}
          }) do
       {:ok, _} ->
-        :ok
+        Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", failed_detail,
+          snapshot_id: snapshot.id, source: snapshot.source)
 
       {:error, changeset} ->
         Logger.warning(

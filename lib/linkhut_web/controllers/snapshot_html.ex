@@ -82,10 +82,13 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   def details(assigns) do
     crawl_run = assigns.snapshot.crawl_run
-    archive_steps = if crawl_run, do: crawl_run.steps, else: []
 
-    assigns =
-      assign(assigns, :timeline, Archiving.merge_timeline(archive_steps, [assigns.snapshot]))
+    timeline =
+      if crawl_run,
+        do: Archiving.steps_for_snapshot(crawl_run.steps, assigns.snapshot.id),
+        else: []
+
+    assigns = assign(assigns, :timeline, timeline)
 
     ~H"""
     <details class="snapshot-details">
@@ -231,10 +234,7 @@ defmodule LinkhutWeb.SnapshotHTML do
     assigns =
       assigns
       |> assign(:max_retry_count, max_retry_count(assigns.archive.snapshots))
-      |> assign(
-        :timeline,
-        Archiving.merge_timeline(assigns.archive.steps, assigns.archive.snapshots)
-      )
+      |> assign(:timeline, sort_timeline(assigns.archive.steps || []))
 
     ~H"""
     <div class={"crawl-run #{archive_state_class(@archive.state)}"}>
@@ -260,9 +260,9 @@ defmodule LinkhutWeb.SnapshotHTML do
   def step_timeline(assigns) do
     ~H"""
     <ol class="step-timeline">
-      <li :for={step <- @steps} class={"step-timeline-item #{step_class(step)}"} data-group={step["prefix"] && step["group"]}>
+      <li :for={step <- @steps} class={"step-timeline-item #{step_class(step)}"} data-source={step["source"]}>
         <time :if={step["at"]} class="step-time">{format_step_time(step["at"])}</time>
-        <span :if={step["prefix"]} class="step-prefix">{step["prefix"]}</span>
+        <span :if={step["source"]} class="step-source">{step["source"]}</span>
         <span class="step-name">{step_display_name(step)}</span>
         <span :if={step["detail"]} class="step-detail">{LinkhutWeb.Archiving.StepDescriptions.render(step["detail"])}</span>
       </li>
@@ -493,12 +493,6 @@ defmodule LinkhutWeb.SnapshotHTML do
   def original_url(_), do: nil
 
   @doc """
-  Extracts crawl steps from a snapshot's crawl_info.
-  Returns an empty list if not available.
-  """
-  defdelegate crawl_steps(snapshot), to: Linkhut.Archiving
-
-  @doc """
   Returns true if any archive is still being processed (active with no complete snapshots).
   """
   def any_processing?(archives) do
@@ -597,4 +591,19 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   defp snapshot_source(%{source: source}), do: source
   defp snapshot_source(_), do: "unknown"
+
+  defp sort_timeline(steps) do
+    group_starts =
+      steps
+      |> Enum.filter(& &1["snapshot_id"])
+      |> Enum.group_by(& &1["snapshot_id"])
+      |> Map.new(fn {id, group} -> {id, Enum.min_by(group, & &1["at"])["at"]} end)
+
+    Enum.sort_by(steps, fn step ->
+      case step["snapshot_id"] do
+        nil -> {step["at"], 0, step["at"]}
+        id -> {group_starts[id], 1, step["at"]}
+      end
+    end)
+  end
 end
