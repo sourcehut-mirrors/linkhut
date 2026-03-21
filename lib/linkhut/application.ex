@@ -10,6 +10,7 @@ defmodule Linkhut.Application do
   def start(_type, _args) do
     validate_crawlers!()
     validate_archiving_config!()
+    ensure_singlefile!()
     warn_missing_serve_host()
 
     # List all child processes to be supervised
@@ -54,6 +55,21 @@ defmodule Linkhut.Application do
 
         other ->
           raise "archiving :max_file_size must be a positive integer, got: #{inspect(other)}"
+      end
+    end
+  end
+
+  defp ensure_singlefile! do
+    crawlers = Linkhut.Config.archiving(:crawlers, [])
+
+    if Linkhut.Archiving.Crawler.SingleFile in crawlers do
+      case SingleFile.bin_version() do
+        {:ok, _} ->
+          :ok
+
+        :error ->
+          Logger.info("SingleFile binary not found, installing...")
+          SingleFile.install()
       end
     end
   end
