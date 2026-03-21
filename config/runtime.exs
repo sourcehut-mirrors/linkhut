@@ -228,6 +228,17 @@ if config_env() == :prod do
     config :linkhut, Linkhut.Archiving, archiving_overrides
   end
 
+  case System.get_env("ARCHIVING_CRAWLER_CONCURRENCY") do
+    nil ->
+      :ok
+
+    val ->
+      oban_config = Application.get_env(:linkhut, Oban, [])
+      queues = Keyword.get(oban_config, :queues, [])
+      queues = Keyword.put(queues, :crawler, String.to_integer(val))
+      config :linkhut, Oban, Keyword.put(oban_config, :queues, queues)
+  end
+
   local_storage_overrides =
     [
       compression:

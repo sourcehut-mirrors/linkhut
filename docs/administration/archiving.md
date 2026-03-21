@@ -68,6 +68,7 @@ In `runtime.exs`, the following environment variables are read:
 | `ARCHIVING_SERVE_HOST` | `:serve_host` | hostname string | (none) | Dedicated hostname for serving archived HTML. |
 | `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
 | `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
+| `ARCHIVING_CRAWLER_CONCURRENCY` | Oban `:crawler` queue limit | integer | `5` | Max concurrent crawler jobs. Lower this on resource-constrained hosts. |
 
 **Local storage:**
 

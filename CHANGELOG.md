@@ -12,6 +12,7 @@ All notable changes to linkhut will be documented in this file.
 - Add S3-compatible storage backend for snapshots
 - Add support for deleting individual snapshots
 - Add support for uploading snapshots
+- Add configuration setting for the number of concurrent crawlers
 
 ## [0.1.2] - 2026-03-12
 
