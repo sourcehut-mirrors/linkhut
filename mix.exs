@@ -4,7 +4,7 @@ defmodule Linkhut.MixProject do
   def project do
     [
       app: :linkhut,
-      version: "0.1.2",
+      version: "0.1.3",
       elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       listeners: [Phoenix.CodeReloader],

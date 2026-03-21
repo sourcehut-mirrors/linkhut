@@ -2,7 +2,7 @@
 
 All notable changes to linkhut will be documented in this file.
 
-## [Unreleased]
+## [0.1.3] - 2026-03-21
 
 - Add support for setting user preferences (show URLs below titles, show exact dates, timezone and default bookmark privacy)
 - Improve relative date display
