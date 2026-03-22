@@ -550,7 +550,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
   end
 
   describe "perform/1 — file size limit" do
-    test "rejects file exceeding max_file_size on non-final attempt" do
+    test "rejects file exceeding max_file_size without retrying" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
       snapshot = create_pending_snapshot(user, link, "large")
@@ -563,30 +563,11 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       job = make_job(snapshot, user, link, type: "large")
 
-      assert {:error, %{msg: "file_too_large"}} = Crawler.perform(job)
-
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :retryable
-      assert updated.archive_metadata["error"] =~ "file_too_large"
-    end
-
-    test "rejects file exceeding max_file_size on final attempt" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "large")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler
-      ])
-
-      put_override(Linkhut.Archiving, :max_file_size, 10)
-
-      job = %{make_job(snapshot, user, link, type: "large") | attempt: 4, max_attempts: 4}
-
-      assert {:error, %{msg: "file_too_large"}} = Crawler.perform(job)
+      assert :ok = Crawler.perform(job)
 
       updated = Repo.get(Snapshot, snapshot.id)
       assert updated.state == :failed
+      assert updated.archive_metadata["error"] =~ "file_too_large"
     end
 
     test "cleans up staging directory on size rejection" do

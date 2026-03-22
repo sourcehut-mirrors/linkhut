@@ -122,7 +122,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
     if is_integer(file_size) and file_size > max_file_size do
       File.rm_rf(staging_dir)
 
-      update_failed(
+      update_failed_final(
         snapshot,
         job,
         %{msg: "file_too_large", size: file_size, max: max_file_size},
