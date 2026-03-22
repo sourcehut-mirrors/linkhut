@@ -321,10 +321,10 @@ defmodule Linkhut.Archiving do
     |> Repo.all()
   end
 
-  @doc "Returns all complete snapshots for a link, ordered by format locality then recency."
+  @doc "Returns all non-deleted snapshots for a link, ordered by format locality then recency."
   def get_current_snapshots_by_link(link_id) do
     Snapshot
-    |> where([s], s.link_id == ^link_id and s.state in [:complete, :not_available])
+    |> where([s], s.link_id == ^link_id and s.state != :pending_deletion)
     |> order_by([s], asc: s.format, desc: s.inserted_at)
     |> preload(:crawl_run)
     |> Repo.all()

@@ -211,8 +211,8 @@ defmodule LinkhutWeb.SnapshotHTML do
               <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
             </td>
             <td data-label="Actions" class="snapshot-actions-cell">
-              <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/#{snapshot.format}"}>view</a>
-              <a :if={@can_delete} href={~p"/_/archive/#{@link.id}/snapshot/#{snapshot.id}/delete"}>delete</a>
+              <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/#{snapshot.format}/#{snapshot.source}"}>view</a>
+              <a :if={@can_delete and snapshot.state in [:complete, :not_available, :failed]} href={~p"/_/archive/#{@link.id}/snapshot/#{snapshot.id}/delete"}>delete</a>
             </td>
           </tr>
         </tbody>
