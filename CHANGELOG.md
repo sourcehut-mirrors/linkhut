@@ -2,7 +2,7 @@
 
 All notable changes to linkhut will be documented in this file.
 
-## [Unreleased]
+## [0.1.4] - 2026-03-22
 
 - Properly terminate SingleFile processes when reaching the timeout to avoid leaving orphaned processes
 
