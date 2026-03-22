@@ -119,7 +119,7 @@ defmodule SingleFile do
   end
 
   defp cmd(command_path, extra_args, opts \\ []) do
-    System.cmd(command_path, extra_args, opts)
+    MuonTrap.cmd(command_path, extra_args, opts)
   end
 
   @doc """
@@ -129,21 +129,27 @@ defmodule SingleFile do
   The task output will be streamed directly to stdio. It
   returns the status of the underlying call.
 
+  Any extra `opts` are forwarded to `MuonTrap.cmd/3` (e.g.
+  `:timeout`, `:delay_to_sigkill`).
+
   ## Examples
 
       SingleFile.run(:default, ["--version"])
+      SingleFile.run(:default, ["--version"], timeout: 10_000)
 
   """
-  @spec run(atom(), [String.t()]) :: {String.t(), non_neg_integer()} | {:error, String.t()}
-  def run(profile, extra_args) when is_atom(profile) and is_list(extra_args) do
+  @spec run(atom(), [String.t()], keyword()) ::
+          {String.t(), non_neg_integer() | :timeout} | {:error, String.t()}
+  def run(profile, extra_args, opts \\ []) when is_atom(profile) and is_list(extra_args) do
     config = config_for!(profile)
     config_args = config[:args] || []
 
-    system_opts = [
-      cd: config[:cd] || File.cwd!(),
-      env: config[:env] || %{},
-      stderr_to_stdout: true
-    ]
+    system_opts =
+      [
+        cd: config[:cd] || File.cwd!(),
+        env: config[:env] || %{},
+        stderr_to_stdout: true
+      ] ++ opts
 
     args = config_args ++ extra_args
     path = bin_path()

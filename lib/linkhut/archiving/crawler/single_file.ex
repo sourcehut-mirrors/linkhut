@@ -6,6 +6,8 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   alias Linkhut.Archiving.Crawler
   alias Linkhut.Archiving.Crawler.Context
 
+  require Logger
+
   @impl true
   def source_type, do: "singlefile"
 
@@ -28,8 +30,10 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
   @html_content_types ~w(text/html application/xhtml+xml)
 
-  # 2 minute timeout
+  # 2 minute timeout for the SingleFile CLI process
   @timeout_ms 120_000
+  # Give Chromium 5 seconds to shut down gracefully before SIGKILL
+  @delay_to_sigkill 5_000
 
   @impl true
   def can_handle?(_url, %{content_type: content_type, status: status})
@@ -46,23 +50,6 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
     File.mkdir_p!(staging_dir)
 
-    task = Task.async(fn -> run_single_file(link_id, url, staging_dir) end)
-
-    case Task.yield(task, @timeout_ms) || Task.shutdown(task, 5_000) do
-      {:ok, result} ->
-        result
-
-      {:exit, reason} ->
-        File.rm_rf(staging_dir)
-        {:error, %{msg: "SingleFile crashed: #{inspect(reason)}"}}
-
-      nil ->
-        File.rm_rf(staging_dir)
-        {:error, %{msg: "SingleFile timed out after #{@timeout_ms}ms"}}
-    end
-  end
-
-  defp run_single_file(link_id, url, staging_dir) do
     args = [
       "--user-agent",
       Crawler.user_agent(),
@@ -73,27 +60,35 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
       staging_dir
     ]
 
-    case SingleFile.run(:default, args) do
-      {output, code} when code == 0 ->
+    case SingleFile.run(:default, args,
+           timeout: @timeout_ms,
+           delay_to_sigkill: @delay_to_sigkill
+         ) do
+      {output, 0} ->
         {:ok,
          {:file,
           %{
             path: Path.join(staging_dir, "#{link_id}"),
             id: link_id,
-            code: code,
+            code: 0,
             cmd: "single-file",
             args: args,
             content_type: "text/html",
             output: IO.iodata_to_binary(output)
           }}}
 
+      {_output, :timeout} ->
+        File.rm_rf(staging_dir)
+        {:error, %{msg: "SingleFile timed out after #{@timeout_ms}ms"}}
+
       {:error, reason} ->
         File.rm_rf(staging_dir)
         {:error, %{msg: reason}}
 
-      {error_msg, code} ->
+      {output, code} ->
+        Logger.warning("SingleFile exited with code #{code} for #{url}: #{output}")
         File.rm_rf(staging_dir)
-        {:error, %{msg: error_msg, code: code}}
+        {:error, %{msg: "SingleFile exited with code #{code}"}}
     end
   end
 
