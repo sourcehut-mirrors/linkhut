@@ -273,9 +273,10 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
   defp get_file_size(_), do: nil
 
-  defp format_error(%{msg: msg}) when is_binary(msg), do: msg
-  defp format_error(msg) when is_binary(msg), do: msg
-  defp format_error(error), do: inspect(error)
+  defp error_info(%{msg: msg}) when is_binary(msg), do: {msg, msg}
+  defp error_info(:unsupported_crawler), do: {"unsupported_crawler", "unsupported_crawler"}
+  defp error_info(msg) when is_binary(msg), do: {msg, "crawler_error"}
+  defp error_info(error), do: {inspect(error), "crawler_error"}
 
   defp decode_preflight_meta(%{"preflight_meta" => meta}) when is_map(meta),
     do: PreflightMeta.from_map(meta)
@@ -296,10 +297,11 @@ defmodule Linkhut.Archiving.Workers.Crawler do
   # Wayback Machine snapshot available") and retrying would be pointless.
   defp update_failed_final(snapshot, job, error, start_time) do
     processing_time = System.monotonic_time(:millisecond) - start_time
+    {error_msg, error_code} = error_info(error)
 
     failed_detail = %{
       "msg" => "crawler_failed_final",
-      "error" => format_error(error),
+      "error" => error_msg,
       "attempt" => job.attempt,
       "max_attempts" => job.attempt
     }
@@ -309,7 +311,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            retry_count: job.attempt - 1,
            failed_at: DateTime.utc_now(),
            processing_time_ms: processing_time,
-           archive_metadata: %{error: format_error(error)}
+           archive_metadata: %{error: error_msg, error_code: error_code}
          }) do
       {:ok, _} ->
         Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", failed_detail,
@@ -333,6 +335,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
   defp update_failed(snapshot, job, error, start_time) do
     processing_time = System.monotonic_time(:millisecond) - start_time
     final_attempt? = job.attempt >= job.max_attempts
+    {error_msg, error_code} = error_info(error)
 
     msg =
       if final_attempt?,
@@ -341,7 +344,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
 
     failed_detail = %{
       "msg" => msg,
-      "error" => format_error(error),
+      "error" => error_msg,
       "attempt" => job.attempt,
       "max_attempts" => job.max_attempts
     }
@@ -351,7 +354,7 @@ defmodule Linkhut.Archiving.Workers.Crawler do
            retry_count: job.attempt - 1,
            failed_at: DateTime.utc_now(),
            processing_time_ms: processing_time,
-           archive_metadata: %{error: format_error(error)}
+           archive_metadata: %{error: error_msg, error_code: error_code}
          }) do
       {:ok, _} ->
         Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", failed_detail,

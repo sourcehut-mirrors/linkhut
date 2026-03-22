@@ -88,7 +88,8 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
            state: :failed,
            failed_at: DateTime.utc_now(),
            archive_metadata: %{
-             error: "snapshot stuck in #{snapshot.state}, marked failed by sweeper"
+             error: "snapshot stuck in #{snapshot.state}, marked failed by sweeper",
+             error_code: "stale"
            }
          }) do
       {:ok, _} ->

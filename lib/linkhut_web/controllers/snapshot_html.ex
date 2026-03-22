@@ -209,6 +209,9 @@ defmodule LinkhutWeb.SnapshotHTML do
             <td data-label="Size">{format_file_size(snapshot.file_size_bytes)}</td>
             <td data-label="State">
               <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
+              <span :if={snapshot.state == :failed and snapshot.archive_metadata["error_code"]} class="snapshot-error-reason">
+                {error_code_label(snapshot.archive_metadata["error_code"])}
+              </span>
             </td>
             <td data-label="Actions" class="snapshot-actions-cell">
               <a :if={snapshot.state == :complete} href={~p"/_/archive/#{@link.id}/#{snapshot.format}/#{snapshot.source}"}>view</a>
@@ -383,6 +386,15 @@ defmodule LinkhutWeb.SnapshotHTML do
   def state_label(:failed), do: "Failed"
   def state_label(:pending_deletion), do: "Pending deletion"
   def state_label(_), do: "Unknown"
+
+  @doc """
+  Returns a human-readable label for a snapshot error code.
+  """
+  def error_code_label("file_too_large"), do: gettext("file too large")
+  def error_code_label("unsupported_crawler"), do: gettext("unsupported crawler")
+  def error_code_label("stale"), do: gettext("timed out")
+  def error_code_label("crawler_error"), do: gettext("crawler error")
+  def error_code_label(_), do: gettext("unknown error")
 
   @doc """
   Returns a CSS class suffix for a snapshot state.

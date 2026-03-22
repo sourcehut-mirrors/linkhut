@@ -235,6 +235,14 @@ table.snapshot-table {
 
 }
 
+.snapshot-error-reason {
+    color: $muted;
+
+    @media (prefers-color-scheme: dark) {
+        color: $muted-dark;
+    }
+}
+
 .snapshot-actions-cell {
     a:not(:first-child)::before {
         content: "·";
