@@ -64,10 +64,10 @@ defmodule Linkhut.MixProject do
       {:floki, "~> 0.37"},
       {:gen_smtp, "~> 1.2"},
       {:gettext, "~> 1.0"},
-      {:hammer, "~> 6.2"},
+      {:hammer, "~> 7.3"},
       {:inet_cidr, "~> 1.0"},
       {:jason, "~> 1.3"},
-      {:oban, "~> 2.19"},
+      {:oban, "~> 2.23"},
       {:owl, "~> 0.13"},
       {:phoenix, "~> 1.8"},
       {:phoenix_copy, "~> 0.1.1", runtime: Mix.env() == :dev},
@@ -87,7 +87,6 @@ defmodule Linkhut.MixProject do
       {:sweet_xml, "~> 0.7"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:tidewave, "~> 0.5", only: :dev},
       {:tzdata, "~> 1.1"},
       {:xml_builder, "~> 2.2"}
     ]

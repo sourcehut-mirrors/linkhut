@@ -64,7 +64,10 @@ defmodule Linkhut.Archiving.Snapshot do
   @doc false
   def create_changeset(snapshot, attrs) do
     snapshot
-    |> cast(attrs, [:link_id, :user_id, :crawl_run_id, :format, :source, :crawler_meta] ++ @updatable_fields)
+    |> cast(
+      attrs,
+      [:link_id, :user_id, :crawl_run_id, :format, :source, :crawler_meta] ++ @updatable_fields
+    )
     |> validate_required([:link_id, :user_id, :format, :source])
     |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawler_meta])
   end
@@ -72,9 +75,17 @@ defmodule Linkhut.Archiving.Snapshot do
   @doc false
   def upload_changeset(attrs) do
     %__MODULE__{}
-    |> cast(attrs, [:link_id, :user_id, :format, :source, :state,
-                     :storage_key, :file_size_bytes, :encoding,
-                     :archive_metadata])
+    |> cast(attrs, [
+      :link_id,
+      :user_id,
+      :format,
+      :source,
+      :state,
+      :storage_key,
+      :file_size_bytes,
+      :encoding,
+      :archive_metadata
+    ])
     |> validate_required([:link_id, :user_id, :format, :source, :state])
     |> validate_inclusion(:source, ["upload"])
     |> validate_inclusion(:state, [:complete])

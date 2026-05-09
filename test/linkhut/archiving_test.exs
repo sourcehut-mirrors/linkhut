@@ -397,7 +397,9 @@ defmodule Linkhut.ArchivingTest do
     test "does not delete crawl runs that still have snapshots" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
-      crawl_run = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
+
+      crawl_run =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
 
       {:ok, _} =
         Archiving.create_snapshot(link.id, user.id, %{
@@ -416,8 +418,11 @@ defmodule Linkhut.ArchivingTest do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
 
-      pending_cr = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :pending)
-      processing_cr = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
+      pending_cr =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :pending)
+
+      processing_cr =
+        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
 
       assert :ok = Archiving.enqueue_pending_deletions()
 
@@ -644,8 +649,18 @@ defmodule Linkhut.ArchivingTest do
     test "filters to orchestration + matching snapshot_id" do
       steps = [
         %{"step" => "created", "at" => "2026-02-26T10:00:00Z"},
-        %{"step" => "crawling", "at" => "2026-02-26T10:00:03Z", "snapshot_id" => 1, "source" => "singlefile"},
-        %{"step" => "crawling", "at" => "2026-02-26T10:00:04Z", "snapshot_id" => 2, "source" => "wayback"},
+        %{
+          "step" => "crawling",
+          "at" => "2026-02-26T10:00:03Z",
+          "snapshot_id" => 1,
+          "source" => "singlefile"
+        },
+        %{
+          "step" => "crawling",
+          "at" => "2026-02-26T10:00:04Z",
+          "snapshot_id" => 2,
+          "source" => "wayback"
+        },
         %{"step" => "completed", "at" => "2026-02-26T10:00:10Z"}
       ]
 
@@ -657,8 +672,18 @@ defmodule Linkhut.ArchivingTest do
 
     test "excludes steps for other snapshot_ids" do
       steps = [
-        %{"step" => "crawling", "at" => "2026-02-26T10:00:03Z", "snapshot_id" => 1, "source" => "singlefile"},
-        %{"step" => "complete", "at" => "2026-02-26T10:00:04Z", "snapshot_id" => 2, "source" => "wayback"}
+        %{
+          "step" => "crawling",
+          "at" => "2026-02-26T10:00:03Z",
+          "snapshot_id" => 1,
+          "source" => "singlefile"
+        },
+        %{
+          "step" => "complete",
+          "at" => "2026-02-26T10:00:04Z",
+          "snapshot_id" => 2,
+          "source" => "wayback"
+        }
       ]
 
       result = Archiving.steps_for_snapshot(steps, 1)

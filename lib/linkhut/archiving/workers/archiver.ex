@@ -14,7 +14,7 @@ defmodule Linkhut.Archiving.Workers.Archiver do
     unique: [
       period: {1, :hour},
       keys: [:link_id, :recrawl],
-      states: [:available, :scheduled, :executing, :retryable]
+      states: :incomplete
     ]
 
   alias Linkhut.Archiving

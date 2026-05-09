@@ -649,9 +649,10 @@ defmodule Linkhut.Archiving do
 
   defp archived_link_ids_without_inflight(user_id) do
     from(l in Link,
-      join: cr in CrawlRun, on: cr.link_id == l.id,
+      join: cr in CrawlRun,
+      on: cr.link_id == l.id,
       left_join: inflight in CrawlRun,
-        on: inflight.link_id == l.id and inflight.state in [:pending, :processing],
+      on: inflight.link_id == l.id and inflight.state in [:pending, :processing],
       where: l.user_id == ^user_id and is_nil(inflight.id),
       distinct: true,
       select: l.id

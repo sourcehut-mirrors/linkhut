@@ -854,5 +854,4 @@ defmodule Linkhut.LinksTest do
       assert {:ok, _} = Links.delete_link(link)
     end
   end
-
 end

@@ -600,7 +600,6 @@ defmodule LinkhutWeb.SnapshotHTML do
     |> Enum.max(fn -> 0 end)
   end
 
-
   defp snapshot_source(%{source: source}), do: source
   defp snapshot_source(_), do: "unknown"
 

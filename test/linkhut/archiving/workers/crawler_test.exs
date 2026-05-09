@@ -259,7 +259,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       ])
 
       # Exhaust the rate limit bucket (limit: 1)
-      assert {:allow, _} = Hammer.check_rate("crawler:ratelimited", 60_000, 1)
+      assert {:allow, _} = Linkhut.Archiving.RateLimit.hit("crawler:ratelimited", 60_000, 1)
 
       job = make_job(snapshot, user, link, type: "ratelimited")
 

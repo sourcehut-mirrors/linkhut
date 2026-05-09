@@ -66,6 +66,7 @@ defmodule Linkhut.Archiving.Workers.ArchiverTest do
       crawl_run = Repo.get(CrawlRun, args["crawl_run_id"])
 
       [created_step | _] = crawl_run.steps
+
       assert created_step["detail"] == %{
                "msg" => "reconciliation",
                "new_types" => ["singlefile"]

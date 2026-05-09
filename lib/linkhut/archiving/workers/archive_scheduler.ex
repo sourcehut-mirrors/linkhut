@@ -6,7 +6,7 @@ defmodule Linkhut.Archiving.Workers.ArchiveScheduler do
 
   use Oban.Worker,
     queue: :default,
-    unique: [period: {1, :minute}, states: [:available, :scheduled, :executing]]
+    unique: [period: {1, :minute}, states: :incomplete]
 
   alias Linkhut.Archiving.Scheduler
 

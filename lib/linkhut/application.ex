@@ -15,6 +15,8 @@ defmodule Linkhut.Application do
 
     # List all child processes to be supervised
     children = [
+      # Start the rate limiter for archiving
+      {Linkhut.Archiving.RateLimit, [clean_period: 60_000 * 60]},
       # Start the PromEx module
       Linkhut.PromEx,
       # Start the PubSub system

@@ -99,8 +99,10 @@ defmodule LinkhutWeb.CoreComponents do
     default: nil,
     doc: "custom error translator function, defaults to translate_error/1"
 
-  attr :rest, :global, include: ~w(accept autocomplete cols disabled form max maxlength min minlength
+  attr :rest, :global,
+    include: ~w(accept autocomplete cols disabled form max maxlength min minlength
                                    pattern placeholder readonly required rows size step)
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do

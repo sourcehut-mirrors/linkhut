@@ -8,7 +8,7 @@ defmodule Linkhut.Archiving.Workers.Reconciler do
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [period: {1, :hour}, states: [:available, :scheduled, :executing, :retryable]]
+    unique: [period: {1, :hour}, states: :incomplete]
 
   alias Linkhut.Archiving
 
@@ -59,9 +59,7 @@ defmodule Linkhut.Archiving.Workers.Reconciler do
         true
 
       {:error, reason} ->
-        Logger.warning(
-          "Reconciler: failed to enqueue link #{link.id}: #{inspect(reason)}"
-        )
+        Logger.warning("Reconciler: failed to enqueue link #{link.id}: #{inspect(reason)}")
 
         false
     end
