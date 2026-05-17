@@ -99,7 +99,10 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
           %{
             "msg" => "stale_snapshot_swept",
             "previous_state" => to_string(snapshot.state)
-          }, snapshot_id: snapshot.id, source: snapshot.source)
+          },
+          snapshot_id: snapshot.id,
+          source: snapshot.source
+        )
 
         Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
 

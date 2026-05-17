@@ -101,7 +101,7 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
           "type" => source,
           "recrawl" => Keyword.get(opts, :recrawl, false),
           "crawl_run_id" => crawl_run.id,
-          "preflight_meta" => preflight_meta,
+          "preflight_meta" => PreflightMeta.to_map(preflight_meta),
           "link_inserted_at" => encode_datetime(link_inserted_at)
         },
         queue: to_string(crawler_module.queue())

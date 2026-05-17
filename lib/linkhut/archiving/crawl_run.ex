@@ -19,7 +19,7 @@ defmodule Linkhut.Archiving.CrawlRun do
       values: [:pending, :processing, :complete, :not_archivable, :failed, :pending_deletion],
       default: :pending
 
-    field :preflight_meta, :map
+    field :preflight_meta, Linkhut.Archiving.PreflightMeta.Type
     field :steps, {:array, :map}, default: []
     field :error, :string
     # Managed by Archiving.recompute_crawl_run_size*/1 — not in @castable_fields.
@@ -51,7 +51,7 @@ defmodule Linkhut.Archiving.CrawlRun do
     |> validate_required([:url, :link_id, :user_id])
     |> optimistic_lock(:lock_version)
     |> maybe_seed_created_step()
-    |> SchemaHelpers.normalize_json_fields([:preflight_meta, :steps])
+    |> SchemaHelpers.normalize_json_fields([:steps])
   end
 
   defp maybe_seed_created_step(%{data: %{id: nil}} = changeset) do
