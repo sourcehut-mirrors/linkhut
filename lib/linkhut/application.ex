@@ -8,6 +8,8 @@ defmodule Linkhut.Application do
   require Logger
 
   def start(_type, _args) do
+    Oban.Telemetry.attach_default_logger(events: :all)
+
     validate_crawlers!()
     validate_archiving_config!()
     ensure_singlefile!()
