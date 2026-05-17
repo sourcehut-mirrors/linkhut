@@ -72,6 +72,10 @@ SECRET_KEY_BASE="<secret_key>"
 DATABASE_URL="ecto://<db_user>:<db_pass>@localhost/linkhut"
 LINKHUT_HOST="<service_host>"
 
+# Reverse proxy real IP header (default: x-forwarded-for)
+# Set this if your reverse proxy uses a different header for the client IP.
+# REAL_IP_HEADER="x-forwarded-for"
+
 # Email delivery (optional — omit SMTP_HOST to disable)
 # SMTP_HOST="<smtp_host>"
 # SMTP_PORT="<smtp_port>"

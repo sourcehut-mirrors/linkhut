@@ -20,12 +20,13 @@ config :linkhut, LinkhutWeb.Endpoint,
     layout: false
   ],
   pubsub_server: Linkhut.PubSub,
-  live_view: [signing_salt: "b58amlvXfHSJ+dhn5yTMgbiMwJubVUHf"]
+  live_view: [signing_salt: "b58amlvXfHSJ+dhn5yTMgbiMwJubVUHf"],
+  rewrite_on: [:x_forwarded_for]
 
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  metadata: [:request_id, :remote_ip, :authenticated]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason

@@ -1,6 +1,8 @@
 defmodule LinkhutWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :linkhut
 
+  require Logger
+
   # Serve at "/_/" the static files from "priv/static" directory.
   plug Plug.Static,
     at: "/_/",
@@ -29,6 +31,8 @@ defmodule LinkhutWeb.Endpoint do
 
   plug LinkhutWeb.Plugs.PromEx, path: "/_/admin/metrics", prom_ex_module: Linkhut.PromEx
 
+  plug Plug.RewriteOn, {LinkhutWeb.Endpoint, :rewrite_on_headers, []}
+  plug LinkhutWeb.Plugs.LogRemoteIp
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
@@ -55,4 +59,10 @@ defmodule LinkhutWeb.Endpoint do
   plug LinkhutWeb.Router
 
   socket "/live", Phoenix.LiveView.Socket
+
+  def rewrite_on_headers do
+    Application.get_env(:linkhut, __MODULE__, [])
+    |> Keyword.get(:rewrite_on, [])
+  end
+
 end
