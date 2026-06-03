@@ -65,15 +65,16 @@ if config_env() == :prod do
       header -> [rewrite_on: [{:remote_ip, header}]]
     end
 
-  config :linkhut, LinkhutWeb.Endpoint,
-    [
-      url: [host: host, scheme: "https", port: 443],
-      http: [
-        ip: ip_address,
-        port: port
-      ],
-      secret_key_base: secret_key_base
-    ] ++ rewrite_on
+  config :linkhut,
+         LinkhutWeb.Endpoint,
+         [
+           url: [host: host, scheme: "https", port: 443],
+           http: [
+             ip: ip_address,
+             port: port
+           ],
+           secret_key_base: secret_key_base
+         ] ++ rewrite_on
 
   # Mailer config:
   if smtp_host = System.get_env("SMTP_HOST") do

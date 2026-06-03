@@ -64,5 +64,4 @@ defmodule LinkhutWeb.Endpoint do
     Application.get_env(:linkhut, __MODULE__, [])
     |> Keyword.get(:rewrite_on, [])
   end
-
 end
