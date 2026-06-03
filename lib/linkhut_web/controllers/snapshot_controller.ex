@@ -353,7 +353,7 @@ defmodule LinkhutWeb.SnapshotController do
 
         {:error, :unsupported_format} ->
           conn
-          |> put_flash(:error, "Unsupported file type. Accepted: HTML, PDF, plain text.")
+          |> put_flash(:error, "Unsupported file type.")
           |> redirect(to: ~p"/_/archive/#{link_id}/all")
 
         {:error, :file_too_large} ->

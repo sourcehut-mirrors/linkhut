@@ -14,7 +14,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   require Logger
 
   @tool_name "Req"
-  @allowed_types_default ["application/pdf", "text/plain", "application/json"]
+  @allowed_types_default [:pdf, :text, :json]
   @overall_timeout_ms 300_000
 
   @impl true
@@ -180,71 +180,29 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
 
   @doc false
   def verify_content(path, content_type) do
-    case content_type do
-      "application/pdf" -> verify_pdf(path)
-      "application/json" -> verify_json(path)
-      "text/" <> _ -> verify_text(path)
-      _ -> :ok
-    end
-  end
-
-  defp verify_pdf(path) do
-    case File.open(path, [:read, :raw]) do
-      {:ok, file} ->
-        header = IO.binread(file, 5)
-        File.close(file)
-
-        if header == "%PDF-" do
+    with group when not is_nil(group) <- Linkhut.Archiving.MIME.group(content_type),
+         {:ok, detected_type} <- Linkhut.Archiving.MIME.detect(path) do
+      case Linkhut.Archiving.MIME.compatible_with?(detected_type, group) do
+        true ->
           :ok
-        else
-          {:error, "not a valid PDF (missing %PDF- header)"}
-        end
+
+        false ->
+          {:error, "not a valid #{group} file (mime-type: #{detected_type})"}
+      end
+    else
+      nil ->
+        # note: succeed on unknown (might want to change this)
+        :ok
 
       {:error, reason} ->
-        {:error, "cannot read file: #{inspect(reason)}"}
-    end
-  end
-
-  defp verify_json(path) do
-    case File.open(path, [:read, :raw, :binary]) do
-      {:ok, file} ->
-        chunk = IO.binread(file, 4096)
-        File.close(file)
-
-        chunk =
-          if is_binary(chunk), do: String.trim_leading(chunk), else: ""
-
-        if String.starts_with?(chunk, "{") or String.starts_with?(chunk, "[") do
-          :ok
-        else
-          {:error, "not valid JSON (first non-whitespace char is not { or [)"}
-        end
-
-      {:error, reason} ->
-        {:error, "cannot read file: #{inspect(reason)}"}
-    end
-  end
-
-  defp verify_text(path) do
-    case File.open(path, [:read, :raw, :binary]) do
-      {:ok, file} ->
-        chunk = IO.binread(file, 4096)
-        File.close(file)
-
-        if is_binary(chunk) and String.valid?(chunk) do
-          :ok
-        else
-          {:error, "content is not valid UTF-8 text"}
-        end
-
-      {:error, reason} ->
-        {:error, "cannot read file: #{inspect(reason)}"}
+        {:error, "cannot validate file: #{inspect(reason)}"}
     end
   end
 
   defp allowed_types do
     Linkhut.Config.archiving(:direct_file, [])
     |> Keyword.get(:allowed_types, @allowed_types_default)
+    |> Linkhut.Archiving.MIME.types()
   end
 
   defp max_bytes do

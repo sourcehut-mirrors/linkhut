@@ -129,12 +129,10 @@ defmodule Linkhut.Archiving.Pipeline.Dispatch do
   defp determine_format("httpfetch", preflight_meta), do: format_from_content_type(preflight_meta)
   defp determine_format(_, _), do: "webpage"
 
-  defp format_from_content_type(%PreflightMeta{content_type: ct}) when is_binary(ct) do
-    cond do
-      ct =~ "application/pdf" -> "pdf"
-      ct =~ "text/plain" -> "text"
-      ct =~ "text/markdown" -> "text"
-      true -> "webpage"
+  defp format_from_content_type(%PreflightMeta{content_type: content_type}) do
+    case Linkhut.Archiving.MIME.format_from_content_type(content_type) do
+      {:ok, format} -> format
+      {:error, :unsupported_format} -> "webpage"
     end
   end
 

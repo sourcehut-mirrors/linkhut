@@ -15,7 +15,7 @@ ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
-RUN apt-get update -y && apt-get install -y build-essential git \
+RUN apt-get update -y && apt-get install -y build-essential git libmagic-dev \
     && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # prepare build dir
@@ -78,7 +78,7 @@ LABEL maintainer="ops@linkhut.org" \
     org.opencontainers.image.created=$BUILD_DATE
 
 RUN apt-get update -y && \
-  apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates curl postgresql-client \
+  apt-get install -y libstdc++6 openssl libncurses5 locales ca-certificates curl postgresql-client libmagic1 \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 # Set the locale

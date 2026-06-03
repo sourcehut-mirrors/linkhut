@@ -507,7 +507,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "rejects unsupported file type", %{conn: conn, link: link} do
-      upload = upload_fixture("image.png", "image/png", "PNG data")
+      upload =
+        upload_fixture("foo.bin", "application/octet-stream", <<0, 1, 2, 3, 0, 255, 128, 10>>)
 
       conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"

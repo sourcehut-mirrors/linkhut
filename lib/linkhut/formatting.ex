@@ -54,6 +54,7 @@ defmodule Linkhut.Formatting do
   def format_display_name("webpage"), do: "Webpage"
   def format_display_name("pdf"), do: "PDF"
   def format_display_name("text"), do: "Text"
+  def format_display_name("image"), do: "Image"
   def format_display_name("reference"), do: "External"
   def format_display_name(format), do: String.capitalize(format)
 

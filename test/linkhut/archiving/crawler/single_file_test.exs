@@ -58,22 +58,24 @@ defmodule Linkhut.Archiving.Crawler.SingleFileTest do
 
     test "returns false for application/pdf" do
       refute SingleFile.can_handle?("https://example.com/doc.pdf", %{
-               content_type: "application/pdf"
+               content_type: "application/pdf",
+               status: 200
              })
     end
 
     test "returns false for image/png" do
       refute SingleFile.can_handle?("https://example.com/image.png", %{
-               content_type: "image/png"
+               content_type: "image/png",
+               status: 200
              })
     end
 
     test "returns false for nil content type" do
-      refute SingleFile.can_handle?("https://example.com", %{content_type: nil})
+      refute SingleFile.can_handle?("https://example.com", %{content_type: nil, status: 200})
     end
 
     test "returns false for missing content type key" do
-      refute SingleFile.can_handle?("https://example.com", %{})
+      refute SingleFile.can_handle?("https://example.com", %{status: 200})
     end
   end
 end

@@ -6,6 +6,8 @@ All notable changes to linkhut will be documented in this file.
 
 - Logging improvements (adds: execution and scheduling of jobs, remote ip address when provided by the reverse proxy)
 - Fix categorization of crawls obtained by httpfetch based on mime type
+- Use libmagic to determine the mime type of artifacts obtained by httpfetch or manually uploaded
+- Add support for archiving images
 
 ## [0.1.4] - 2026-03-22
 

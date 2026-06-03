@@ -62,6 +62,7 @@ defmodule Linkhut.MixProject do
       {:ex_oauth2_provider, "~> 0.5"},
       {:excoveralls, "~> 0.18", only: :test},
       {:floki, "~> 0.37"},
+      {:gen_magic, "~> 1.1"},
       {:gen_smtp, "~> 1.2"},
       {:gettext, "~> 1.0"},
       {:hammer, "~> 7.3"},

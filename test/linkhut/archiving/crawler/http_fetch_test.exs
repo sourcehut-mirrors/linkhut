@@ -105,7 +105,7 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
     test "rejects non-PDF" do
       path = write_temp_file("<html>not a pdf</html>")
       assert {:error, msg} = HttpFetch.verify_content(path, "application/pdf")
-      assert msg =~ "not a valid PDF"
+      assert msg =~ "not a valid pdf file (mime-type: text/html)"
       File.rm(path)
     end
 
@@ -130,25 +130,18 @@ defmodule Linkhut.Archiving.Crawler.HttpFetchTest do
     test "rejects non-JSON" do
       path = write_temp_file("<html>not json</html>")
       assert {:error, msg} = HttpFetch.verify_content(path, "application/json")
-      assert msg =~ "not valid JSON"
+      assert msg =~ "not a valid json file (mime-type: text/html)"
       File.rm(path)
     end
 
-    test "accepts valid UTF-8 text" do
+    test "accepts valid text" do
       path = write_temp_file("Hello, world!")
       assert :ok = HttpFetch.verify_content(path, "text/plain")
       File.rm(path)
     end
 
-    test "rejects invalid UTF-8" do
-      path = write_temp_binary(<<0xFF, 0xFE, 0x00, 0x01>>)
-      assert {:error, msg} = HttpFetch.verify_content(path, "text/plain")
-      assert msg =~ "not valid UTF-8"
-      File.rm(path)
-    end
-
     test "accepts unknown content types" do
-      path = write_temp_file("anything")
+      path = write_temp_binary(<<0xFF, 0xFE, 0x00, 0x01>>)
       assert :ok = HttpFetch.verify_content(path, "application/octet-stream")
       File.rm(path)
     end

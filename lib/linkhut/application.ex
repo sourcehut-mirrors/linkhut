@@ -17,6 +17,8 @@ defmodule Linkhut.Application do
 
     # List all child processes to be supervised
     children = [
+      # GenMagic server
+      {GenMagic.Server, name: :gen_magic},
       # Start the rate limiter for archiving
       {Linkhut.Archiving.RateLimit, [clean_period: 60_000 * 60]},
       # Start the PromEx module

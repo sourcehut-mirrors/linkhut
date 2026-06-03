@@ -102,7 +102,7 @@ config :linkhut, Linkhut.Archiving,
     Linkhut.Archiving.Crawler.WaybackMachine
   ],
   direct_file: [
-    allowed_types: ["application/pdf", "text/plain", "application/json"]
+    allowed_types: [:pdf, :text, :json, :image]
   ],
   # Appended to crawler User-Agent. Recommended: a URL where site owners
   # can report issues or request opt-out, e.g. "+https://your-instance.com"
