@@ -9,10 +9,12 @@ packages:
     - golang
     - unzip
     - erlang
-    - erlang-dev
     - erlang-asn1
+    - erlang-dev
     - erlang-os-mon
     - erlang-xmerl
+    - libmagic-dev
+    - pkg-config
     - postgresql
 repositories:
   rabbitmq: https://ppa.launchpadcontent.net/rabbitmq/rabbitmq-erlang/ubuntu noble main 0xB279943D2A549531E144B875F77F1EDA57EBB1CC
