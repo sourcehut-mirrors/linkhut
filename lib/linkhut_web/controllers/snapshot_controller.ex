@@ -2,7 +2,7 @@ defmodule LinkhutWeb.SnapshotController do
   use LinkhutWeb, :controller
 
   alias Linkhut.{Links, Archiving}
-  alias Linkhut.Archiving.StorageKey
+  alias Linkhut.Archiving.{Format, StorageKey}
   alias LinkhutWeb.Breadcrumb
 
   plug :require_can_view_archives when action in [:show, :full, :download, :index]
@@ -75,7 +75,7 @@ defmodule LinkhutWeb.SnapshotController do
   end
 
   defp render_snapshot_or_redirect(conn, _user, _link, link_id, complete, nil, _source) do
-    first = Enum.min_by(complete, &Linkhut.Formatting.format_sort_key(&1.format))
+    first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
     redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
   end
 
@@ -83,7 +83,7 @@ defmodule LinkhutWeb.SnapshotController do
     snapshot = find_snapshot(complete, format, source)
 
     if snapshot == nil do
-      first = Enum.min_by(complete, &Linkhut.Formatting.format_sort_key(&1.format))
+      first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
       redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
     else
       tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete, link_id)

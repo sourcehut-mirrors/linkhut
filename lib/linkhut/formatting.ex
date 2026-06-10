@@ -32,42 +32,15 @@ defmodule Linkhut.Formatting do
   end
 
   @doc """
-  Returns the human-readable display name for a crawler type string.
-
-  ## Examples
-
-      iex> Linkhut.Formatting.crawler_display_name("singlefile")
-      "Web page"
-
-      iex> Linkhut.Formatting.crawler_display_name("httpfetch")
-      "File"
-
-      iex> Linkhut.Formatting.crawler_display_name("wayback")
-      "Wayback Machine"
+  Formats processing time from milliseconds to a readable format.
   """
-  def crawler_display_name("singlefile"), do: "Web page"
-  def crawler_display_name("httpfetch"), do: "File"
-  def crawler_display_name("wget"), do: "Wget"
-  def crawler_display_name("wayback"), do: "Wayback Machine"
-  def crawler_display_name(type), do: String.capitalize(type)
+  def format_processing_time(nil), do: nil
 
-  def format_display_name("webpage"), do: "Webpage"
-  def format_display_name("pdf"), do: "PDF"
-  def format_display_name("text"), do: "Text"
-  def format_display_name("image"), do: "Image"
-  def format_display_name("reference"), do: "External"
-  def format_display_name(format), do: String.capitalize(format)
-
-  @doc """
-  Returns a sort key for format tab ordering.
-  Local artifact formats sort before external/reference formats.
-  """
-  def format_sort_key("reference"), do: 1
-  def format_sort_key(_), do: 0
-
-  def source_display_name("singlefile"), do: "SingleFile"
-  def source_display_name("httpfetch"), do: "HTTP Fetch"
-  def source_display_name("wayback"), do: "Wayback Machine"
-  def source_display_name("upload"), do: "Upload"
-  def source_display_name(source), do: String.capitalize(source)
+  def format_processing_time(ms) when is_integer(ms) do
+    cond do
+      ms >= 60_000 -> "#{Float.round(ms / 60_000, 1)} min"
+      ms >= 1_000 -> "#{Float.round(ms / 1_000, 1)} sec"
+      true -> "#{ms} ms"
+    end
+  end
 end

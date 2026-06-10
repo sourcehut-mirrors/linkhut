@@ -3,72 +3,6 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
 
   alias LinkhutWeb.SnapshotHTML
 
-  describe "format_file_size/1" do
-    test "returns nil for nil" do
-      assert SnapshotHTML.format_file_size(nil) == nil
-    end
-
-    test "formats bytes" do
-      assert SnapshotHTML.format_file_size(500) == "500 bytes"
-    end
-
-    test "formats kilobytes" do
-      assert SnapshotHTML.format_file_size(2048) == "2.0 KB"
-    end
-
-    test "formats megabytes" do
-      assert SnapshotHTML.format_file_size(5_242_880) == "5.0 MB"
-    end
-
-    test "formats gigabytes" do
-      assert SnapshotHTML.format_file_size(2_147_483_648) == "2.0 GB"
-    end
-  end
-
-  describe "format_datetime/1" do
-    test "formats a DateTime to date string" do
-      dt = ~U[2025-03-15 10:30:00Z]
-      assert SnapshotHTML.format_datetime(dt) == "2025-03-15"
-    end
-
-    test "returns 'Unknown' for nil" do
-      assert SnapshotHTML.format_datetime(nil) == "Unknown"
-    end
-
-    test "returns 'Unknown' for non-DateTime" do
-      assert SnapshotHTML.format_datetime("not a date") == "Unknown"
-    end
-  end
-
-  describe "format_processing_time/1" do
-    test "returns nil for nil" do
-      assert SnapshotHTML.format_processing_time(nil) == nil
-    end
-
-    test "formats milliseconds" do
-      assert SnapshotHTML.format_processing_time(500) == "500 ms"
-    end
-
-    test "formats seconds" do
-      assert SnapshotHTML.format_processing_time(3500) == "3.5 sec"
-    end
-
-    test "formats minutes" do
-      assert SnapshotHTML.format_processing_time(120_000) == "2.0 min"
-    end
-  end
-
-  describe "format_relative_datetime/1" do
-    test "formats a DateTime as relative" do
-      dt = DateTime.utc_now()
-      assert SnapshotHTML.format_relative_datetime(dt) =~ "now"
-    end
-
-    test "returns 'Unknown' for nil" do
-      assert SnapshotHTML.format_relative_datetime(nil) == "Unknown"
-    end
-  end
-
   describe "format_response_code/1" do
     test "formats unknown codes as raw integer" do
       assert SnapshotHTML.format_response_code(418) == "418"
@@ -109,17 +43,6 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "crawler_label/1" do
-    test "returns display name for known source" do
-      assert SnapshotHTML.crawler_label(%{source: "singlefile", archive_metadata: nil}) ==
-               "Web page"
-    end
-
-    test "returns Unknown for missing source" do
-      assert SnapshotHTML.crawler_label(%{archive_metadata: nil}) == "Unknown"
-    end
-  end
-
   describe "tool_label/1" do
     test "returns tool name with version" do
       assert SnapshotHTML.tool_label(%{
@@ -147,21 +70,13 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "format_step_time/1" do
+  describe "format_step_time/2" do
     test "formats ISO 8601 timestamp to HH:MM:SS" do
-      assert SnapshotHTML.format_step_time("2026-02-26T14:30:45Z") == "14:30:45"
-    end
-
-    test "returns empty string for nil" do
-      assert SnapshotHTML.format_step_time(nil) == ""
+      assert SnapshotHTML.format_step_time("2026-02-26T14:30:45Z", "UTC") == "14:30:45"
     end
 
     test "returns raw string for invalid timestamp" do
-      assert SnapshotHTML.format_step_time("not-a-date") == "not-a-date"
-    end
-
-    test "returns empty string for non-binary" do
-      assert SnapshotHTML.format_step_time(123) == ""
+      assert SnapshotHTML.format_step_time("not-a-date", "UTC") == "not-a-date"
     end
   end
 
@@ -171,37 +86,25 @@ defmodule LinkhutWeb.SnapshotHTMLTest do
     end
   end
 
-  describe "wayback_timestamp/1" do
+  describe "wayback_timestamp/2" do
     test "formats valid 14-digit timestamp" do
       snapshot = %{archive_metadata: %{"timestamp" => "20250301120000"}}
-      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025-03-01"
+      assert SnapshotHTML.wayback_timestamp(snapshot, "UTC") == "2025-03-01"
     end
 
     test "formats timestamp longer than 14 digits" do
       snapshot = %{archive_metadata: %{"timestamp" => "20250301120000123"}}
-      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025-03-01"
+      assert SnapshotHTML.wayback_timestamp(snapshot, "UTC") == "2025-03-01"
     end
 
     test "returns raw string for non-numeric timestamp" do
       snapshot = %{archive_metadata: %{"timestamp" => "2025XX01120000"}}
-      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025XX01120000"
-    end
-
-    test "returns nil for missing timestamp" do
-      assert SnapshotHTML.wayback_timestamp(%{archive_metadata: %{}}) == nil
-    end
-
-    test "returns nil for nil archive_metadata" do
-      assert SnapshotHTML.wayback_timestamp(%{archive_metadata: nil}) == nil
-    end
-
-    test "returns nil for missing archive_metadata field" do
-      assert SnapshotHTML.wayback_timestamp(%{}) == nil
+      assert SnapshotHTML.wayback_timestamp(snapshot, "UTC") == "2025XX01120000"
     end
 
     test "returns raw string for too-short timestamp" do
       snapshot = %{archive_metadata: %{"timestamp" => "2025"}}
-      assert SnapshotHTML.wayback_timestamp(snapshot) == "2025"
+      assert SnapshotHTML.wayback_timestamp(snapshot, "UTC") == "2025"
     end
   end
 

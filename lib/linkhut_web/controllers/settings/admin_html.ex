@@ -2,6 +2,7 @@ defmodule LinkhutWeb.Settings.AdminHTML do
   use LinkhutWeb, :html
 
   import LinkhutWeb.SettingsComponents
+  import Linkhut.Formatting, only: [format_bytes: 1]
 
   embed_templates "admin_html/*"
 

@@ -6,9 +6,8 @@ defmodule LinkhutWeb.SettingsComponents do
 
   import LinkhutWeb.NavigationComponents, only: [nav_link: 1]
 
-  defdelegate format_bytes(bytes), to: Linkhut.Formatting
-  defdelegate crawler_display_name(type), to: Linkhut.Formatting
-  defdelegate format_display_name(format), to: Linkhut.Formatting
+  import Linkhut.Formatting, only: [format_bytes: 1]
+  import Linkhut.Archiving.Format, only: [format_display_name: 1]
 
   attr :is_admin?, :boolean, required: true, doc: "flag for whether to show admin tabs"
   attr :request_path, :string, required: true, doc: "the current path"

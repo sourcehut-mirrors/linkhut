@@ -1,9 +1,9 @@
 <.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
 <div class="snapshot-viewer">
   <.toolbar link={@link} snapshot={@snapshot} show_url={LinkhutWeb.LinkComponents.show_url?(assigns)} external_url={assigns[:external_url]} />
-  <.details snapshot={@snapshot} link={@link} external_url={assigns[:external_url]} />
+  <.details snapshot={@snapshot} link={@link} external_url={assigns[:external_url]} timezone={@preferences.timezone} />
   <%= if assigns[:external_url] do %>
-    <.content_external external_url={@external_url} snapshot={@snapshot} />
+    <.content_external external_url={@external_url} snapshot={@snapshot} timezone={@preferences.timezone} />
   <% else %>
     <.content_iframe serve_url={@serve_url} title={@link.title} />
   <% end %>

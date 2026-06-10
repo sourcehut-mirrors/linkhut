@@ -34,6 +34,31 @@ defmodule LinkhutWeb.Helpers do
   end
 
   @doc """
+  Formats a datetime (or a date) as a date for display
+  """
+  def format_date_absolute(dt, timezone, opts \\ [])
+
+  def format_date_absolute(%NaiveDateTime{} = datetime, timezone, opts) do
+    format_date_absolute(to_date(datetime), timezone, opts)
+  end
+
+  def format_date_absolute(%DateTime{} = datetime, timezone, opts) do
+    format_date_absolute(datetime |> in_timezone(timezone) |> to_date(), timezone, opts)
+  end
+
+  def format_date_absolute(%Date{} = date, _timezone, opts) when is_list(opts) do
+    format = Keyword.get(opts, :format, "%Y-%m-%d")
+
+    date
+    |> Calendar.strftime(format)
+  end
+
+  @doc "Formats the time-of-day for display, shifted to the given timezone."
+  def format_time(%DateTime{} = dt, timezone \\ nil) do
+    dt |> in_timezone(timezone) |> Calendar.strftime("%H:%M:%S")
+  end
+
+  @doc """
   Formats a duration in seconds as a human-readable relative time string.
 
   Accepts either a `DateTime` (computes diff from now) or an integer

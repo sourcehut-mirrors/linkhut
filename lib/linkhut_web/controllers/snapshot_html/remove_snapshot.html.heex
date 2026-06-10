@@ -7,19 +7,19 @@
     <tbody>
       <tr>
         <th>Format</th>
-        <td>{LinkhutWeb.SnapshotHTML.format_display_name(@snapshot.format)}</td>
+        <td>{format_display_name(@snapshot.format)}</td>
       </tr>
       <tr>
         <th>Source</th>
-        <td>{LinkhutWeb.SnapshotHTML.source_display_name(@snapshot.source)}</td>
+        <td>{source_display_name(@snapshot.source)}</td>
       </tr>
       <tr>
         <th>Captured</th>
-        <td>{LinkhutWeb.SnapshotHTML.format_datetime(@snapshot.inserted_at)}</td>
+        <td>{LinkhutWeb.Helpers.format_date_absolute(@snapshot.inserted_at, @preferences.timezone)}</td>
       </tr>
       <tr :if={@snapshot.file_size_bytes}>
         <th>Size</th>
-        <td>{LinkhutWeb.SnapshotHTML.format_file_size(@snapshot.file_size_bytes)}</td>
+        <td>{format_bytes(@snapshot.file_size_bytes)}</td>
       </tr>
     </tbody>
   </table>

@@ -661,7 +661,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           crawl_run_id: crawl_run.id,
           archive_metadata: %{
             original_url: link.url,
-            final_url: link.url
+            final_url: link.url,
+            timestamp: "20250301120000"
           }
         })
 

@@ -2,8 +2,14 @@ defmodule LinkhutWeb.SnapshotHTML do
   use LinkhutWeb, :html
 
   alias Linkhut.Archiving
+  alias Linkhut.Archiving.Format
 
   import LinkhutWeb.NavigationComponents, only: [nav_link: 1]
+
+  import LinkhutWeb.Helpers, only: [format_date_absolute: 2, format_time: 2, time_ago: 1]
+
+  import Linkhut.Formatting, only: [format_bytes: 1, format_processing_time: 1]
+  import Linkhut.Archiving.Format, only: [format_display_name: 1, source_display_name: 1]
 
   embed_templates "snapshot_html/*"
 
@@ -44,7 +50,7 @@ defmodule LinkhutWeb.SnapshotHTML do
     format_counts = Enum.frequencies_by(snapshots, & &1.format)
 
     snapshots
-    |> Enum.sort_by(&Linkhut.Formatting.format_sort_key(&1.format))
+    |> Enum.sort_by(&Format.format_sort_key(&1.format))
     |> Enum.map(fn snapshot ->
       name =
         if format_counts[snapshot.format] > 1 do
@@ -79,6 +85,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   attr :snapshot, :map, required: true
   attr :link, :map, required: true
   attr :external_url, :string, default: nil
+  attr :timezone, :string, default: nil
 
   def details(assigns) do
     crawl_run = assigns.snapshot.crawl_run
@@ -109,7 +116,7 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
           <tr>
             <th>Captured</th>
-            <td>{format_datetime(@snapshot.inserted_at)}</td>
+            <td>{format_date_absolute(@snapshot.inserted_at, @timezone)}</td>
           </tr>
           <tr>
             <th>Format</th>
@@ -137,13 +144,13 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
           <tr :if={@snapshot.file_size_bytes}>
             <th>Size</th>
-            <td>{format_file_size(@snapshot.file_size_bytes)}</td>
+            <td>{format_bytes(@snapshot.file_size_bytes)}</td>
           </tr>
-          <tr :if={wayback_content_length(@snapshot)}>
+          <tr :if={@snapshot.source == "wayback"}>
             <th>Size</th>
-            <td>{format_file_size(wayback_content_length(@snapshot))}</td>
+            <td>{format_bytes(wayback_content_length(@snapshot))}</td>
           </tr>
-          <tr :if={wayback_digest(@snapshot)}>
+          <tr :if={@snapshot.source == "wayback"}>
             <th>Digest</th>
             <td><code>{wayback_digest(@snapshot)}</code></td>
           </tr>
@@ -163,12 +170,12 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
           <tr :if={@snapshot.failed_at}>
             <th>Failed at</th>
-            <td>{format_datetime(@snapshot.failed_at)}</td>
+            <td>{format_date_absolute(@snapshot.failed_at, @timezone)}</td>
           </tr>
         </tbody>
       </table>
       <h4 :if={@timeline != []} class="step-timeline-header">Timeline</h4>
-      <.step_timeline :if={@timeline != []} steps={@timeline} />
+      <.step_timeline :if={@timeline != []} steps={@timeline} timezone={@timezone} />
     </details>
     """
   end
@@ -178,6 +185,7 @@ defmodule LinkhutWeb.SnapshotHTML do
   attr :snapshots, :list, required: true
   attr :link, :map, required: true
   attr :can_delete, :boolean, default: false
+  attr :timezone, :string, default: nil
 
   def current_snapshots(assigns) do
     ~H"""
@@ -200,13 +208,13 @@ defmodule LinkhutWeb.SnapshotHTML do
           <tr :for={snapshot <- @snapshots}>
             <td data-label="Format">{format_display_name(snapshot.format)}</td>
             <td data-label="Source">{source_display_name(snapshot.source)}</td>
-            <td data-label="Captured" title={format_relative_datetime(snapshot.inserted_at)}>
-              {format_datetime(snapshot.inserted_at)}
+            <td data-label="Captured" title={time_ago(snapshot.inserted_at)}>
+              {format_date_absolute(snapshot.inserted_at, @timezone)}
             </td>
             <td data-label="Tool">{tool_label(snapshot)}</td>
             <td data-label="Response">{format_response_code(snapshot.response_code)}</td>
             <td data-label="Processing time">{format_processing_time(snapshot.processing_time_ms)}</td>
-            <td data-label="Size">{format_file_size(snapshot.file_size_bytes)}</td>
+            <td data-label="Size">{format_bytes(snapshot.file_size_bytes)}</td>
             <td data-label="State">
               <.state_badge state={snapshot.state}>{state_label(snapshot.state)}</.state_badge>
               <span :if={snapshot.state == :failed and snapshot.archive_metadata["error_code"]} class="snapshot-error-reason">
@@ -224,14 +232,13 @@ defmodule LinkhutWeb.SnapshotHTML do
     """
   end
 
-  defp accepted_upload_types, do: Enum.join(Linkhut.Archiving.accepted_upload_types(), ",")
-
-  defdelegate source_display_name(source), to: Linkhut.Formatting
+  defp accepted_upload_types, do: Enum.join(Archiving.accepted_upload_types(), ",")
 
   # --- Archive-centric components ---
 
   attr :archive, :map, required: true
   attr :link, :map, required: true
+  attr :timezone, :string, default: nil
 
   def crawl_run_group(assigns) do
     assigns =
@@ -242,8 +249,8 @@ defmodule LinkhutWeb.SnapshotHTML do
     ~H"""
     <div class={"crawl-run #{archive_state_class(@archive.state)}"}>
       <div class="crawl-run-header">
-        <span class="crawl-run-time" title={format_relative_datetime(@archive.inserted_at)}>
-          {format_datetime(@archive.inserted_at)}
+        <span class="crawl-run-time" title={time_ago(@archive.inserted_at)}>
+          {format_date_absolute(@archive.inserted_at, @timezone)}
         </span>
         <div class="crawl-run-header-right">
           <span :if={@archive.state == :failed && @max_retry_count > 0} class="crawl-run-retries">
@@ -253,18 +260,19 @@ defmodule LinkhutWeb.SnapshotHTML do
         </div>
       </div>
       <div :if={@archive.error} class="crawl-run-error">{@archive.error}</div>
-      <.step_timeline :if={@timeline != []} steps={@timeline} />
+      <.step_timeline :if={@timeline != []} steps={@timeline} timezone={@timezone} />
     </div>
     """
   end
 
   attr :steps, :list, required: true
+  attr :timezone, :string, default: nil
 
   def step_timeline(assigns) do
     ~H"""
     <ol class="step-timeline">
       <li :for={step <- @steps} class={"step-timeline-item #{step_class(step)}"} data-source={step["source"]}>
-        <time :if={step["at"]} class="step-time">{format_step_time(step["at"])}</time>
+        <time :if={step["at"]} class="step-time">{format_step_time(step["at"], @timezone)}</time>
         <span :if={step["source"]} class="step-source">{step["source"]}</span>
         <span class="step-name">{step_display_name(step)}</span>
         <span :if={step["detail"]} class="step-detail">{LinkhutWeb.Archiving.StepDescriptions.render(step["detail"])}</span>
@@ -291,15 +299,16 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :external_url, :string, required: true
   attr :snapshot, :map, required: true
+  attr :timezone, :string, default: nil
 
   def content_external(assigns) do
     ~H"""
     <div class="snapshot-content-external">
       <table class="details-table">
         <tbody>
-          <tr :if={wayback_timestamp(@snapshot)}>
+          <tr :if={@snapshot.source == "wayback"}>
             <th>Captured</th>
-            <td>{wayback_timestamp(@snapshot)}</td>
+            <td>{wayback_timestamp(@snapshot, @timezone)}</td>
           </tr>
           <tr>
             <th>URL</th>
@@ -316,52 +325,10 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   # --- Helper functions ---
 
-  @doc """
-  Formats a file size in bytes to a human-readable format.
-  """
-  def format_file_size(nil), do: nil
-  defdelegate format_file_size(bytes), to: Linkhut.Formatting, as: :format_bytes
-
-  @doc """
-  Formats a datetime for display in the snapshot metadata.
-  """
-  def format_datetime(%DateTime{} = dt) do
-    dt
-    |> DateTime.to_date()
-    |> Date.to_string()
-  end
-
-  def format_datetime(_), do: "Unknown"
-
-  @doc """
-  Formats processing time from milliseconds to a readable format.
-  """
-  def format_processing_time(nil), do: nil
-
-  def format_processing_time(ms) when is_integer(ms) do
-    cond do
-      ms >= 60_000 -> "#{Float.round(ms / 60_000, 1)} min"
-      ms >= 1_000 -> "#{Float.round(ms / 1_000, 1)} sec"
-      true -> "#{ms} ms"
-    end
-  end
-
-  defdelegate crawler_display_name(type), to: Linkhut.Formatting
-  defdelegate format_display_name(format), to: Linkhut.Formatting
-
   defp default_tool_name("singlefile"), do: "SingleFile"
   defp default_tool_name("httpfetch"), do: "Req"
   defp default_tool_name("wget"), do: "Wget"
   defp default_tool_name(type), do: String.capitalize(type)
-
-  @doc """
-  Formats a datetime as a relative time string (e.g. "3 days ago").
-  """
-  def format_relative_datetime(%DateTime{} = dt) do
-    LinkhutWeb.Helpers.time_ago(dt)
-  end
-
-  def format_relative_datetime(_), do: "Unknown"
 
   @doc """
   Returns a human-readable label for an HTTP response code.
@@ -423,14 +390,6 @@ defmodule LinkhutWeb.SnapshotHTML do
   def crawler_version(_), do: nil
 
   @doc """
-  Returns the crawler type display name.
-  E.g. "SingleFile" or "HTTP Fetch".
-  """
-  def crawler_label(snapshot) do
-    crawler_display_name(snapshot_source(snapshot))
-  end
-
-  @doc """
   Extracts the tool name from a snapshot's crawler_meta.
   Returns nil if not available.
   """
@@ -486,16 +445,12 @@ defmodule LinkhutWeb.SnapshotHTML do
   Formats an ISO 8601 timestamp string for step timeline display.
   Returns a short time representation or the raw string on error.
   """
-  def format_step_time(nil), do: ""
-
-  def format_step_time(iso_string) when is_binary(iso_string) do
+  def format_step_time(iso_string, timezone) when is_binary(iso_string) do
     case DateTime.from_iso8601(iso_string) do
-      {:ok, dt, _} -> Calendar.strftime(dt, "%H:%M:%S")
+      {:ok, dt, _} -> format_time(dt, timezone)
       _ -> iso_string
     end
   end
-
-  def format_step_time(_), do: ""
 
   @doc """
   Extracts the original URL from a snapshot's archive_metadata.
@@ -541,14 +496,13 @@ defmodule LinkhutWeb.SnapshotHTML do
   Extracts and formats the Wayback Machine capture timestamp from archive_metadata.
   Returns nil if not available.
   """
-  def wayback_timestamp(%{archive_metadata: %{"timestamp" => ts}}) when is_binary(ts) do
+  def wayback_timestamp(%{archive_metadata: %{"timestamp" => ts}} = _, timezone)
+      when is_binary(ts) do
     case parse_wayback_timestamp(ts) do
-      {:ok, dt} -> format_datetime(dt)
+      {:ok, dt} -> format_date_absolute(dt, timezone)
       :error -> ts
     end
   end
-
-  def wayback_timestamp(_), do: nil
 
   @doc """
   Extracts the content length from Wayback Machine archive_metadata.

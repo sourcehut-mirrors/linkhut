@@ -705,6 +705,15 @@ defmodule Linkhut.ArchivingTest do
       result = Archiving.steps_for_snapshot(steps, 1)
       assert Enum.map(result, & &1["step"]) == ["created", "crawling", "completed"]
     end
+
+    test "every step entry carries a binary ISO-8601 \"at\"" do
+      for entry <-
+            Archiving.Steps.append_step([], "preflight", %{"msg" => "x"}) ++
+              Archiving.Steps.append_step([], "created", nil) do
+        assert is_binary(entry["at"])
+        assert {:ok, _, _} = DateTime.from_iso8601(entry["at"])
+      end
+    end
   end
 
   describe "maybe_complete_crawl_run/1" do

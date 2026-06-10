@@ -12,8 +12,7 @@ defmodule Linkhut.Archiving do
 
   alias Linkhut.Accounts
   alias Linkhut.Accounts.User
-  alias Linkhut.Archiving.{CrawlRun, Snapshot, Steps, Storage, Tokens}
-  alias Linkhut.Formatting
+  alias Linkhut.Archiving.{CrawlRun, Format, Snapshot, Steps, Storage, Tokens}
   alias Linkhut.Links.Link
   alias Linkhut.{Repo, Subscriptions}
 
@@ -328,7 +327,7 @@ defmodule Linkhut.Archiving do
     |> order_by([s], asc: s.format, desc: s.inserted_at)
     |> preload(:crawl_run)
     |> Repo.all()
-    |> Enum.sort_by(&Formatting.format_sort_key(&1.format))
+    |> Enum.sort_by(&Format.format_sort_key(&1.format))
   end
 
   @doc "Returns the latest complete snapshot of a given format for a link."

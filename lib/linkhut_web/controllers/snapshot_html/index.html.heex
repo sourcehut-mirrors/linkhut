@@ -2,10 +2,10 @@
 <div class="bookmark-header">
   <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={LinkhutWeb.LinkComponents.show_url?(assigns)} />
 </div>
-<.current_snapshots snapshots={@current_snapshots} link={@link} can_delete={@can_delete} />
+<.current_snapshots snapshots={@current_snapshots} link={@link} can_delete={@can_delete} timezone={@preferences.timezone} />
 <section class="settings">
   <h3>Crawl history</h3>
-  <.crawl_run_group :for={archive <- @archives} archive={archive} link={@link} />
+  <.crawl_run_group :for={archive <- @archives} archive={archive} link={@link} timezone={@preferences.timezone} />
 </section>
 <section :if={@can_delete} class="settings snapshot-actions">
   <div :if={!any_processing?(@archives)} class="snapshot-action-card">
@@ -16,7 +16,7 @@
       <fieldset class="crawler-selection">
         <label :for={crawler <- @crawlers}>
           <input type="checkbox" name="crawlers[]" value={crawler} checked />
-          {LinkhutWeb.SnapshotHTML.source_display_name(crawler)}
+          {source_display_name(crawler)}
         </label>
       </fieldset>
       <button type="submit" class="btn btn-small">Re-crawl</button>
@@ -24,7 +24,7 @@
   </div>
   <div class="snapshot-action-card">
     <h4>Upload snapshot</h4>
-    <p class="snapshot-action-description">Upload your own HTML, PDF, or text snapshot for this link.</p>
+    <p class="snapshot-action-description">Upload your own HTML, PDF, image or text snapshot for this link.</p>
     <.form :let={f} for={%{}} as={:upload} multipart action={~p"/_/archive/#{@link.id}/upload"}>
       <fieldset>
         <.input field={f[:file]} type="file" label="file" accept={accepted_upload_types()} />
