@@ -2,7 +2,7 @@
 
 All notable changes to linkhut will be documented in this file.
 
-## Unreleased
+## [0.1.5] - 2026-06-11
 
 - Logging improvements (adds: execution and scheduling of jobs, remote ip address when provided by the reverse proxy)
 - Fix categorization of crawls obtained by httpfetch based on mime type
