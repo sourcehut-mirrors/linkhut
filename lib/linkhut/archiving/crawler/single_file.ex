@@ -28,10 +28,10 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   @impl true
   def queue, do: :crawler
 
-  # 2 minute timeout for the SingleFile CLI process
-  @timeout_ms 120_000
-  # Give Chromium 5 seconds to shut down gracefully before SIGKILL
-  @delay_to_sigkill 5_000
+  # 5 minute timeout for the SingleFile CLI process
+  @timeout_ms 300_000
+  # Give Chromium 1 minute to shut down gracefully before SIGKILL
+  @delay_to_sigkill_ms 60_000
 
   @impl true
   def can_handle?(_url, %{content_type: content_type, status: status})
@@ -60,7 +60,7 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
 
     case SingleFile.run(:default, args,
            timeout: @timeout_ms,
-           delay_to_sigkill: @delay_to_sigkill
+           delay_to_sigkill: @delay_to_sigkill_ms
          ) do
       {output, 0} ->
         {:ok,
