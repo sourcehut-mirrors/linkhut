@@ -2,7 +2,7 @@
 
 All notable changes to linkhut will be documented in this file.
 
-## [Unreleased]
+## [0.1.6] - 2026-06-12
 
 - Add way to set Single-File CLI arguments via environment variable
 
