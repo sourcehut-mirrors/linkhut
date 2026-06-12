@@ -14,7 +14,7 @@ defmodule Mix.Linkhut do
 
     if !System.get_env("DEBUG") do
       try do
-        Logger.remove_backend(:console)
+        LoggerBackends.remove(:console)
       catch
         :exit, _ -> :ok
       end

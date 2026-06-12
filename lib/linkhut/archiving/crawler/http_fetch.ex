@@ -11,8 +11,6 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   alias Linkhut.Archiving.Crawler
   alias Linkhut.Archiving.Crawler.Context
 
-  require Logger
-
   @tool_name "Req"
   @allowed_types_default [:pdf, :text, :json]
   @overall_timeout_ms 300_000

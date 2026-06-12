@@ -12,8 +12,6 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
 
   alias Linkhut.Archiving.Crawler.Context
 
-  require Logger
-
   @cdx_url "https://web.archive.org/cdx/search/cdx"
 
   @impl true

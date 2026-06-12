@@ -68,6 +68,7 @@ defmodule Linkhut.MixProject do
       {:hammer, "~> 7.3"},
       {:inet_cidr, "~> 1.0"},
       {:jason, "~> 1.3"},
+      {:logger_backends, "~> 1.0"},
       {:oban, "~> 2.23"},
       {:owl, "~> 0.13"},
       {:phoenix, "~> 1.8"},

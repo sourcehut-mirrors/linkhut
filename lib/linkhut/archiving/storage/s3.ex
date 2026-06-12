@@ -182,7 +182,7 @@ defmodule Linkhut.Archiving.Storage.S3 do
   defp chunk_binary(data, chunk_size) when byte_size(data) <= chunk_size, do: [data]
 
   defp chunk_binary(data, chunk_size) do
-    <<chunk::binary-size(chunk_size), rest::binary>> = data
+    <<chunk::binary-size(^chunk_size), rest::binary>> = data
     [chunk | chunk_binary(rest, chunk_size)]
   end
 

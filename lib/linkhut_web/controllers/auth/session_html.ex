@@ -1,6 +1,5 @@
 defmodule LinkhutWeb.Auth.SessionHTML do
   use LinkhutWeb, :html
-  use Phoenix.Component
 
   def login(assigns) do
     ~H"""

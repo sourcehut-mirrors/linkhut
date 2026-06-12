@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.UserAuth do
   use LinkhutWeb, :verified_routes
 
-  require Logger
-
   import Plug.Conn
   import Phoenix.Controller
 

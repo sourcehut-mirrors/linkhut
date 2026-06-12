@@ -1,8 +1,6 @@
 defmodule LinkhutWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :linkhut
 
-  require Logger
-
   # Serve at "/_/" the static files from "priv/static" directory.
   plug Plug.Static,
     at: "/_/",

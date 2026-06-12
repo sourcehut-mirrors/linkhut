@@ -1,6 +1,5 @@
 defmodule LinkhutWeb.Auth.RegistrationHTML do
   use LinkhutWeb, :html
-  use Phoenix.Component
 
   def register(assigns) do
     ~H"""
