@@ -90,6 +90,13 @@ In `runtime.exs`, the following environment variables are read:
 | `ARCHIVING_S3_PRESIGN_TTL` | `:presign_ttl` | integer (seconds) | `900` | Presigned URL expiry. |
 | `ARCHIVING_S3_COMPRESSION` | `:compression` | `"none"` or `"gzip"` | `"gzip"` | Compression for new S3 snapshots. |
 
+**Crawler Settings:**
+
+| Variable | Type | Default | Description |
+|---|---|---|---|---|
+| `ARCHIVING_CRAWLER_SF_ARGS` | string | (none) | Command-line arguments used when invoking single-file-cli, (see: [single-file-cli options](https://github.com/gildas-lormeau/single-file-cli/blob/master/options.js)) |
+
+
 ### Compression
 
 When `compression` is set to `:gzip`, new snapshots with compressible content

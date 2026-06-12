@@ -307,5 +307,15 @@ if config_env() == :prod do
              Application.get_env(:linkhut, Linkhut.Archiving.Storage.S3, []),
              s3_overrides
            )
+
+    # SingleFile crawler CLI args
+    case System.get_env("ARCHIVING_CRAWLER_SF_ARGS") do
+      nil ->
+        :ok
+
+      val ->
+        default = Application.get_env(:single_file, :default, [])
+        config :single_file, default: Keyword.put(default, :args, OptionParser.split(val))
+    end
   end
 end
