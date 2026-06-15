@@ -1,28 +1,28 @@
 details.import-results {
     border-radius: 4px;
-    border: 1px solid $light-gray;
+    border: 1px solid var(--border-strong);
 
     & > summary, & > dl {
         padding: $spacing-small;
     }
 
     &[open] > summary {
-        border-bottom: 1px solid $light-gray;
+        border-bottom: 1px solid var(--border-strong);
     }
 
     &.error > summary {
-        background-color: $light-red;
+        background-color: var(--error-surface);
     }
 
     &.success > summary {
-        background-color: $light-green;
+        background-color: var(--status-success);
     }
 
     & > dl {
         margin-top: 0;
 
         & > dt {
-            border-top: 1px solid $gray;
+            border-top: 1px solid var(--border);
 
             @include link-title();
 
@@ -36,8 +36,8 @@ details.import-results {
             margin-bottom: $spacing-small;
 
             & > pre {
-                background-color: $near-black;
-                color: $white;
+                background-color: var(--background);
+                color: var(--foreground);
                 font-size: $font-tiny;
                 overflow-x: auto;
                 white-space: pre-wrap;

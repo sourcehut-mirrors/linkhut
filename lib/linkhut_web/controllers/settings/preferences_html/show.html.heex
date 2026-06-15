@@ -13,6 +13,13 @@
           options={timezone_options()}
           prompt={gettext("UTC (default)")}
         />
+        <.input
+          field={f[:theme]}
+          type="select"
+          label={gettext("Theme")}
+          options={[{gettext("Light"), :light}, {gettext("Dark"), :dark}]}
+          prompt={gettext("System (default)")}
+        />
       </fieldset>
       <h4>{gettext("Defaults")}</h4>
       <fieldset>

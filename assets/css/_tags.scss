@@ -9,12 +9,8 @@ ul.tag-cloud {
         display: inline-block;
 
         & a {
-            color: $purple;
+            color: var(--tag);
             display: inline;
-
-            @media (prefers-color-scheme: dark) {
-                color: $bright-purple;
-            }
         }
 
         &:not(:last-child)::after {

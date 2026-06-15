@@ -6,55 +6,30 @@
     &.pending,
     &.crawling,
     &.queued {
-        color: $light-blue;
-        background-color: $blue;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $dark-blue;
-        }
+        color: var(--status-pending-fg);
+        background-color: var(--status-pending);
     }
 
     &.retryable,
     &.processing,
     &.in-progress {
-        color: $light-yellow;
-        background-color: $yellow;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $gold;
-        }
+        color: var(--status-progress-fg);
+        background-color: var(--status-progress);
     }
 
     &.not-archivable,
     &.not-available {
-        color: $dark-gray;
-        background-color: $light-gray;
-
-        @media (prefers-color-scheme: dark) {
-            color: $bright-gray;
-            background-color: $dark-gray;
-        }
+        color: var(--status-neutral-fg);
+        background-color: var(--status-neutral);
     }
 
     &.failed {
-        color: $washed-red;
-        background-color: $red;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $dark-red;
-        }
+        color: var(--status-error-fg);
+        background-color: var(--status-error);
     }
 
     &.complete {
-        color: $washed-green;
-        background-color: $green;
-
-        @media (prefers-color-scheme: dark) {
-            color: $foreground-dark;
-            background-color: $dark-green;
-        }
+        color: var(--status-success-fg);
+        background-color: var(--status-success);
     }
 }

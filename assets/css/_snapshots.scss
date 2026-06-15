@@ -20,13 +20,8 @@ div.snapshot-toolbar {
     justify-content: space-between;
     align-items: baseline;
     padding: 0;
-    border-bottom: 1px solid $gray;
-    background-color: $card-background;
-
-    @media (prefers-color-scheme: dark) {
-        border-bottom-color: $dark-gray;
-        background-color: $card-background-dark;
-    }
+    border-bottom: 1px solid var(--border);
+    background-color: var(--card-background);
 
     & > h2 {
         margin: 0;
@@ -36,9 +31,7 @@ div.snapshot-toolbar {
         padding: 0 $spacing-small;
 
         & > a {
-            @media (prefers-color-scheme: dark) {
-                color: $muted-dark;
-            }
+            color: var(--muted);
 
             &:not(:first-child) {
                 margin-left: $spacing-small;
@@ -70,22 +63,14 @@ div.snapshot-link {
 details.snapshot-details {
     border-radius: 0;
     border: none;
-    border-bottom: 1px solid $gray;
-    background-color: $card-background;
-
-    @media (prefers-color-scheme: dark) {
-        border-bottom-color: $dark-gray;
-        background-color: $card-background-dark;
-    }
+    border-bottom: 1px solid var(--border);
+    background-color: var(--card-background);
 
     & > summary {
         padding: $spacing-tiny $spacing-small;
         cursor: pointer;
         border-bottom: none;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
+        color: var(--muted);
     }
 
     & > dl {
@@ -144,50 +129,29 @@ table.snapshot-table {
     & > thead > tr > th {
         text-align: left;
         font-weight: bold;
-        color: $muted;
+        color: var(--muted);
         padding: $spacing-tiny $spacing-small;
-        border-bottom: 1px solid $light-gray;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-            border-bottom-color: $dark-gray;
-        }
+        border-bottom: 1px solid var(--border);
     }
 
     & > tbody > tr > td {
         padding: $spacing-tiny $spacing-small;
-        border-bottom: 1px solid $light-gray;
+        border-bottom: 1px solid var(--border);
         vertical-align: middle;
-
-        @media (prefers-color-scheme: dark) {
-            border-bottom-color: $dark-gray;
-        }
 
         &:empty::after {
             content: "—";
-            color: $muted;
-
-            @media (prefers-color-scheme: dark) {
-                color: $muted-dark;
-            }
+            color: var(--muted);
         }
     }
 
     & > tbody > tr.final-url-row > td {
-        color: $muted;
+        color: var(--muted);
         padding-top: 0;
         border-bottom: none;
 
         & > a {
-            color: $dark-green;
-
-            @media (prefers-color-scheme: dark) {
-                color: $bright-green;
-            }
-        }
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
+            color: var(--link-url);
         }
     }
 
@@ -200,11 +164,7 @@ table.snapshot-table {
         & > tbody > tr {
             display: block;
             padding: $spacing-small 0;
-            border-bottom: 1px solid $light-gray;
-
-            @media (prefers-color-scheme: dark) {
-                border-bottom-color: $dark-gray;
-            }
+            border-bottom: 1px solid var(--border);
         }
 
         & > tbody > tr > td {
@@ -219,12 +179,8 @@ table.snapshot-table {
             &::before {
                 content: attr(data-label);
                 font-weight: bold;
-                color: $muted;
+                color: var(--muted);
                 margin-right: $spacing-tiny;
-
-                @media (prefers-color-scheme: dark) {
-                    color: $muted-dark;
-                }
             }
         }
 
@@ -236,22 +192,14 @@ table.snapshot-table {
 }
 
 .snapshot-error-reason {
-    color: $muted;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
+    color: var(--muted);
 }
 
 .snapshot-actions-cell {
     a:not(:first-child)::before {
         content: "·";
-        color: $muted;
+        color: var(--muted);
         margin-right: $spacing-tiny;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
     }
 }
 
@@ -267,14 +215,9 @@ table.snapshot-table {
 .snapshot-action-card {
     flex: 1;
     min-width: 15em;
-    border: 1px solid $light-gray;
+    border: 1px solid var(--border);
     padding: $spacing-small;
-    background-color: $card-background;
-
-    @media (prefers-color-scheme: dark) {
-        border-color: $dark-gray;
-        background-color: $card-background-dark;
-    }
+    background-color: var(--card-background);
 
     & > h4 {
         margin: 0 0 $spacing-tiny 0;
@@ -282,13 +225,9 @@ table.snapshot-table {
 }
 
 .snapshot-action-description {
-    color: $muted;
+    color: var(--muted);
     font-size: $font-small;
     margin: 0 0 $spacing-tiny 0;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
 }
 
 .crawler-selection {
@@ -310,47 +249,26 @@ table.snapshot-table {
 // Crawl run entries (index page)
 
 .crawl-run {
-    border: 1px solid $light-gray;
+    border: 1px solid var(--border);
     border-left-width: 3px;
     margin-bottom: $spacing-small;
     padding: 0;
-    background-color: $card-background;
-
-    @media (prefers-color-scheme: dark) {
-        border-color: $dark-gray;
-        background-color: $card-background-dark;
-    }
+    background-color: var(--card-background);
 
     &.pending {
-        border-left-color: $blue;
-
-        @media (prefers-color-scheme: dark) {
-            border-left-color: $dark-blue;
-        }
+        border-left-color: var(--status-pending);
     }
 
     &.failed {
-        border-left-color: $red;
-
-        @media (prefers-color-scheme: dark) {
-            border-left-color: $dark-red;
-        }
+        border-left-color: var(--status-error);
     }
 
     &.processing {
-        border-left-color: $yellow;
-
-        @media (prefers-color-scheme: dark) {
-            border-left-color: $gold;
-        }
+        border-left-color: var(--status-progress);
     }
 
     &.complete {
-        border-left-color: $dark-green;
-
-        @media (prefers-color-scheme: dark) {
-            border-left-color: $dark-green;
-        }
+        border-left-color: var(--status-success);
     }
 }
 
@@ -359,41 +277,25 @@ table.snapshot-table {
     justify-content: space-between;
     align-items: center;
     padding: $spacing-tiny $spacing-small;
-    border-bottom: 1px solid $light-gray;
-
-    @media (prefers-color-scheme: dark) {
-        border-bottom-color: $dark-gray;
-    }
+    border-bottom: 1px solid var(--border);
 }
 
 .crawl-run-error {
-    color: $red;
+    color: var(--error-text);
     padding: $spacing-tiny $spacing-small;
     font-size: $font-small;
-
-    @media (prefers-color-scheme: dark) {
-        color: $washed-red;
-    }
 }
 
 details.archive-details {
     border: none;
     border-radius: 0;
-    border-bottom: 1px solid $light-gray;
-
-    @media (prefers-color-scheme: dark) {
-        border-bottom-color: $dark-gray;
-    }
+    border-bottom: 1px solid var(--border);
 
     & > summary {
         padding: $spacing-tiny $spacing-small;
         cursor: pointer;
-        color: $muted;
+        color: var(--muted);
         border-bottom: none;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
     }
 }
 
@@ -403,11 +305,7 @@ details.archive-details {
     padding-bottom: 0;
     font-size: $font-small;
     font-weight: bold;
-    color: $muted;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
+    color: var(--muted);
 }
 
 .step-timeline {
@@ -426,27 +324,19 @@ details.archive-details {
     gap: $spacing-tiny;
 
     & > .step-time {
-        color: $muted;
+        color: var(--muted);
         font-family: monospace;
         font-size: $font-small;
         flex-shrink: 0;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
     }
 
     & > .step-source {
-        color: $muted;
+        color: var(--muted);
         font-size: $font-small;
 
         &::after {
             content: "/";
             margin-left: 1px;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
         }
     }
 
@@ -455,27 +345,15 @@ details.archive-details {
     }
 
     & > .step-detail {
-        color: $muted;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
+        color: var(--muted);
     }
 
     &.step-failed > .step-name {
-        color: $red;
-
-        @media (prefers-color-scheme: dark) {
-            color: $washed-red;
-        }
+        color: var(--error-text);
     }
 
     &.step-complete > .step-name {
-        color: $dark-green;
-
-        @media (prefers-color-scheme: dark) {
-            color: $bright-green;
-        }
+        color: var(--success-text);
     }
 }
 
@@ -493,11 +371,7 @@ table.details-table {
         white-space: nowrap;
         vertical-align: top;
         width: 1%;
-        color: $muted;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
+        color: var(--muted);
     }
 
     & > tbody > tr > td {
@@ -515,9 +389,5 @@ table.details-table {
 
 .crawl-run-retries {
     font-size: $font-small;
-    color: $muted;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
+    color: var(--muted);
 }

@@ -5,13 +5,9 @@ section.settings.preferences label {
 
 .preference-help {
     font-size: $font-small;
-    color: $muted;
+    color: var(--muted);
     margin-left: $spacing-medium;
     margin-bottom: $spacing-small;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
 
     & summary {
         cursor: pointer;

@@ -13,10 +13,10 @@ div.bookmark-card {
     justify-content: flex-end;
 
     & > .icons {
-        border-top-color: $light-gray;
+        border-top-color: var(--border-strong);
         border-top-style: solid;
         border-top-width: 1px;
-        background-color: $washed-gray;
+        background-color: var(--surface-faint);
         max-width: $font-normal;
         min-width: $font-normal;
         padding-bottom: 2px;
@@ -29,23 +29,12 @@ div.bookmark-card {
             margin-top: 2px;
 
             &[data-icon-type='private'] {
-                content: hidden($blue);
-                @media (prefers-color-scheme: dark) {
-                    content: hidden($bright-blue);
-                }
+                content: var(--hidden-svg);
             }
 
             &[data-icon-type='unread'] {
-                content: later($blue);
-                @media (prefers-color-scheme: dark) {
-                    content: later($bright-blue);
-                }
+                content: var(--later-svg);
             }
-        }
-
-        @media (prefers-color-scheme: dark) {
-            border-top-color: $gray;
-            background-color: $dark-gray;
         }
     }
 }
@@ -58,13 +47,9 @@ div.bookmark {
     background-clip: content-box;
 
     & > div:first-child {
-        border-top-color: $light-gray;
+        border-top-color: var(--border-strong);
         border-top-style: solid;
         border-top-width: 1px;
-
-        @media (prefers-color-scheme: dark) {
-            border-top-color: $gray;
-        }
     }
 
     & > div {
@@ -88,15 +73,15 @@ div.bookmark {
             }
 
             & a.savers {
-                background-color: $blue;
-                color: $white;
+                background-color: var(--savers-bg);
+                color: var(--accent-fg);
                 display: block;
                 font-size: $font-normal;
                 font-weight: bold;
                 padding: $spacing-tiny;
                 margin-top: -5px;
                 border-top: 1px;
-                border-top-color: $dark-blue;
+                border-top-color: var(--savers-top-border);
                 border-top-style: solid;
 
                 &::before {
@@ -104,13 +89,13 @@ div.bookmark {
                 }
 
                 &:hover {
-                    background-color: $green;
-                    border-top-color: $dark-green;
+                    background-color: var(--savers-bg-hover);
+                    border-top-color: var(--savers-top-border-hover);
                     text-decoration: none;
 
                     @media #{$large} {
                         &::after {
-                            color: $gray;
+                            color: var(--muted);
                             content: attr(data-label);
                             font-size: $font-tiny;
                             font-weight: normal;
@@ -118,20 +103,8 @@ div.bookmark {
                             margin-top: 2px;
                             position: absolute;
                             text-transform: uppercase;
-
-                            @media (prefers-color-scheme: dark) {
-                                color: $muted-dark;
-                            }
                         }
                     }
-
-                    @media (prefers-color-scheme: dark) {
-                        background-color: $bright-green;
-                    }
-                }
-
-                @media (prefers-color-scheme: dark) {
-                    background-color: $bright-blue;
                 }
             }
         }
@@ -167,13 +140,9 @@ div.bookmark {
     }
 
     & > .ownership {
-        color: $muted;
+        color: var(--muted);
         font-size: $font-tiny;
         margin-bottom: $spacing-tiny;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
 
         & > span {
             display: inline;
@@ -185,13 +154,9 @@ div.bookmark {
     }
 
     & > .ownership > .savers {
-        color: $muted;
+        color: var(--muted);
         font-size: $font-tiny;
         margin-bottom: $spacing-tiny;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
 
         @media #{$large} {
             display: none;
@@ -240,7 +205,7 @@ div.bookmark {
 
                 @media #{$large} {
                     &:hover::after {
-                        color: $gray;
+                        color: var(--muted);
                         content: attr(data-label);
                         font-size: $font-tiny;
                         font-weight: normal;
@@ -248,10 +213,6 @@ div.bookmark {
                         position: absolute;
                         text-transform: uppercase;
                         top: 0;
-
-                        @media (prefers-color-scheme: dark) {
-                            color: $muted-dark;
-                        }
                     }
                 }
 
@@ -259,13 +220,8 @@ div.bookmark {
                     display: inline-block;
 
                     & > a {
-                        color: $purple;
+                        color: var(--tag);
                         display: inline;
-
-                        @media (prefers-color-scheme: dark) {
-                            color: $bright-purple;
-                        }
-
                     }
 
                     &:not(:last-child)::after {
@@ -281,17 +237,13 @@ div.bookmark {
             }
         }
     }
-
-    @media (prefers-color-scheme: dark) {
-        background-color: $card-background-dark;
-    }
 }
 
 // URL detail page
 
 .url-detail-header {
     padding: $spacing-small $spacing-tiny;
-    border-color: $dark-gray;
+    border-color: var(--border-strong);
     border-width: 1px 0 0 0;
     border-style: solid;
 
@@ -306,17 +258,13 @@ div.bookmark {
     }
 
     & > .metadata {
-        color: $muted;
+        color: var(--muted);
         font-size: $font-tiny;
         margin-top: $spacing-tiny;
 
         & > span:not(:first-child)::before {
             content: '\00B7';
             margin: 0 $spacing-tiny;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
         }
     }
 }
@@ -331,46 +279,26 @@ div.bookmark {
     }
 
     .spark-bar {
-        fill: $dark-green;
+        fill: var(--spark-bar);
         pointer-events: none;
-
-        @media (prefers-color-scheme: dark) {
-            fill: $bright-green;
-        }
     }
 
     .spark-empty {
-        fill: $light-gray;
+        fill: var(--spark-empty);
         pointer-events: none;
-
-        @media (prefers-color-scheme: dark) {
-            fill: $dark-gray;
-        }
     }
 
     .spark-bucket:hover {
         .spark-hit-area {
-            fill: rgba(0, 0, 0, 0.05);
-
-            @media (prefers-color-scheme: dark) {
-                fill: rgba(255, 255, 255, 0.1);
-            }
+            fill: var(--spark-hit-area-hover);
         }
 
         .spark-bar {
-            fill: $bright-green;
-
-            @media (prefers-color-scheme: dark) {
-                fill: $light-green;
-            }
+            fill: var(--spark-bar-hover);
         }
 
         .spark-empty {
-            fill: $bright-gray;
-
-            @media (prefers-color-scheme: dark) {
-                fill: $gray;
-            }
+            fill: var(--spark-empty-hover);
         }
     }
 }

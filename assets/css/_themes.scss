@@ -1,0 +1,248 @@
+@use "sass:map";
+
+$themes: (
+        --accent-border: (
+                light: $navy,
+                dark: $dark-blue
+        ),
+        --accent-fg: (
+                light: $white,
+                dark: $near-white
+        ),
+        --accent-halo: (
+                light: $light-blue,
+                dark: $bright-blue
+        ),
+        --accent: (
+                light: $blue,
+                dark: $bright-blue
+        ),
+        --background: (
+                light: $white,
+                dark: $darker-brown
+        ),
+        --banner-info-fg: (
+                light: $light-blue,
+                dark: $near-white
+        ),
+        --banner-info: (
+                light: $blue,
+                dark: $dark-blue
+        ),
+        --banner-error-fg: (
+                light: $washed-red,
+                dark: $near-white
+        ),
+        --banner-error: (
+                light: $red,
+                dark: $dark-red
+        ),
+        --border-control: (
+                light: $gray,
+                dark: $bright-gray
+        ),
+        --border-faint: (
+                light: $near-white,
+                dark: $near-black
+        ),
+        --border-strong: (
+                light: $light-gray,
+                dark: $gray
+        ),
+        --border: (
+                light: $light-gray,
+                dark: $dark-gray
+        ),
+        --card-background: (
+                light: $light-gray,
+                dark: $dark-brown
+        ),
+        --error-border: (
+                light: $light-red,
+                dark: $dark-red
+        ),
+        --error-surface: (
+                light: $washed-red,
+                dark: $red
+        ),
+        --error-text-strong: (
+                light: $red,
+                dark: $red
+        ),
+        --error-text: (
+                light: $red,
+                dark: $washed-red
+        ),
+        --foreground: (
+                light: $near-black,
+                dark: $near-white
+        ),
+        --hidden-svg: (
+                light: hidden($blue),
+                dark: hidden($bright-blue)
+        ),
+        --later-svg: (
+                light: later($blue),
+                dark: later($bright-blue)
+        ),
+        --link-url: (
+                light: $dark-green,
+                dark: $bright-green
+        ),
+        --link: (
+                light: $blue,
+                dark: $bright-blue
+        ),
+        --muted: (
+                light: $gray,
+                dark: $bright-gray
+        ),
+        --rss-svg: (
+                light: rss($near-black),
+                dark: rss($near-white)
+        ),
+        --savers-bg-hover: (
+                light: $green,
+                dark: $bright-green
+        ),
+        --savers-bg: (
+                light: $blue,
+                dark: $bright-blue
+        ),
+        --savers-top-border-hover: (
+                light: $dark-green,
+                dark: $dark-green
+        ),
+        --savers-top-border: (
+                light: $dark-blue,
+                dark: $dark-blue
+        ),
+        --separator-link: (
+                light: $light-purple,
+                dark: $light-purple
+        ),
+        --separator-page: (
+                light: $dark-pink,
+                dark: $bright-pink
+        ),
+        --separator-tags-multi: (
+                light: $dark-green,
+                dark: $bright-green
+        ),
+        --separator-tags: (
+                light: $dark-blue,
+                dark: $bright-blue
+        ),
+        --separator-user-prefix: (
+                light: $dark-blue,
+                dark: $bright-blue
+        ),
+        --separator-user: (
+                light: $dark-red,
+                dark: $bright-red
+        ),
+        --spark-bar-hover: (
+                light: $bright-green,
+                dark: $light-green
+        ),
+        --spark-bar: (
+                light: $dark-green,
+                dark: $bright-green
+        ),
+        --spark-empty-hover: (
+                light: $bright-gray,
+                dark: $gray
+        ),
+        --spark-empty: (
+                light: $light-gray,
+                dark: $dark-gray
+        ),
+        --spark-hit-area-hover: (
+                light: rgba(0, 0, 0, 0.05 ),
+                dark: rgba(255, 255, 255, 0.1)
+        ),
+        --status-error-fg: (
+                light: $washed-red,
+                dark: $near-white
+        ),
+        --status-error: (
+                light: $red,
+                dark: $dark-red
+        ),
+        --status-neutral-fg: (
+                light: $dark-gray,
+                dark: $bright-gray
+        ),
+        --status-neutral: (
+                light: $light-gray,
+                dark: $dark-gray
+        ),
+        --status-pending-fg: (
+                light: $light-blue,
+                dark: $near-white
+        ),
+        --status-pending: (
+                light: $blue,
+                dark: $dark-blue
+        ),
+        --status-progress-fg: (
+                light: $light-yellow,
+                dark: $near-white
+        ),
+        --status-progress: (
+                light: $yellow,
+                dark: $gold
+        ),
+        --status-success-fg: (
+                light: $washed-green,
+                dark: $near-white
+        ),
+        --status-success: (
+                light: $green,
+                dark: $dark-green
+        ),
+        --strong: (
+                light: $near-black,
+                dark: $white
+        ),
+        --success-text: (
+                light: $dark-green,
+                dark: $bright-green
+        ),
+        --surface-faint: (
+                light: $washed-gray,
+                dark: $dark-gray
+        ),
+        --surface-subtle: (
+                light: $light-gray,
+                dark: $dark-gray
+        ),
+        --tag: (
+                light: $purple,
+                dark: $bright-purple
+        ),
+        --unread-svg: (
+                light: unread($blue),
+                dark: unread($bright-blue)
+        ),
+);
+
+@mixin theme($theme-name) {
+  @each $color-name, $color-values in $themes {
+    #{$color-name}: #{map.get($color-values, $theme-name)};
+  }
+}
+
+:root, :root.light {
+  @include theme(light);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include theme(dark);
+  }
+}
+
+:root.dark {
+  @include theme(dark);
+}

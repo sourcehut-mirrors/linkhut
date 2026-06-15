@@ -19,6 +19,7 @@ defmodule Linkhut.Accounts.PreferencesTest do
       assert pref.default_private == false
       assert pref.strip_tracking_params == false
       assert pref.timezone == nil
+      assert pref.theme == nil
     end
 
     test "returns saved preferences when they exist" do
@@ -40,6 +41,7 @@ defmodule Linkhut.Accounts.PreferencesTest do
       assert pref.user_id == user.id
       assert pref.show_exact_dates == true
       assert pref.show_url == true
+      assert pref.theme == nil
     end
 
     test "updates existing preferences" do
@@ -80,6 +82,14 @@ defmodule Linkhut.Accounts.PreferencesTest do
       {:ok, pref} = Preferences.upsert(user, %{timezone: ""})
 
       assert pref.timezone == nil
+    end
+
+    test "clears theme when set to empty string" do
+      user = user_fixture()
+      {:ok, _} = Preferences.upsert(user, %{theme: "light"})
+      {:ok, pref} = Preferences.upsert(user, %{theme: ""})
+
+      assert pref.theme == nil
     end
   end
 

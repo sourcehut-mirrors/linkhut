@@ -1,34 +1,26 @@
 @import 'variables';
 @import 'svgs';
+@import 'themes';
 
 html, body {
     height: 100%;
 }
 
 body {
-    background-color: $background;
-    color: $foreground;
+    background-color: var(--background);
+    color: var(--foreground);
     display: flex;
     flex-direction: column;
     font-family: -apple-system, BlinkMacSystemFont, 'avenir next', avenir, 'helvetica neue', helvetica, ubuntu, roboto, noto, 'segoe ui', arial, sans-serif;
     font-size: 1rem;
     max-width: 100%;
 
-    @media (prefers-color-scheme: dark) {
-        background-color: $background-dark;
-        color: $foreground-dark;
-    }
-
     @media #{$extra-large} {
         max-width: 120rem;
     }
 
     a {
-        color: $blue;
-
-        @media (prefers-color-scheme: dark) {
-            color: $bright-blue;
-        }
+        color: var(--link);
     }
 }
 
@@ -41,13 +33,8 @@ input {
     font-size: 1rem;
 
     &[disabled] {
-        color: $gray;
-        background-color: $card-background;
-
-        @media (prefers-color-scheme: dark) {
-            color: $bright-gray;
-            background-color: $card-background-dark;
-        }
+        color: var(--muted);
+        background-color: var(--card-background);
     }
 }
 
@@ -78,44 +65,29 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 footer {
-    color: $muted;
+    color: var(--muted);
     font-size: $font-tiny;
     margin-top: auto;
 
     & a {
-        color: $muted;
+        color: var(--muted);
         text-decoration: underline;
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
-    }
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
     }
 }
 
 .strong {
-    color: $strong;
-    @media (prefers-color-scheme: dark) {
-        color: $strong-dark;
-    }
+    color: var(--strong);
 }
 
-@mixin banner($fg-color, $bg-color, $fg-color-dark, $bg-color-dark) {
+@mixin banner($fg-color, $bg-color) {
     align-items: center;
-    background-color: $bg-color;
-    color: $fg-color;
+    background-color: var(#{$bg-color});
+    color: var(#{$fg-color});
     display: flex;
     justify-content: center;
     margin-left: $spacing-tiny;
     margin-right: $spacing-tiny;
     padding: $spacing-large;
-
-    @media (prefers-color-scheme: dark) {
-        background-color: $bg-color-dark;
-        color: $fg-color-dark;
-    }
 
     & > span {
         line-height: 1.25;
@@ -132,17 +104,13 @@ footer {
     margin-bottom: 2px;
 
     & > a {
-        color: $blue;
+        color: var(--link);
         display: inline-block;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         vertical-align: baseline;
         white-space: nowrap;
-
-        @media (prefers-color-scheme: dark) {
-            color: $bright-blue;
-        }
     }
 }
 
@@ -154,17 +122,13 @@ footer {
     overflow: hidden;
 
     & > a, & > span {
-        color: $dark-green;
+        color: var(--link-url);
         display: inline-block;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         vertical-align: baseline;
         white-space: nowrap;
-
-        @media (prefers-color-scheme: dark) {
-            color: $bright-green;
-        }
     }
 }
 
@@ -177,20 +141,12 @@ footer {
         padding: 0;
 
         & > li {
-            color: $muted;
+            color: var(--muted);
             display: inline-block;
             font-size: $font-tiny;
 
-            @media (prefers-color-scheme: dark) {
-                color: $muted-dark;
-            }
-
             & > a {
-                color: $muted;
-
-                @media (prefers-color-scheme: dark) {
-                    color: $muted-dark;
-                }
+                color: var(--muted);
             }
 
             &:not(:first-child)::before {
@@ -206,14 +162,10 @@ footer {
             & > button {
                 background-color: transparent;
                 border: none;
-                color: $muted;
+                color: var(--muted);
                 font-size: $font-tiny;
                 font-weight: bold;
                 padding: 0;
-
-                @media (prefers-color-scheme: dark) {
-                    color: $muted-dark;
-                }
 
                 &:hover {
                     cursor: pointer;
@@ -225,21 +177,17 @@ footer {
 }
 
 div.info {
-    @include banner($navy, $light-blue, $foreground-dark, $blue);
+    @include banner(--banner-info-fg, --banner-info);
 }
 
 div.error {
-    @include banner($red, $washed-red, $foreground-dark, $red);
+    @include banner(--banner-error-fg, --banner-error);
 }
 
 a:not(.doc) {
-    color: $foreground;
+    color: var(--foreground);
     text-decoration: none;
     transition: color 0.15s ease-in;
-
-    @media (prefers-color-scheme: dark) {
-        color: $foreground-dark;
-    }
 
     &:hover {
         text-decoration: underline;
@@ -273,18 +221,14 @@ fieldset {
     }
 
     & input, & textarea {
-        border-color: $muted;
+        background-color: var(--background);
+        border-color: var(--border-control);
         border-style: solid;
         border-width: 1px;
         box-sizing: border-box;
+        color: var(--foreground);
         margin-bottom: $spacing-small;
         padding: $spacing-small;
-
-        @media (prefers-color-scheme: dark) {
-            background-color: $background-dark;
-            border-color: $muted-dark;
-            color: $foreground-dark;
-        }
     }
 
     & textarea {
@@ -299,12 +243,8 @@ fieldset {
 
         &:focus {
             outline: 0;
-            border-color: $blue;
-            box-shadow: 0 0 0 0.2rem $light-blue;
-            @media (prefers-color-scheme: dark) {
-                border-color: $dark-blue;
-                box-shadow: 0 0 0 0.2rem $bright-blue;
-            }
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.2rem var(--accent-halo);
         }
     }
 
@@ -340,12 +280,11 @@ fieldset {
 
     & div.invalid {
         & input, & textarea {
-            background-color: $washed-red;
-            color: $red;
+            background-color: var(--error-surface);
         }
 
         & ul {
-            color: $red;
+            color: var(--error-text-strong);
             list-style: none;
             margin: 0 0 $spacing-small;
             padding: 0;
@@ -354,50 +293,32 @@ fieldset {
                 all: unset;
                 cursor: pointer;
                 text-decoration: underline;
-                color: $blue;
-
-                @media (prefers-color-scheme: dark) {
-                    color: $bright-blue;
-                }
+                color: var(--link);
             }
         }
     }
 
     & div.inline-info {
         font-size: $font-tiny;
-        color: $muted;
+        color: var(--muted);
         margin-bottom: $spacing-small;
         margin-top: -$spacing-tiny;
 
         & > span {
-            color: $near-black;
-
-            @media (prefers-color-scheme: dark) {
-                color: $near-white;
-            }
-        }
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
+            color: var(--foreground);
         }
     }
 }
 
 form:not([itemprop='signout']) {
     & button, a {
-        background-color: $background;
-        border-color: $muted;
+        background-color: var(--background);
+        border-color: var(--border-control);
         border-style: solid;
         border-width: 1px;
-        color: $foreground;
+        color: var(--foreground);
         display: inline-block;
         padding: $spacing-small $spacing-medium;
-
-        @media (prefers-color-scheme: dark) {
-            background-color: $background-dark;
-            border-color: $muted-dark;
-            color: $foreground-dark;
-        }
 
         &:hover {
             cursor: pointer;
@@ -417,17 +338,13 @@ button, input:not([type=checkbox]) {
 }
 
 nav {
-    color: $muted;
+    color: var(--muted);
     display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
     justify-content: space-between;
     line-height: 1rem;
     padding: $spacing-tiny;
-
-    @media (prefers-color-scheme: dark) {
-        color: $muted-dark;
-    }
 
     @media #{$not-small} {
         flex-direction: row-reverse;
@@ -460,13 +377,10 @@ nav {
                 font-size: 0;
 
                 &::before {
-                    content: unread($blue);
+                    content: var(--unread-svg);
                     display: inline-block;
                     vertical-align: middle;
                     width: $font-small;
-                    @media (prefers-color-scheme: dark) {
-                        content: unread($bright-blue);
-                    }
                 }
 
                 &::after {
@@ -523,7 +437,7 @@ nav {
         flex-wrap: wrap;
 
         & > a.brand {
-            color: $foreground;
+            color: var(--foreground);
             flex-grow: 0;
             flex-shrink: 0;
             font-weight: bold;
@@ -551,10 +465,6 @@ nav {
             }
             // }}}
 
-            @media (prefers-color-scheme: dark) {
-                color: $foreground-dark;
-            }
-
             &:hover, &:focus {
                 opacity: 0.5;
                 text-decoration: none;
@@ -573,24 +483,16 @@ nav {
             flex-wrap: wrap;
 
             & > span.title {
-                color: $foreground;
+                color: var(--foreground);
                 flex-grow: 0;
                 line-break: strict;
 
-                @media (prefers-color-scheme: dark) {
-                    color: $foreground-dark;
-                }
-
                 &::before {
-                    color: $dark-pink;
+                    color: var(--separator-page);
                     content: '\203A';
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
-
-                    @media (prefers-color-scheme: dark) {
-                        color: $bright-pink;
-                    }
                 }
 
                 & > span {
@@ -599,12 +501,12 @@ nav {
             }
 
             & > span.url {
-                color: $foreground;
+                color: var(--foreground);
                 flex-grow: 0;
                 word-break: break-word;
 
                 &::before {
-                    color: $light-purple;
+                    color: var(--separator-link);
                     content: '\002F';
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
@@ -621,24 +523,16 @@ nav {
                 flex-grow: 0;
 
                 &::before {
-                    color: $dark-red;
+                    color: var(--separator-user);
                     content: '\002F';
                     font-size: $font-normal;
                     margin-left: $spacing-tiny;
                     margin-right: $spacing-tiny;
-
-                    @media (prefers-color-scheme: dark) {
-                        color: $bright-red;
-                    }
                 }
 
                 & > a::before {
-                    color: $dark-blue;
+                    color: var(--separator-user-prefix);
                     content: '\007E';
-
-                    @media (prefers-color-scheme: dark) {
-                        color: $bright-blue;
-                    }
                 }
 
                 & > a {
@@ -656,24 +550,16 @@ nav {
                     }
 
                     &:first-child::before {
-                        color: $dark-blue;
+                        color: var(--separator-tags);
                         content: '\002F';
                         font-size: $font-normal;
                         margin-left: $spacing-tiny;
                         margin-right: $spacing-tiny;
-
-                        @media (prefers-color-scheme: dark) {
-                            color: $bright-blue;
-                        }
                     }
 
                     &:not(:first-child)::before {
                         content: '\002B';
-                        color: $dark-green;
-
-                        @media (prefers-color-scheme: dark) {
-                            color: $bright-green;
-                        }
+                        color: var(--separator-tags-multi);
                     }
                 }
             }
@@ -701,13 +587,9 @@ div#content, div#controls {
         }
 
         & h5 {
-            border-top-color: $light-gray;
+            border-top-color: var(--border-strong);
             border-top-style: solid;
             border-top-width: 1px;
-
-            @media (prefers-color-scheme: dark) {
-                border-top-color: $dark-gray;
-            }
         }
 
         & h5 div#all-tags {
@@ -716,12 +598,8 @@ div#content, div#controls {
             float: right;
 
             & a {
-                color: $muted;
+                color: var(--muted);
                 vertical-align: sub;
-
-                @media (prefers-color-scheme: dark) {
-                    color: $muted-dark;
-                }
             }
         }
 
@@ -809,13 +687,9 @@ div.sort-options {
     & > div {
         display: flex;
         flex-direction: row;
-        color: $muted;
+        color: var(--muted);
         margin-left: 0;
         margin-right: $spacing-tiny;
-
-        @media (prefers-color-scheme: dark) {
-            color: $muted-dark;
-        }
 
         &:not(:last-child) {
             @media #{$large} {
@@ -844,11 +718,7 @@ div.sort-options {
                     display: inline-block;
 
                     &:hover {
-                        background-color: $light-gray;
-
-                        @media (prefers-color-scheme: dark) {
-                            background-color: $dark-gray;
-                        }
+                        background-color: var(--surface-subtle);
                     }
 
                     &.active {
@@ -870,10 +740,10 @@ div.date-group {
     }
 
     & h4.date {
-        border-top-color: $light-gray;
+        border-top-color: var(--border-strong);
         border-top-style: solid;
         border-top-width: 1px;
-        color: $muted;
+        color: var(--muted);
         font-weight: lighter;
         line-height: 1.2;
         margin-bottom: 2px;
@@ -890,11 +760,6 @@ div.date-group {
         @media #{$not-small} {
             width: 6em;
         }
-
-        @media (prefers-color-scheme: dark) {
-            border-top-color: $gray;
-            color: $muted-dark;
-        }
     }
 }
 
@@ -902,19 +767,14 @@ div.date-group {
 
 a.button {
     align-items: center;
-    border-color: $muted;
+    border-color: var(--border-control);
     border-style: solid;
     border-width: 1px;
     box-sizing: border-box;
     display: inline-flex;
     padding: $spacing-small $spacing-medium;
     text-decoration: none;
-    background-color: $background;
-
-    @media (prefers-color-scheme: dark) {
-        background-color: $background-dark;
-        border-color: $muted-dark;
-    }
+    background-color: var(--background);
 
     &.fill {
         display: block;
@@ -936,27 +796,18 @@ a.button {
     &:hover, &:focus {
         cursor: pointer;
         text-decoration: none;
-        box-shadow: 0 0 0 0.2rem $light-blue;
+        border-color: var(--accent-border);
+        box-shadow: 0 0 0 0.2rem var(--accent-halo);
         outline: 0;
-
-        @media (prefers-color-scheme: dark) {
-            border-color: $dark-blue;
-            box-shadow: 0 0 0 0.2rem $bright-blue;
-        }
     }
 
     &.primary {
-        border-color: $navy;
-        background-color: $blue;
-        color: $white;
+        border-color: var(--accent-border);
+        background-color: var(--accent);
+        color: var(--accent-fg);
 
         &:hover, &:focus {
             transition: box-shadow 0.15s ease-in-out;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            border-color: $dark-blue;
-            background-color: $bright-blue;
         }
     }
 }
@@ -975,48 +826,31 @@ div.pagination {
 
     & > a {
         text-decoration: none;
-        border: 1px solid $background;
+        border: 1px solid var(--background);
 
         &.active {
-            background-color: $blue;
-            color: $white;
-
-            @media (prefers-color-scheme: dark) {
-                background-color: $bright-blue;
-                color: $near-white;
-            }
+            background-color: var(--accent);
+            color: var(--accent-fg);
         }
 
         &:hover {
             text-decoration: none;
 
             &:not(.active) {
-                background-color: $light-gray;
-                border-color: $muted;
-
-                @media (prefers-color-scheme: dark) {
-                    background-color: $dark-gray;
-                    border-color: $muted-dark;
-                }
+                background-color: var(--surface-subtle);
+                border-color: var(--border-control);
             }
-        }
-        @media (prefers-color-scheme: dark) {
-            border-color: $background-dark;
         }
     }
 }
 
 a.feed-link {
     &::before {
-        content: rss($near-black);
+        content: var(--rss-svg);
         display: inline-block;
         vertical-align: middle;
         width: $font-normal;
         margin-right: 0.5 * $spacing-tiny;
-
-        @media (prefers-color-scheme: dark) {
-            content: rss($near-white);
-        }
     }
 }
 
@@ -1033,7 +867,7 @@ div.navigation {
     }
 
     & > ul.navigation-tabs {
-        border-bottom-color: $light-gray;
+        border-bottom-color: var(--border);
         border-bottom-style: solid;
         border-bottom-width: 0.2rem;
         display: inline-flex;
@@ -1043,10 +877,6 @@ div.navigation {
         margin: $spacing-tiny;
         padding: 0;
         width: inherit;
-
-        @media (prefers-color-scheme: dark) {
-            border-bottom-color: $dark-gray;
-        }
 
         @media #{$not-small} {
             flex-direction: row;
@@ -1060,11 +890,7 @@ div.navigation {
             list-style: none;
 
             &.active, &:hover {
-                background-color: $light-gray;
-
-                @media (prefers-color-scheme: dark) {
-                    background-color: $dark-gray;
-                }
+                background-color: var(--surface-subtle);
             }
 
             & > a {
@@ -1083,7 +909,7 @@ div.navigation {
 }
 
 section.settings {
-    background: $card-background;
+    background: var(--card-background);
     margin-top: $spacing-small;
     overflow-x: auto;
     padding: $spacing-small;
@@ -1094,25 +920,15 @@ section.settings {
 
     & h4 {
         border-bottom: 1px solid;
-        border-bottom-color: $background;
+        border-bottom-color: var(--border-faint);
         padding-bottom: $spacing-tiny;
-
-        @media (prefers-color-scheme: dark) {
-            border-bottom-color: $dark-gray;
-        }
     }
 
     &.warning {
-        background-color: $washed-red;
-        border-color: $light-red;
+        background-color: var(--error-surface);
+        border-color: var(--error-border);
         border-style: solid;
         border-width: 1px;
-
-        @media (prefers-color-scheme: dark) {
-            background-color: $red;
-            border-color: $dark-red;
-            color: $foreground-dark;
-        }
     }
 
     & > dl {
@@ -1134,6 +950,7 @@ section.settings {
         max-width: 100%;
         margin-bottom: $spacing-medium;
         border-collapse: collapse;
+        background-color: var(--surface-subtle);
 
         & > thead > tr > th {
             text-align: inherit;
@@ -1165,14 +982,6 @@ section.settings {
                 list-style-position: inside;
             }
         }
-
-        @media (prefers-color-scheme: dark) {
-            background-color: $dark-gray;
-        }
-    }
-
-    @media (prefers-color-scheme: dark) {
-        background-color: $card-background-dark;
     }
 }
 

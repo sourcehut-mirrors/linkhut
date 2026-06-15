@@ -14,11 +14,19 @@ defmodule Linkhut.Accounts.Preferences.UserPreference do
     field :show_exact_dates, :boolean, default: false
     field :default_private, :boolean, default: false
     field :strip_tracking_params, :boolean, default: false
+    field :theme, Ecto.Enum, values: [:dark, :light]
 
     timestamps(type: :utc_datetime)
   end
 
-  @cast_fields [:timezone, :show_url, :show_exact_dates, :default_private, :strip_tracking_params]
+  @cast_fields [
+    :timezone,
+    :show_url,
+    :show_exact_dates,
+    :default_private,
+    :strip_tracking_params,
+    :theme
+  ]
 
   @doc false
   def changeset(preference, attrs) do
