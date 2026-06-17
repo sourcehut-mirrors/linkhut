@@ -2,6 +2,10 @@
 
 All notable changes to linkhut will be documented in this file.
 
+## [Unreleased]
+
+- Add support for selecting theme from user preferences pannel
+
 ## [0.1.6] - 2026-06-12
 
 - Add way to set Single-File CLI arguments via environment variable
