@@ -17,8 +17,8 @@ defmodule LinkhutWeb.LinkXML do
     uri = URI.new!("#{conn.scheme}://#{conn.host}:#{conn.port}")
     feed_url = URI.merge(uri, feed_path(conn)) |> URI.to_string()
     html_url = URI.merge(uri, html_path(conn)) |> URI.to_string()
-
-    render_feed(title, feed_url, html_url, links)
+    icon_url = URI.merge(uri, static_path(conn, "/images/favicon.svg")) |> URI.to_string()
+    render_feed(title, feed_url, html_url, icon_url, links, conn.assigns[:current_user])
   end
 
   defp title(%{} = scope) do
@@ -73,7 +73,7 @@ defmodule LinkhutWeb.LinkXML do
     end
   end
 
-  defp render_feed(title, feed_url, html_url, links) do
+  defp render_feed(title, feed_url, html_url, icon_url, links, current_user) do
     Feed.new(
       feed_url,
       DateTime.utc_now(),
@@ -81,19 +81,20 @@ defmodule LinkhutWeb.LinkXML do
     )
     |> Feed.link(feed_url, rel: "self", type: "application/atom+xml")
     |> Feed.link(html_url, rel: "alternate", type: "text/html")
+    |> Feed.icon(icon_url)
     |> Feed.entries(
       links.entries
       |> Enum.flat_map(fn links -> links end)
-      |> Enum.map(fn link -> feed_entry(link) end)
+      |> Enum.map(fn link -> feed_entry(link, current_user) end)
     )
     |> Feed.build()
     |> Atomex.generate_document()
   end
 
-  defp feed_entry(link) do
+  defp feed_entry(link, current_user) do
     Entry.new(link.url, link.inserted_at, link.title)
     |> Entry.link(link.url, rel: "alternate")
-    |> Entry.content(link.notes)
+    |> Entry.content(rendered_notes(link, current_user), type: :html)
     |> Entry.author(link.user.username, uri: url(~p"/~#{link.user.username}"))
     |> (fn entry ->
           Enum.reduce(link.tags, entry, fn tag, entry ->

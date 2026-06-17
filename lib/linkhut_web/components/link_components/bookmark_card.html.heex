@@ -18,11 +18,7 @@
     <% end %>
     <%= if Map.get(assigns, :show_notes, true) do %>
       <div class="description">
-        <%= if @logged_in? && @link.user_id == @current_user.id do %>
-          {sanitize(HtmlSanitizeEx.basic_html(Earmark.as_html!(@link.notes, pure_links: false)))}
-        <% else %>
-          {sanitize(@link.notes_html)}
-        <% end %>
+        {sanitize(rendered_notes(@link, @current_user))}
       </div>
     <% end %>
     <div class="ownership">

@@ -127,6 +127,21 @@ defmodule LinkhutWeb.Controllers.Utils do
     struct(Scope, fields)
   end
 
+  @doc """
+  Returns the note rendered as HTML for display.
+
+  For the note's owner the markdown is rendered with the more permissive
+  `HtmlSanitizeEx.basic_html/1` formatting; for everyone else the stored,
+  strictly-scrubbed `notes_html` is used.
+  """
+  def rendered_notes(%Linkhut.Links.Link{} = link, current_user) do
+    if current_user != nil && link.user_id == current_user.id do
+      HtmlSanitizeEx.basic_html(Earmark.as_html!(link.notes, pure_links: false))
+    else
+      link.notes_html
+    end
+  end
+
   defp fetch_tag_options(%{} = scope, params) do
     Map.put(scope, :tag_options, Tags.parse_options(params))
   end

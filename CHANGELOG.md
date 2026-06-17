@@ -5,6 +5,7 @@ All notable changes to linkhut will be documented in this file.
 ## [Unreleased]
 
 - Add support for selecting theme from user preferences pannel
+- Use html content for entries in RSS feed
 
 ## [0.1.6] - 2026-06-12
 

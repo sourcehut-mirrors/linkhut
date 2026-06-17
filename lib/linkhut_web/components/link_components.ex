@@ -4,7 +4,7 @@ defmodule LinkhutWeb.LinkComponents do
   """
   use LinkhutWeb, :html
 
-  import LinkhutWeb.Controllers.Utils, only: [html_path: 2]
+  import LinkhutWeb.Controllers.Utils, only: [html_path: 2, rendered_notes: 2]
   import LinkhutWeb.Helpers, only: [in_timezone: 2, time_ago: 1]
 
   use PhoenixHtmlSanitizer, :basic_html
