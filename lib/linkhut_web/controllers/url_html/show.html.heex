@@ -55,7 +55,7 @@
         </div>
       <% end %>
 
-      {pagination(assigns)}
+      <.pagination page={@page} scope={@scope} />
     <% else %>
       <%= if @url do %>
         <div class="url-detail-header">

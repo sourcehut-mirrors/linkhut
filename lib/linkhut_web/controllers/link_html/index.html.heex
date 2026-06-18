@@ -40,7 +40,7 @@
         </div>
       </div>
     <% end %>
-    {pagination(Map.put(assigns, :page, Map.drop(@links, [:entries])))}
+    <.pagination page={@links} scope={@scope} />
   </section>
   {_side_panel(assigns)}
 </div>

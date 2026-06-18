@@ -7,6 +7,7 @@ defmodule LinkhutWeb.UrlHTML do
   import LinkhutWeb.Helpers
   import LinkhutWeb.Controllers.Utils
   import LinkhutWeb.LinkComponents
+  import LinkhutWeb.PaginationComponents
 
   embed_templates "url_html/*"
 

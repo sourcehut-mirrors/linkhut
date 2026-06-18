@@ -4,6 +4,7 @@ defmodule LinkhutWeb.LinkHTML do
   import LinkhutWeb.Helpers
   import LinkhutWeb.Controllers.Utils
   import LinkhutWeb.LinkComponents
+  import LinkhutWeb.PaginationComponents
 
   alias LinkhutWeb.Router.Helpers, as: Routes
   alias Linkhut.Search.Context

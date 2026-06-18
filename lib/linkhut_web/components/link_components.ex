@@ -27,11 +27,6 @@ defmodule LinkhutWeb.LinkComponents do
   #   @show_title        - when false, suppresses the title row (default: true)
   #   @show_notes        - when false, suppresses the notes row (default: true)
   #
-  # pagination/1 is an embedded template (pagination.html.heex) that renders
-  # truncated page navigation. It expects:
-  #
-  #   @page  - pagination struct with :page, :num_pages, :has_prev, :has_next, etc.
-  #   @scope - %Scope{} for URL generation
 
   attr :title, :string, required: true
   attr :url, :string, required: true
