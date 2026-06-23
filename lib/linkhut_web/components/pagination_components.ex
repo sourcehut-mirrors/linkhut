@@ -15,14 +15,15 @@ defmodule LinkhutWeb.PaginationComponents do
 
     ~H"""
     <div class="pagination">
-      <.prev_button page={@page} />
+      <.prev_button page={@page} scope={@scope} />
       <.page_number :for={number <- @page_numbers} page_number={number} current={@page.page} scope={@scope} />
-      <.next_button page={@page} />
+      <.next_button page={@page} scope={@scope} />
     </div>
     """
   end
 
   attr :page, Pagination.Page, required: true
+  attr :scope, Utils.Scope, required: true
 
   defp prev_button(assigns) do
     ~H"""
@@ -34,6 +35,7 @@ defmodule LinkhutWeb.PaginationComponents do
   end
 
   attr :page, Pagination.Page, required: true
+  attr :scope, Utils.Scope, required: true
 
   defp next_button(assigns) do
     ~H"""

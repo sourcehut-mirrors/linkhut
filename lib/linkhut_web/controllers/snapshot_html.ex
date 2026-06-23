@@ -3,6 +3,7 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   alias Linkhut.Archiving
   alias Linkhut.Archiving.Format
+  alias Linkhut.Accounts.Preferences.UserPreference
 
   import LinkhutWeb.NavigationComponents, only: [nav_link: 1]
 
@@ -65,14 +66,14 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   attr :link, :map, required: true
   attr :snapshot, :map, required: true
-  attr :show_url, :boolean, default: true
+  attr :preferences, UserPreference, default: %UserPreference{}
   attr :external_url, :string, default: nil
 
   def toolbar(assigns) do
     ~H"""
     <div class="snapshot-toolbar">
       <div class="bookmark-header">
-        <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={@show_url} />
+        <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} preferences={@preferences} />
       </div>
       <div :if={!@external_url} class="snapshot-nav">
         <a href={~p"/_/archive/#{@link.id}/#{@snapshot.format}/#{@snapshot.source}/full"}>full page</a>

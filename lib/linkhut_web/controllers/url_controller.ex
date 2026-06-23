@@ -78,9 +78,7 @@ defmodule LinkhutWeb.UrlController do
       order: order,
       context: context,
       scope: Utils.scope(conn),
-      breadcrumb: context && Breadcrumb.from_context(context),
-      show_exact_dates: true,
-      show_url: false
+      breadcrumb: context && Breadcrumb.from_context(context)
     )
   end
 

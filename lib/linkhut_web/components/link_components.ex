@@ -11,50 +11,121 @@ defmodule LinkhutWeb.LinkComponents do
 
   alias LinkhutWeb.Controllers.Utils
   alias LinkhutWeb.Router.Helpers, as: Routes
+  alias Linkhut.Accounts.Preferences.UserPreference
 
-  embed_templates "link_components/*"
+  attr :link, Linkhut.Links.Link, required: true
+  attr :context, Linkhut.Search.Context, required: true
+  attr :scope, Utils.Scope, default: nil
+  attr :current_user, Linkhut.Accounts.User, default: nil
+  attr :can_view_archives?, :boolean, default: false
+  attr :preferences, UserPreference, default: %UserPreference{}
+  attr :show_title, :boolean, default: true
+  attr :show_notes, :boolean, default: true
+  attr :show_url, :boolean, required: true
+  attr :show_exact_dates, :boolean, required: true
 
-  # bookmark_card/1 is an embedded template (bookmark_card.html.heex) that
-  # renders a single bookmark entry. It expects the full parent assigns plus:
-  #
-  #   @link              - %Link{} struct (required)
-  #   @context           - %Context{} with current search context
-  #   @scope             - %Scope{} for URL generation
-  #   @logged_in?        - boolean
-  #   @current_user      - current user struct (when logged in)
-  #   @can_view_archives? - boolean
-  #   @preferences       - %UserPreference{} (from GlobalAssigns, nil when logged out)
-  #   @show_title        - when false, suppresses the title row (default: true)
-  #   @show_notes        - when false, suppresses the notes row (default: true)
-  #
+  def bookmark_card(assigns) do
+    ~H"""
+    <div class={["bookmark-card", highlight_owned?(@link, @current_user, @context) && "your-bookmark"]}>
+      <div class="bookmark">
+        <div :if={@show_title} data-posted-on={@link.inserted_at} data-saves={@link.saves} data-relevance={@link.score} class="title">
+          <h4><a rel="nofollow" class="taggedlink" href={@link.url}>{@link.title}</a></h4>
+          <span :if={@link.is_private} class="no-css-label">{gettext("Private")}</span>
+          <a :if={show_saves?(@link, @context)} class="savers" data-count={@link.saves} data-label={gettext("people")} href={~p"/-#{@link.url}"}></a>
+        </div>
+        <div :if={@show_url} class="full-url">
+          <a rel="nofollow" href={@link.url}>{@link.url}</a>
+        </div>
+        <div :if={@show_notes} class="description">
+          {sanitize(rendered_notes(@link, @current_user))}
+        </div>
+        <div class="ownership">
+          <%= unless owned?(@link, @current_user) do %>
+            <span>
+              {gettext("by")} <a href={~p"/~#{@link.user.username}"}>{@link.user.username}</a>
+            </span>
+          <% end %>
+          <span>
+            <.bookmark_date
+              datetime={@link.inserted_at}
+              href={~p"/~#{@link.user.username}/-#{@link.url}"}
+              exact={@show_exact_dates}
+              timezone={@preferences.timezone}
+            />
+          </span>
+          <span :if={show_saves?(@link, @context)} class="savers">
+            {gettext("saved")} <a href={~p"/-#{@link.url}"}>{@link.saves}</a> {ngettext("time", "times", @link.saves)}
+          </span>
+        </div>
+        <div class="meta">
+          <.link_tags scope={@scope} link={@link} />
+          <div :if={@current_user} class="actions">
+            <h5 class="label">{gettext("Actions:")}</h5>
+            <ul class="actions">
+              <%= if owned?(@link, @current_user) do %>
+                <li>
+                  <a href={~p"/_/edit?#{%{url: @link.url}}"}>{gettext("edit")}</a>
+                </li>
+                <li>
+                  <a href={~p"/_/delete?#{%{url: @link.url}}"}>{gettext("delete")}</a>
+                </li>
+                <%= if @link.is_unread do %>
+                  <li>
+                    <.form for={%{}} action={~p"/_/edit"} method="put">
+                      <input type="hidden" name="link[url]" value={@link.url} />
+                      <input type="hidden" name="link[is_unread]" value="false" />
+                      <button type="submit">{gettext("mark as read")}</button>
+                    </.form>
+                  </li>
+                <% end %>
+                <li :if={@can_view_archives?}>
+                  <a href={~p"/_/archive/#{@link.id}"}>{gettext("archive")}</a>
+                </li>
+              <% else %>
+                <li :if={!@link.saved_by_current_user?}>
+                  <a href={~p"/_/add?#{%{url: @link.url, title: @link.title, notes: @link.notes, tags: @link.tags}}"}>{gettext("copy to mine")}</a>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div :if={@link.is_private or @link.is_unread} class="icons">
+        <span :if={@link.is_private} data-icon-type="private" title={gettext("private")}></span>
+        <span :if={@link.is_unread} data-icon-type="unread" title={gettext("unread")}></span>
+      </div>
+    </div>
+    <hr />
+    """
+  end
+
+  defp show_saves?(link, context), do: is_nil(context.url) and link.saves > 1
 
   attr :title, :string, required: true
   attr :url, :string, required: true
-  attr :show_url, :boolean, default: true
+  attr :preferences, UserPreference, default: %UserPreference{}
 
   def bookmark_header(assigns) do
     ~H"""
     <div class="title">
       <h3><a rel="nofollow" href={@url}>{@title}</a></h3>
     </div>
-    <div :if={@show_url} class="full-url">
+    <div :if={@preferences.show_url} class="full-url">
       <a rel="nofollow" href={@url}>{@url}</a>
     </div>
     """
   end
 
-  defp owned?(link, assigns) do
-    assigns[:logged_in?] && link.user_id == assigns[:current_user].id
+  defp owned?(link, current_user) do
+    current_user && link.user_id == current_user.id
   end
 
-  defp highlight_owned?(link, assigns) do
-    owned?(link, assigns) && !in_own_context?(assigns)
+  defp highlight_owned?(link, current_user, context) do
+    owned?(link, current_user) && !in_own_context?(current_user, context)
   end
 
-  defp in_own_context?(assigns) do
-    assigns[:logged_in?] &&
-      get_in(assigns, [:context, Access.key(:from), Access.key(:id)]) ==
-        assigns[:current_user].id
+  defp in_own_context?(current_user, context) do
+    current_user && get_in(context, [Access.key(:from), Access.key(:id)]) == current_user.id
   end
 
   attr :link, Linkhut.Links.Link, required: true
@@ -102,33 +173,6 @@ defmodule LinkhutWeb.LinkComponents do
     """
   end
 
-  @doc """
-  Returns whether to show full/exact dates.
-
-  Checks for an explicit `:show_exact_dates` assign first (set by controllers
-  that always want exact dates, e.g. the URL detail timeline), then falls
-  back to the user's preference. Returns `false` when neither is set.
-  """
-  @spec show_exact_dates?(map()) :: boolean()
-  def show_exact_dates?(assigns) do
-    assigns[:show_exact_dates] || pref(assigns, :show_exact_dates) || false
-  end
-
-  @doc """
-  Returns whether to show the URL below bookmark titles.
-
-  Checks for an explicit `:show_url` assign first (set by controllers
-  that need to override, e.g. the URL detail page suppresses URLs),
-  then falls back to the user's preference. Returns `true` by default.
-  """
-  @spec show_url?(map()) :: boolean()
-  def show_url?(assigns) do
-    case assigns[:show_url] do
-      nil -> pref(assigns, :show_url) != false
-      val -> val
-    end
-  end
-
   defp format_relative_datetime(%DateTime{} = dt, timezone) do
     now = DateTime.utc_now()
     diff_seconds = DateTime.diff(now, dt)
@@ -157,10 +201,6 @@ defmodule LinkhutWeb.LinkComponents do
 
   defp format_tooltip_datetime(%DateTime{} = dt, timezone) do
     dt |> in_timezone(timezone) |> Calendar.strftime("%Y-%m-%d %H:%M %Z")
-  end
-
-  defp pref(assigns, key) do
-    get_in(assigns, [:preferences, Access.key(key)])
   end
 
   @doc """

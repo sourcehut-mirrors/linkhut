@@ -1,6 +1,6 @@
 <.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
 <div class="bookmark-header">
-  <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} show_url={LinkhutWeb.LinkComponents.show_url?(assigns)} />
+  <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} preferences={@preferences} />
 </div>
 <.current_snapshots snapshots={@current_snapshots} link={@link} can_delete={@can_delete} timezone={@preferences.timezone} />
 <section class="settings">

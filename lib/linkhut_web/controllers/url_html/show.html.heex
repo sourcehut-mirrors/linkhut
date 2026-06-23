@@ -44,12 +44,18 @@
           <h4 class="date"><span>{format_date(head.link.inserted_at, @preferences.timezone)}</span></h4>
           <div class="bookmarks">
             <%= for entry <- entries do %>
-              {bookmark_card(
-                assigns
-                |> Map.put(:link, entry.link)
-                |> Map.put(:show_title, entry.show_title)
-                |> Map.put(:show_notes, entry.show_notes)
-              )}
+              <.bookmark_card
+                link={entry.link}
+                show_title={entry.show_title}
+                show_notes={entry.show_notes}
+                show_url={false}
+                show_exact_dates={true}
+                context={@context}
+                scope={@scope}
+                current_user={@current_user}
+                can_view_archives?={@can_view_archives?}
+                preferences={@preferences}
+              />
             <% end %>
           </div>
         </div>

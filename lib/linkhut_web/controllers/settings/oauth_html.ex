@@ -4,10 +4,12 @@ defmodule LinkhutWeb.Settings.OauthHTML do
   import LinkhutWeb.Helpers
   import LinkhutWeb.SettingsComponents
 
+  alias Linkhut.Accounts.Preferences.UserPreference
+
   embed_templates "oauth_html/*"
 
   attr :personal_access_tokens, :list, required: true
-  attr :preferences, :any, default: nil
+  attr :preferences, UserPreference, default: %UserPreference{}
 
   defp personal_token_list(assigns) do
     ~H"""
@@ -38,7 +40,7 @@ defmodule LinkhutWeb.Settings.OauthHTML do
   end
 
   attr :authorized_applications, :list, required: true
-  attr :preferences, :any, default: nil
+  attr :preferences, UserPreference, default: %UserPreference{}
 
   defp authorized_application_list(assigns) do
     ~H"""
