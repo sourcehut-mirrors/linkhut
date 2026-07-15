@@ -9,12 +9,12 @@
   <%= if @detail do %>
     <aside>
       <div class="actions">
-        <%= if @logged_in? && @detail.current_user_bookmark do %>
+        <%= if logged_in?(@viewer) && @detail.current_user_bookmark do %>
           <a class="button" href={~p"/_/edit?#{%{url: @detail.url}}"}>
             <span>{gettext("Edit your bookmark")}</span>
           </a>
         <% end %>
-        <%= if @logged_in? && !@detail.current_user_bookmark do %>
+        <%= if logged_in?(@viewer) && !@detail.current_user_bookmark do %>
           <a class="button primary" href={~p"/_/add?#{%{url: @detail.url, title: @detail.title}}"}>
             <span>{gettext("Add to your bookmarks")}</span>
           </a>

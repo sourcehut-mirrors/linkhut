@@ -1,11 +1,11 @@
 <.snapshot_tabs tabs={@tabs} link_id={@link.id} request_path={@conn.request_path} />
 <div class="bookmark-header">
-  <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} preferences={@preferences} />
+  <LinkhutWeb.LinkComponents.bookmark_header title={@link.title} url={@link.url} preferences={@viewer.preferences} />
 </div>
-<.current_snapshots snapshots={@current_snapshots} link={@link} can_delete={@can_delete} timezone={@preferences.timezone} />
+<.current_snapshots snapshots={@current_snapshots} link={@link} can_delete={@can_delete} timezone={@viewer.preferences.timezone} />
 <section class="settings">
   <h3>Crawl history</h3>
-  <.crawl_run_group :for={archive <- @archives} archive={archive} link={@link} timezone={@preferences.timezone} />
+  <.crawl_run_group :for={archive <- @archives} archive={archive} link={@link} timezone={@viewer.preferences.timezone} />
 </section>
 <section :if={@can_delete} class="settings snapshot-actions">
   <div :if={!any_processing?(@archives)} class="snapshot-action-card">

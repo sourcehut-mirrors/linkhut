@@ -20,4 +20,9 @@ defmodule Linkhut.Search.Context do
   @spec user?(t()) :: boolean()
   def user?(%__MODULE__{from: nil}), do: false
   def user?(%__MODULE__{from: _}), do: true
+
+  @doc "Returns whether this context is scoped to the very same user performing the search."
+  @spec own_links?(t(), Accounts.User.t() | nil) :: boolean()
+  def own_links?(%__MODULE__{from: %Accounts.User{id: id}}, %Accounts.User{id: id}), do: true
+  def own_links?(%__MODULE__{}, _user), do: false
 end

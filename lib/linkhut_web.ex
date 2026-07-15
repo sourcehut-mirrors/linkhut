@@ -58,6 +58,8 @@ defmodule LinkhutWeb do
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
+
+      import LinkhutWeb.Viewer, only: [logged_in?: 1]
     end
   end
 

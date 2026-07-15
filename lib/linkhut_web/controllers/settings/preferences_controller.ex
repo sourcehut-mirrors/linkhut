@@ -4,7 +4,7 @@ defmodule LinkhutWeb.Settings.PreferencesController do
   alias Linkhut.Accounts.Preferences
 
   def show(conn, _) do
-    preference = conn.assigns[:preferences]
+    preference = conn.assigns.viewer.preferences
     changeset = Preferences.change(preference)
 
     render(conn, :show, changeset: changeset)

@@ -32,18 +32,16 @@
     </div>
     <%= for [head | _] = links <- @links.entries do %>
       <div class="date-group">
-        <h4 class="date"><span>{format_date(head.inserted_at, @preferences.timezone)}</span></h4>
+        <h4 class="date"><span>{format_date(head.inserted_at, @viewer.preferences.timezone)}</span></h4>
         <div class="bookmarks">
           <%= for link <- links do %>
             <.bookmark_card
               link={link}
               context={@context}
               scope={@scope}
-              current_user={@current_user}
-              can_view_archives?={@can_view_archives?}
-              show_url={@preferences.show_url}
-              show_exact_dates={@preferences.show_exact_dates}
-              preferences={@preferences}
+              viewer={@viewer}
+              show_url={@viewer.preferences.show_url}
+              show_exact_dates={@viewer.preferences.show_exact_dates}
             />
           <% end %>
         </div>

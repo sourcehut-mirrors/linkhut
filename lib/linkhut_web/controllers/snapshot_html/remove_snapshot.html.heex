@@ -15,7 +15,7 @@
       </tr>
       <tr>
         <th>Captured</th>
-        <td>{LinkhutWeb.Helpers.format_date_absolute(@snapshot.inserted_at, @preferences.timezone)}</td>
+        <td>{LinkhutWeb.Helpers.format_date_absolute(@snapshot.inserted_at, @viewer.preferences.timezone)}</td>
       </tr>
       <tr :if={@snapshot.file_size_bytes}>
         <th>Size</th>

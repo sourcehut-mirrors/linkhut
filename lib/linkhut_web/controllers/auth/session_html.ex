@@ -12,7 +12,7 @@ defmodule LinkhutWeb.Auth.SessionHTML do
         </fieldset>
         <.button type="submit">Log In</.button>
       </.form>
-      <div :if={not @logged_in?}>
+      <div :if={not logged_in?(@viewer)}>
         <p>
           <a class="doc" href={~p"/_/reset-password"}>{gettext("Forgot your password?")}</a>
         </p>

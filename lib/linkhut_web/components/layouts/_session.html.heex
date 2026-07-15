@@ -1,10 +1,10 @@
 <ul>
-  <%= if @logged_in? do %>
+  <%= if logged_in?(@viewer) do %>
     <li>
-      <span>Logged in as <a href={Routes.user_path(@conn, :show, @current_user.username)}>{@current_user.username}</a></span>
-      <%= if @unread_count > 0 do %>
+      <span>Logged in as <a href={Routes.user_path(@conn, :show, @viewer.user.username)}>{@viewer.user.username}</a></span>
+      <%= if @viewer.unread_count > 0 do %>
         <ul class="quicklinks">
-          <li><a href={Routes.unread_path(@conn, :unread)} title={gettext("%{count} unread links", count: @unread_count)} data-count={@unread_count}>{gettext("Unread")}</a></li>
+          <li><a href={Routes.unread_path(@conn, :unread)} title={gettext("%{count} unread links", count: @viewer.unread_count)} data-count={@viewer.unread_count}>{gettext("Unread")}</a></li>
         </ul>
       <% end %>
     </li>

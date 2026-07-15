@@ -14,7 +14,7 @@ defmodule LinkhutWeb.LinkController do
   @links_per_page 20
 
   def new(conn, params) do
-    prefs = conn.assigns.preferences
+    prefs = conn.assigns.viewer.preferences
     params = Links.maybe_clean_url(params, prefs)
     link_defaults = %Link{is_private: prefs.default_private}
 
@@ -27,7 +27,7 @@ defmodule LinkhutWeb.LinkController do
 
   def insert(conn, %{"link" => link_params}) do
     user = conn.assigns[:current_user]
-    link_params = Links.maybe_clean_url(link_params, conn.assigns.preferences)
+    link_params = Links.maybe_clean_url(link_params, conn.assigns.viewer.preferences)
 
     case Links.create_link(user, link_params) do
       {:ok, link} ->

@@ -6,7 +6,7 @@
       </form>
     </fieldset>
   </section>
-  <aside :if={@logged_in?}>
+  <aside :if={logged_in?(@viewer)}>
     <div class="actions">
       <a class="button primary" href={Routes.link_path(@conn, :new)}><span>{gettext("Add a bookmark")}</span></a>
     </div>

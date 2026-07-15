@@ -9,16 +9,16 @@ defmodule LinkhutWeb.LinkComponents do
 
   use PhoenixHtmlSanitizer, :basic_html
 
+  alias LinkhutWeb.Viewer
   alias LinkhutWeb.Controllers.Utils
   alias LinkhutWeb.Router.Helpers, as: Routes
   alias Linkhut.Accounts.Preferences.UserPreference
+  alias Linkhut.Search
 
   attr :link, Linkhut.Links.Link, required: true
-  attr :context, Linkhut.Search.Context, required: true
+  attr :context, Search.Context, required: true
   attr :scope, Utils.Scope, default: nil
-  attr :current_user, Linkhut.Accounts.User, default: nil
-  attr :can_view_archives?, :boolean, default: false
-  attr :preferences, UserPreference, default: %UserPreference{}
+  attr :viewer, Viewer, required: true
   attr :show_title, :boolean, default: true
   attr :show_notes, :boolean, default: true
   attr :show_url, :boolean, required: true
@@ -26,7 +26,7 @@ defmodule LinkhutWeb.LinkComponents do
 
   def bookmark_card(assigns) do
     ~H"""
-    <div class={["bookmark-card", highlight_owned?(@link, @current_user, @context) && "your-bookmark"]}>
+    <div class={["bookmark-card", highlight_owned?(@link, @viewer, @context) && "your-bookmark"]}>
       <div class="bookmark">
         <div :if={@show_title} data-posted-on={@link.inserted_at} data-saves={@link.saves} data-relevance={@link.score} class="title">
           <h4><a rel="nofollow" class="taggedlink" href={@link.url}>{@link.title}</a></h4>
@@ -37,20 +37,18 @@ defmodule LinkhutWeb.LinkComponents do
           <a rel="nofollow" href={@link.url}>{@link.url}</a>
         </div>
         <div :if={@show_notes} class="description">
-          {sanitize(rendered_notes(@link, @current_user))}
+          {sanitize(rendered_notes(@link, @viewer.user))}
         </div>
         <div class="ownership">
-          <%= unless owned?(@link, @current_user) do %>
-            <span>
-              {gettext("by")} <a href={~p"/~#{@link.user.username}"}>{@link.user.username}</a>
-            </span>
-          <% end %>
+          <span :if={not owned?(@link, @viewer)}>
+            {gettext("by")} <a href={~p"/~#{@link.user.username}"}>{@link.user.username}</a>
+          </span>
           <span>
             <.bookmark_date
               datetime={@link.inserted_at}
               href={~p"/~#{@link.user.username}/-#{@link.url}"}
               exact={@show_exact_dates}
-              timezone={@preferences.timezone}
+              timezone={@viewer.preferences.timezone}
             />
           </span>
           <span :if={show_saves?(@link, @context)} class="savers">
@@ -59,26 +57,24 @@ defmodule LinkhutWeb.LinkComponents do
         </div>
         <div class="meta">
           <.link_tags scope={@scope} link={@link} />
-          <div :if={@current_user} class="actions">
+          <div :if={logged_in?(@viewer)} class="actions">
             <h5 class="label">{gettext("Actions:")}</h5>
             <ul class="actions">
-              <%= if owned?(@link, @current_user) do %>
+              <%= if owned?(@link, @viewer) do %>
                 <li>
                   <a href={~p"/_/edit?#{%{url: @link.url}}"}>{gettext("edit")}</a>
                 </li>
                 <li>
                   <a href={~p"/_/delete?#{%{url: @link.url}}"}>{gettext("delete")}</a>
                 </li>
-                <%= if @link.is_unread do %>
-                  <li>
-                    <.form for={%{}} action={~p"/_/edit"} method="put">
-                      <input type="hidden" name="link[url]" value={@link.url} />
-                      <input type="hidden" name="link[is_unread]" value="false" />
-                      <button type="submit">{gettext("mark as read")}</button>
-                    </.form>
-                  </li>
-                <% end %>
-                <li :if={@can_view_archives?}>
+                <li :if={@link.is_unread}>
+                  <.form for={%{}} action={~p"/_/edit"} method="put">
+                    <input type="hidden" name="link[url]" value={@link.url} />
+                    <input type="hidden" name="link[is_unread]" value="false" />
+                    <button type="submit">{gettext("mark as read")}</button>
+                  </.form>
+                </li>
+                <li :if={@viewer.can_view_archives?}>
                   <a href={~p"/_/archive/#{@link.id}"}>{gettext("archive")}</a>
                 </li>
               <% else %>
@@ -116,16 +112,11 @@ defmodule LinkhutWeb.LinkComponents do
     """
   end
 
-  defp owned?(link, current_user) do
-    current_user && link.user_id == current_user.id
-  end
+  defp owned?(_, %Viewer{user: nil}), do: false
+  defp owned?(link, %Viewer{user: user}), do: link.user_id == user.id
 
-  defp highlight_owned?(link, current_user, context) do
-    owned?(link, current_user) && !in_own_context?(current_user, context)
-  end
-
-  defp in_own_context?(current_user, context) do
-    current_user && get_in(context, [Access.key(:from), Access.key(:id)]) == current_user.id
+  defp highlight_owned?(link, %Viewer{} = viewer, context) do
+    owned?(link, viewer) and not Search.Context.own_links?(context, viewer.user)
   end
 
   attr :link, Linkhut.Links.Link, required: true
