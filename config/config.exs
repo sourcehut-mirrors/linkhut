@@ -80,14 +80,16 @@ config :linkhut, Oban,
     {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(60)}
   ],
   crontab: [
-    # Every 2 minutes — fill archiver queue
+    # Fill archiver queue
     {"*/2 * * * *", Linkhut.Archiving.Workers.ArchiveScheduler},
-    # Hourly — clean up orphaned pending_deletion snapshots
+    # Clean up orphaned pending_deletion snapshots
     {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner},
-    # Every 15 minutes — mark stale snapshots as failed
+    # Mark stale snapshots as failed
     {"*/15 * * * *", Linkhut.Archiving.Workers.StaleSnapshotSweeper},
-    # Daily at 3am — reconcile links with uncovered sources
-    {"0 3 * * *", Linkhut.Archiving.Workers.Reconciler}
+    # Reconcile links with uncovered sources
+    {"0 3 * * *", Linkhut.Archiving.Workers.Reconciler},
+    # Mark stuck imports as failed
+    {"0 * * * *", Linkhut.DataTransfer.Workers.StuckImportReconciler}
   ]
 
 # Archiving configuration
@@ -111,6 +113,9 @@ config :linkhut, Linkhut.Archiving,
   user_agent_suffix: nil
 
 config :linkhut, Linkhut.Archiving.Storage.Local, compression: :gzip
+
+# DataTransfer configuration
+config :linkhut, Linkhut.DataTransfer, upload_dir: "/tmp/linkhut-uploads"
 
 # Mail configuration
 config :linkhut, Linkhut.Mail, sender: nil

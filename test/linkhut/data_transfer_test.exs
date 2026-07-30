@@ -1,16 +1,23 @@
-defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
+defmodule Linkhut.DataTransferTest do
   use Linkhut.DataCase
 
   import Linkhut.Factory
 
   alias Linkhut.DataTransfer
-  alias Linkhut.DataTransfer.Workers.ImportWorker
+  alias Linkhut.DataTransfer.Workers.Importer
 
   @valid_bookmark_html """
   <!DOCTYPE NETSCAPE-Bookmark-file-1>
   <DL><p>
   <DT><A HREF="https://example.com/import-test" ADD_DATE="1678900000" TAGS="test">Import Test</A>
   <DD>A test bookmark
+  </DL>
+  """
+
+  @invalid_bookmark_html """
+  <!DOCTYPE NETSCAPE-Bookmark-file-1>
+  <DL><p>
+  <DT><A>invalid bookmark</A>
   </DL>
   """
 
@@ -40,7 +47,7 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
   # Enqueue via Oban to get a real job ID, then call perform directly
   # with a matching Oban.Job struct so the import record can be found.
   defp enqueue_and_perform(user, file, overrides \\ %{}) do
-    {:ok, import} = ImportWorker.enqueue(user, file, overrides)
+    {:ok, import} = DataTransfer.create_import(user, file, overrides)
     job_id = import.job_id
 
     # Build an Oban.Job struct matching what the real queue would provide
@@ -49,16 +56,16 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
       args: %{"user_id" => user.id, "file" => file, "overrides" => overrides}
     }
 
-    result = ImportWorker.perform(oban_job)
+    result = Importer.perform(oban_job)
     {result, job_id}
   end
 
-  describe "perform/1" do
+  describe "create_import/3" do
     test "imports a valid bookmark file", %{user: user} do
       path = write_temp_file(@valid_bookmark_html)
       {result, job_id} = enqueue_and_perform(user, path)
 
-      assert {:ok, _} = result
+      assert :ok = result
 
       import = DataTransfer.get_import(user.id, job_id)
       assert import.state == :complete
@@ -68,11 +75,26 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
       assert import.invalid == 0
     end
 
+    test "imports a file with an invalid bookmark", %{user: user} do
+      path = write_temp_file(@invalid_bookmark_html)
+      {result, job_id} = enqueue_and_perform(user, path)
+
+      assert :ok = result
+
+      import = DataTransfer.get_import(user.id, job_id)
+      assert import.state == :complete
+      assert import.total == 1
+      assert import.saved == 0
+      assert import.failed == 0
+      assert import.invalid == 1
+      assert import.invalid_entries == ["No URL found for entry with title: 'invalid bookmark'"]
+    end
+
     test "handles multiple bookmarks", %{user: user} do
       path = write_temp_file(@multiple_bookmarks_html)
       {result, job_id} = enqueue_and_perform(user, path)
 
-      assert {:ok, _} = result
+      assert :ok = result
 
       import = DataTransfer.get_import(user.id, job_id)
       assert import.state == :complete
@@ -84,7 +106,7 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
       path = write_temp_file(@unsupported_content)
       {result, job_id} = enqueue_and_perform(user, path)
 
-      assert {:error, :unsupported_format} = result
+      assert {:cancel, :unsupported_format} = result
 
       import = DataTransfer.get_import(user.id, job_id)
       assert import.state == :failed
@@ -95,7 +117,7 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
       path = write_temp_file(@valid_bookmark_html)
       {result, job_id} = enqueue_and_perform(user, path, %{"is_private" => "true"})
 
-      assert {:ok, _} = result
+      assert :ok = result
 
       import = DataTransfer.get_import(user.id, job_id)
       assert import.state == :complete
@@ -110,25 +132,6 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
       {_result, _job_id} = enqueue_and_perform(user, path)
 
       refute File.exists?(path)
-    end
-
-    test "marks import as failed when file is unreadable", %{user: user} do
-      path =
-        Path.join(System.tmp_dir!(), "nonexistent_#{System.unique_integer([:positive])}.html")
-
-      {:ok, import_record} = ImportWorker.enqueue(user, path)
-      job_id = import_record.job_id
-
-      oban_job = %Oban.Job{
-        id: job_id,
-        args: %{"user_id" => user.id, "file" => path, "overrides" => %{}}
-      }
-
-      assert {:error, :enoent} = ImportWorker.perform(oban_job)
-
-      import_record = DataTransfer.get_import(user.id, job_id)
-      assert import_record.state == :failed
-      assert import_record.invalid_entries == ["Failed to read uploaded file: enoent"]
     end
 
     test "tracks duplicate URL as failed record", %{user: user} do
@@ -162,7 +165,7 @@ defmodule Linkhut.DataTransfer.Workers.ImportWorkerTest do
 
     test "returns true when import is queued", %{user: user} do
       path = write_temp_file(@valid_bookmark_html)
-      {:ok, _import} = ImportWorker.enqueue(user, path)
+      {:ok, _import} = DataTransfer.create_import(user, path, %{})
 
       assert DataTransfer.has_active_import?(user.id)
     end

@@ -2,6 +2,10 @@
 
 All notable changes to linkhut will be documented in this file.
 
+## [Unreleased]
+
+- Add new configuration key for the directory where imports are uploaded: `DATA_TRANSFER_UPLOAD_DIR`. The default is under `/tmp/linkhut-uploads` but it is strongly recommended to change this to a durable folder so incomplete uploads can resume after a reboot.
+
 ## [0.1.7] - 2026-07-14
 
 - Add support for selecting theme from user preferences pannel

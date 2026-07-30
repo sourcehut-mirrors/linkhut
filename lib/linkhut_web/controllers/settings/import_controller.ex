@@ -5,15 +5,13 @@ defmodule LinkhutWeb.Settings.ImportController do
   Controller for importing bookmarks
   """
   alias Linkhut.DataTransfer
-  alias Linkhut.DataTransfer.Workers.ImportWorker
 
   def show(conn, _) do
     render(conn, :import_export)
   end
 
   def upload(conn, %{
-        "upload" =>
-          %{"file" => %Plug.Upload{content_type: "text/html", path: file} = upload} = params
+        "upload" => %{"file" => %Plug.Upload{content_type: "text/html", path: file}} = params
       }) do
     user = conn.assigns[:current_user]
 
@@ -25,11 +23,15 @@ defmodule LinkhutWeb.Settings.ImportController do
       )
       |> redirect(to: ~p"/_/import")
     else
-      Plug.Upload.give_away(upload, ImportWorker.get_pid())
-      {:ok, import} = ImportWorker.enqueue(user, file, Map.take(params, ["is_private"]))
+      case DataTransfer.create_import(user, file, Map.take(params, ["is_private"])) do
+        {:ok, import} ->
+          redirect(conn, to: ~p"/_/import/#{import.job_id}")
 
-      conn
-      |> redirect(to: ~p"/_/import/#{import.job_id}")
+        {:error, _} ->
+          conn
+          |> put_flash(:error, "Couldn't start the import, try again")
+          |> redirect(to: ~p"/_/import")
+      end
     end
   end
 

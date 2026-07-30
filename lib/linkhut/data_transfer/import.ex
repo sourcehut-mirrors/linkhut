@@ -8,16 +8,17 @@ defmodule Linkhut.DataTransfer.Import do
   schema "imports" do
     field :user_id, :id
     field :job_id, :id
+    field :file, :string
     field :overrides, :map
 
     field :state, Ecto.Enum,
-      values: [:queued, :in_progress, :complete, :failed],
+      values: [:queued, :in_progress, :complete, :failed, :canceled],
       default: :queued
 
     field :total, :integer
-    field :saved, :integer
-    field :failed, :integer
-    field :invalid, :integer
+    field :saved, :integer, default: 0
+    field :failed, :integer, default: 0
+    field :invalid, :integer, default: 0
 
     embeds_many :failed_records, Record do
       field :url, :string
@@ -41,7 +42,7 @@ defmodule Linkhut.DataTransfer.Import do
     import
     |> cast(
       attrs,
-      [:user_id, :job_id, :state, :total, :saved, :invalid, :failed, :invalid_entries],
+      [:user_id, :job_id, :file, :state, :total, :saved, :invalid, :failed, :invalid_entries],
       opts
     )
     |> cast_embed(:failed_records, with: &record_changeset/2)
@@ -52,4 +53,7 @@ defmodule Linkhut.DataTransfer.Import do
     record
     |> cast(attrs, [:url, :title, :notes, :tags, :is_private, :inserted_at, :errors])
   end
+
+  @doc "Returns the number of bookmarks that have been imported (or attempted) so far"
+  def processed_count(%__MODULE__{saved: s, failed: f, invalid: i}), do: s + f + i
 end

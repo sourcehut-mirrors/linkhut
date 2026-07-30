@@ -1,6 +1,9 @@
 defmodule Linkhut.Config do
   @moduledoc false
 
+  @spec data_transfer(atom(), any()) :: any()
+  def data_transfer(key, default \\ nil), do: get(Linkhut.DataTransfer, key, default)
+
   @spec archiving(atom(), any()) :: any()
   def archiving(key, default \\ nil), do: get(Linkhut.Archiving, key, default)
 

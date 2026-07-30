@@ -318,4 +318,8 @@ if config_env() == :prod do
         config :single_file, default: Keyword.put(default, :args, OptionParser.split(val))
     end
   end
+
+  # Data Transfer config
+  config :linkhut, Linkhut.DataTransfer,
+    upload_dir: System.get_env("DATA_TRANSFER_UPLOAD_DIR") || "/tmp/linkhut-uploads"
 end

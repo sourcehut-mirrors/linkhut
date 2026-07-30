@@ -99,6 +99,9 @@ LINKHUT_HOST="<service_host>"
 # ARCHIVING_MAX_FILE_SIZE="70000000"
 # ARCHIVING_USER_AGENT_SUFFIX="+https://your-instance.com"
 # ARCHIVING_STORAGE_COMPRESSION="none"
+
+# Data Transfer (Import/Export)
+# DATA_TRANSFER_UPLOAD_DIR="/tmp/linkhut-uploads"
 EOF
 ```
 
