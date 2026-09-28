@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
   minio:
-    image: minio/minio:latest
+    image: pgsty/minio:latest
     ports:
       - "9000:9000"  # API port
       - "9001:9001"  # Console port
@@ -22,7 +22,7 @@ services:
       - "minio-data:/data"
     command: ["server", "/data", "--console-address", ":9001"]
   createbuckets:
-    image: minio/mc:latest
+    image: pgsty/mc:latest
     depends_on:
       - minio
     entrypoint: >
