@@ -3,66 +3,16 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
 
   import Linkhut.Factory
 
-  alias Linkhut.Archiving
   alias Linkhut.Archiving.Snapshot
   alias Linkhut.Archiving.Workers.StaleSnapshotSweeper
 
-  defp create_snapshot(user, link, attrs) do
-    crawl_run =
-      insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
-
-    attrs =
-      attrs
-      |> Map.put(:crawl_run_id, crawl_run.id)
-      |> Map.put_new(:format, "webpage")
-      |> Map.put_new(:source, "singlefile")
-
-    {:ok, snapshot} = Archiving.create_snapshot(link.id, user.id, attrs)
-
-    {snapshot, crawl_run}
-  end
-
-  defp age_snapshot(snapshot, minutes) do
-    ago = DateTime.add(DateTime.utc_now(), -minutes, :minute)
-
-    Repo.query!("UPDATE snapshots SET updated_at = $1 WHERE id = $2", [ago, snapshot.id])
-
-    Repo.get(Snapshot, snapshot.id)
-  end
-
-  test "marks stale :crawling snapshot as :failed" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
-
-    age_snapshot(snapshot, 45)
-
-    assert :ok = perform_job(StaleSnapshotSweeper, %{})
-
-    updated = Repo.get(Snapshot, snapshot.id)
-    assert updated.state == :failed
-  end
-
-  test "marks stale :retryable snapshot as :failed" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :retryable})
-
-    age_snapshot(snapshot, 45)
-
-    assert :ok = perform_job(StaleSnapshotSweeper, %{})
-
-    updated = Repo.get(Snapshot, snapshot.id)
-    assert updated.state == :failed
+  defp stuck_snapshot(state, minutes) do
+    ago = DateTime.utc_now() |> DateTime.add(-minutes, :minute) |> DateTime.truncate(:second)
+    insert(:snapshot, state: state, updated_at: ago)
   end
 
   test "does not mark recent snapshots as failed" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
-
-    # Only 5 minutes old — should not be swept
-    age_snapshot(snapshot, 5)
+    snapshot = stuck_snapshot(:crawling, 5)
 
     assert :ok = perform_job(StaleSnapshotSweeper, %{})
 
@@ -71,21 +21,15 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
   end
 
   test "does not mark snapshots that have active Oban crawler jobs" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
-
-    age_snapshot(snapshot, 45)
+    snapshot = stuck_snapshot(:crawling, 45)
 
     # Insert an active Oban job for this snapshot
-    Linkhut.Archiving.Workers.Crawler.new(%{
-      "snapshot_id" => snapshot.id,
-      "user_id" => user.id,
-      "link_id" => link.id,
-      "url" => "https://example.com",
-      "type" => "singlefile"
-    })
-    |> Oban.insert!()
+    job =
+      %{"snapshot_id" => snapshot.id}
+      |> Linkhut.Archiving.Workers.Crawler.new()
+      |> Oban.insert!()
+
+    Repo.update_all(from(s in Snapshot, where: s.id == ^snapshot.id), set: [job_id: job.id])
 
     assert :ok = perform_job(StaleSnapshotSweeper, %{})
 
@@ -93,77 +37,35 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeperTest do
     assert updated.state == :crawling
   end
 
-  test "calls maybe_complete_crawl_run after marking snapshot failed" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, crawl_run} = create_snapshot(user, link, %{state: :crawling})
+  test "marks a stale snapshot as :failed when its job is no longer live" do
+    for {state, job_state} <- [
+          pending: "discarded",
+          crawling: "cancelled",
+          pending: nil,
+          crawling: nil
+        ] do
+      snapshot = stuck_snapshot(state, 45)
 
-    age_snapshot(snapshot, 45)
+      if job_state do
+        job =
+          %{"snapshot_id" => snapshot.id}
+          |> Linkhut.Archiving.Workers.Crawler.new()
+          |> Oban.insert!()
 
-    assert :ok = perform_job(StaleSnapshotSweeper, %{})
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: job_state])
+        Repo.update_all(from(s in Snapshot, where: s.id == ^snapshot.id), set: [job_id: job.id])
+      end
 
-    updated_crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, crawl_run.id)
-    assert updated_crawl_run.state == :complete
-  end
+      assert :ok = perform_job(StaleSnapshotSweeper, %{})
 
-  test "marks :pending snapshot as :failed when its Oban job is discarded" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :pending})
-
-    # Insert a discarded Oban job for this snapshot
-    job =
-      Linkhut.Archiving.Workers.Crawler.new(%{
-        "snapshot_id" => snapshot.id,
-        "user_id" => user.id,
-        "link_id" => link.id,
-        "url" => "https://example.com",
-        "type" => "singlefile"
-      })
-      |> Oban.insert!()
-
-    Repo.query!("UPDATE oban_jobs SET state = 'discarded' WHERE id = $1", [job.id])
-
-    assert :ok = perform_job(StaleSnapshotSweeper, %{})
-
-    updated = Repo.get(Snapshot, snapshot.id)
-    assert updated.state == :failed
-  end
-
-  test "marks :crawling snapshot as :failed when its Oban job is cancelled" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {snapshot, _crawl_run} = create_snapshot(user, link, %{state: :crawling})
-
-    job =
-      Linkhut.Archiving.Workers.Crawler.new(%{
-        "snapshot_id" => snapshot.id,
-        "user_id" => user.id,
-        "link_id" => link.id,
-        "url" => "https://example.com",
-        "type" => "singlefile"
-      })
-      |> Oban.insert!()
-
-    Repo.query!("UPDATE oban_jobs SET state = 'cancelled' WHERE id = $1", [job.id])
-
-    assert :ok = perform_job(StaleSnapshotSweeper, %{})
-
-    updated = Repo.get(Snapshot, snapshot.id)
-    assert updated.state == :failed
+      assert Repo.get(Snapshot, snapshot.id).state == :failed,
+             "for #{state} with #{job_state || "no"} job"
+    end
   end
 
   test "does not touch :complete or :failed snapshots" do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-
-    {complete_snapshot, _} =
-      create_snapshot(user, link, %{state: :complete, storage_key: "local:/tmp/test"})
-
-    {failed_snapshot, _} = create_snapshot(user, link, %{state: :failed})
-
-    age_snapshot(complete_snapshot, 45)
-    age_snapshot(failed_snapshot, 45)
+    complete_snapshot = stuck_snapshot(:complete, 45)
+    failed_snapshot = stuck_snapshot(:failed, 45)
 
     assert :ok = perform_job(StaleSnapshotSweeper, %{})
 

@@ -32,7 +32,7 @@ defmodule LinkhutWeb.Settings.AdminController do
     render(conn, :admin,
       form: form,
       banned_users: Moderation.list_banned_users(),
-      archive_stats: Archiving.admin_archive_stats()
+      archive_stats: Archiving.Stats.admin_archive_stats()
     )
   end
 end

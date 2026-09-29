@@ -2,8 +2,8 @@ defmodule LinkhutWeb.SnapshotController do
   use LinkhutWeb, :controller
 
   alias Linkhut.{Links, Archiving}
-  alias Linkhut.Archiving.{Format, StorageKey}
-  alias LinkhutWeb.Breadcrumb
+  alias Linkhut.Archiving.{Format, LinkArchival, StorageKey}
+  alias LinkhutWeb.{Breadcrumb, SnapshotTokens}
 
   plug :require_can_view_archives when action in [:show, :full, :download, :index]
   plug :require_can_create_archives when action in [:recrawl, :upload, :remove_snapshot, :delete]
@@ -50,7 +50,18 @@ defmodule LinkhutWeb.SnapshotController do
     with {:ok, link_id} <- parse_link_id(link_id),
          {:ok, link} <- Links.get_user_link(link_id, user.id) do
       complete = Archiving.get_complete_snapshots_by_link(link_id)
-      render_snapshot_or_redirect(conn, user, link, link_id, complete, format, source)
+
+      case {complete, find_snapshot(complete, format, source)} do
+        {[], _} ->
+          redirect(conn, to: ~p"/_/archive/#{link_id}/all")
+
+        {_, nil} ->
+          first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
+          redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
+
+        {_, snapshot} ->
+          render_snapshot(conn, user, link, snapshot, complete)
+      end
     else
       {:error, :not_found} ->
         conn
@@ -64,49 +75,25 @@ defmodule LinkhutWeb.SnapshotController do
     end
   end
 
-  defp render_snapshot_or_redirect(conn, user, _link, link_id, [], _format, _source) do
-    if Archiving.get_crawl_runs_by_link(link_id) == [] do
-      conn
-      |> put_flash(:info, "Archive is being prepared, check back soon.")
-      |> redirect(to: ~p"/~#{user.username}")
-    else
-      redirect(conn, to: ~p"/_/archive/#{link_id}/all")
-    end
-  end
+  defp render_snapshot(conn, user, link, snapshot, complete) do
+    base = %{
+      link: link,
+      snapshot: snapshot,
+      tabs: LinkhutWeb.SnapshotHTML.build_tabs(complete, link.id),
+      breadcrumb: %Breadcrumb{user: user, url: link.url}
+    }
 
-  defp render_snapshot_or_redirect(conn, _user, _link, link_id, complete, nil, _source) do
-    first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
-    redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
-  end
+    assigns =
+      case StorageKey.parse(snapshot.storage_key) do
+        {:ok, {:external, url}} ->
+          Map.put(base, :external_url, url)
 
-  defp render_snapshot_or_redirect(conn, user, link, link_id, complete, format, source) do
-    snapshot = find_snapshot(complete, format, source)
+        _ ->
+          token = SnapshotTokens.generate_token(snapshot.id)
+          Map.put(base, :serve_url, serve_url(conn, token))
+      end
 
-    if snapshot == nil do
-      first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
-      redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
-    else
-      tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete, link_id)
-
-      base = %{
-        link: link,
-        snapshot: snapshot,
-        tabs: tabs,
-        breadcrumb: %Breadcrumb{user: user, url: link.url}
-      }
-
-      assigns =
-        case StorageKey.parse(snapshot.storage_key) do
-          {:ok, {:external, url}} ->
-            Map.put(base, :external_url, url)
-
-          _ ->
-            token = Archiving.generate_token(snapshot.id)
-            Map.put(base, :serve_url, serve_url(conn, token))
-        end
-
-      render(conn, :show, assigns)
-    end
+    render(conn, :show, assigns)
   end
 
   defp find_snapshot(complete, format, source) do
@@ -122,7 +109,7 @@ defmodule LinkhutWeb.SnapshotController do
   Returns the HTML content directly for iframe display.
   """
   def serve(conn, %{"token" => token}) do
-    with {:ok, snapshot_id} <- Archiving.verify_token(token),
+    with {:ok, snapshot_id} <- SnapshotTokens.verify_token(token),
          {:ok, snapshot} <- Archiving.get_complete_snapshot(snapshot_id),
          {:ok, instruction} <- Archiving.Storage.resolve(snapshot.storage_key) do
       case instruction do
@@ -167,7 +154,8 @@ defmodule LinkhutWeb.SnapshotController do
     case parse_link_id(link_id) do
       {:ok, link_id} ->
         with {:ok, _link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <- resolve_snapshot(link_id, format, params["source"]) do
+             {:ok, snapshot} <-
+               Archiving.get_latest_complete_snapshot(link_id, format, params["source"]) do
           redirect_to_snapshot(conn, snapshot)
         else
           {:error, :not_found} ->
@@ -192,7 +180,8 @@ defmodule LinkhutWeb.SnapshotController do
     case parse_link_id(link_id) do
       {:ok, link_id} ->
         with {:ok, link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <- resolve_snapshot(link_id, format, params["source"]) do
+             {:ok, snapshot} <-
+               Archiving.get_latest_complete_snapshot(link_id, format, params["source"]) do
           serve_download(conn, link, snapshot, link_id, format, user)
         else
           {:error, :not_found} ->
@@ -206,17 +195,6 @@ defmodule LinkhutWeb.SnapshotController do
         |> put_flash(:error, "Not found")
         |> redirect(to: ~p"/~#{user.username}")
     end
-  end
-
-  defp resolve_snapshot(link_id, format, source) when is_binary(source) do
-    case Archiving.get_latest_complete_snapshot(link_id, format, source) do
-      {:ok, _} = result -> result
-      _ -> {:error, :not_found}
-    end
-  end
-
-  defp resolve_snapshot(link_id, format, _) do
-    Archiving.get_latest_complete_snapshot(link_id, format)
   end
 
   @doc """
@@ -239,29 +217,22 @@ defmodule LinkhutWeb.SnapshotController do
   defp render_index(conn, user, link_id) do
     case Links.get_user_link(link_id, user.id) do
       {:ok, link} ->
-        archives = Archiving.get_crawl_runs_by_link(link_id)
+        current_snapshots = Archiving.get_current_snapshots_by_link(link_id)
+        complete_snapshots = Enum.filter(current_snapshots, &(&1.state == :complete))
+        tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete_snapshots, link_id)
+        archiving? = Archiving.archiving?(link)
 
-        if archives == [] do
-          conn
-          |> put_flash(:info, "Archive is being prepared, check back soon.")
-          |> redirect(to: ~p"/~#{user.username}")
-        else
-          current_snapshots = Archiving.get_current_snapshots_by_link(link_id)
-          complete_snapshots = Enum.filter(current_snapshots, &(&1.state == :complete))
-          tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete_snapshots, link_id)
-
-          conn
-          |> maybe_auto_refresh(archives)
-          |> render(:index, %{
-            link: link,
-            archives: archives,
-            current_snapshots: current_snapshots,
-            tabs: tabs,
-            crawlers: configured_crawler_types(),
-            can_delete: Archiving.can_create_archives?(user),
-            breadcrumb: %Breadcrumb{user: user, url: link.url}
-          })
-        end
+        conn
+        |> maybe_auto_refresh(archiving?)
+        |> render(:index, %{
+          link: link,
+          current_snapshots: current_snapshots,
+          tabs: tabs,
+          archiving: archiving?,
+          crawlers: link |> LinkArchival.applicable_crawlers() |> Enum.map(& &1.source_type()),
+          can_delete: Archiving.can_create_archives?(user),
+          breadcrumb: %Breadcrumb{user: user, url: link.url}
+        })
 
       {:error, :not_found} ->
         conn
@@ -280,11 +251,16 @@ defmodule LinkhutWeb.SnapshotController do
       {:ok, link_id} ->
         case Links.get_user_link(link_id, user.id) do
           {:ok, link} ->
-            recrawl_opts = recrawl_opts(params)
-            Archiving.schedule_recrawl(link, recrawl_opts)
+            {kind, message} =
+              case Archiving.enqueue_recrawl(link, recrawl_opts(params)) do
+                {:ok, %{conflict?: true}} -> {:info, "This link is already being archived"}
+                {:ok, :nothing_to_archive} -> {:error, "No crawler can archive this link"}
+                {:ok, _job} -> {:info, "Re-crawl scheduled"}
+                {:error, _reason} -> {:error, "Re-crawl failed"}
+              end
 
             conn
-            |> put_flash(:info, "Re-crawl scheduled")
+            |> put_flash(kind, message)
             |> redirect(to: ~p"/_/archive/#{link_id}/all")
 
           {:error, :not_found} ->
@@ -356,9 +332,7 @@ defmodule LinkhutWeb.SnapshotController do
           |> put_flash(:error, "Unsupported file type.")
           |> redirect(to: ~p"/_/archive/#{link_id}/all")
 
-        {:error, :file_too_large} ->
-          max = Linkhut.Config.archiving(:max_file_size)
-
+        {:error, {:file_too_large, _size, max}} ->
           conn
           |> put_flash(:error, "File too large (max #{Linkhut.Formatting.format_bytes(max)})")
           |> redirect(to: ~p"/_/archive/#{link_id}/all")
@@ -447,7 +421,7 @@ defmodule LinkhutWeb.SnapshotController do
         redirect(conn, external: url)
 
       _ ->
-        token = Archiving.generate_token(snapshot.id)
+        token = SnapshotTokens.generate_token(snapshot.id)
         redirect(conn, external: serve_url(conn, token))
     end
   end
@@ -526,13 +500,8 @@ defmodule LinkhutWeb.SnapshotController do
     end
   end
 
-  defp maybe_auto_refresh(conn, archives) do
-    if Enum.any?(archives, &(&1.state in [:pending, :processing])) do
-      put_resp_header(conn, "refresh", "30")
-    else
-      conn
-    end
-  end
+  defp maybe_auto_refresh(conn, true), do: put_resp_header(conn, "refresh", "30")
+  defp maybe_auto_refresh(conn, false), do: conn
 
   defp serve_file(conn, path, "gzip") do
     if accepts_encoding?(conn, "gzip") do
@@ -601,10 +570,10 @@ defmodule LinkhutWeb.SnapshotController do
 
   defp csp_for_content_type("text/html") do
     if Linkhut.Config.archiving(:serve_host) do
-      # Dedicated subdomain — allow inline scripts/styles for archived pages
+      # allow inline scripts/styles for archived pages
       "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:"
     else
-      # Same origin — restrict scripts to prevent XSS on the app domain
+      # restrict scripts to prevent XSS on the app domain
       "default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:"
     end
   end

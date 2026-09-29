@@ -10,7 +10,6 @@ defmodule Linkhut.Application do
   def start(_type, _args) do
     Oban.Telemetry.attach_default_logger(events: :all)
 
-    validate_crawlers!()
     validate_archiving_config!()
     ensure_singlefile!()
     warn_missing_serve_host()
@@ -76,18 +75,6 @@ defmodule Linkhut.Application do
         :error ->
           Logger.info("SingleFile binary not found, installing...")
           SingleFile.install()
-      end
-    end
-  end
-
-  defp validate_crawlers! do
-    for module <- Linkhut.Config.archiving(:crawlers, []) do
-      Code.ensure_loaded!(module)
-
-      unless function_exported?(module, :source_type, 0) and
-               function_exported?(module, :can_handle?, 2) and
-               function_exported?(module, :fetch, 1) do
-        raise "#{inspect(module)} does not implement Linkhut.Archiving.Crawler behaviour"
       end
     end
   end

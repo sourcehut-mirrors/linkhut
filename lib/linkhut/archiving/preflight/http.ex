@@ -1,85 +1,115 @@
 defmodule Linkhut.Archiving.Preflight.HTTP do
   @moduledoc """
   Executes the HTTP preflight request (HEAD) and returns structured
-  metadata. Pure HTTP logic — no DB writes or orchestration.
+  metadata.
   """
 
-  alias Linkhut.Archiving.{Crawler, PreflightMeta}
+  alias Linkhut.Archiving.{Crawler, Log, MIME, PreflightMeta}
+
+  @max_redirects 5
 
   @doc """
-  Sends a HEAD request to `url` and returns parsed preflight metadata.
-
-  Falls back to GET if the server returns 405 (Method Not Allowed).
-
-  On a successful HTTP response (any status), returns `{:ok, %PreflightMeta{}, events}`
-  where `events` is a list of step maps recording notable occurrences (e.g. HEAD failure).
-  On a transport-level failure, returns `{:error, reason}`.
+  Sends a HEAD request to `url` (falls back to using GET), and checks the final
+  URL with `check_url/1`.
   """
-  @spec execute(String.t()) :: {:ok, PreflightMeta.t(), [{String.t(), map()}]} | {:error, term()}
-  def execute(url) do
-    req_opts =
-      [
-        url: url,
-        method: :head,
-        redirect: true,
-        max_redirects: 5,
-        headers: [user_agent: Crawler.user_agent()]
-      ]
-      |> Keyword.merge(Application.get_env(:linkhut, :req_options, []))
+  @spec execute(String.t(), keyword()) ::
+          {:ok, PreflightMeta.t()} | {:unusable, Crawler.reject_reason()} | {:unreachable, term()}
+  def execute(url, opts \\ []) do
+    log = Keyword.get(opts, :log)
 
-    req =
-      Req.new(req_opts)
-      |> Req.Request.append_response_steps(capture_url: &capture_final_url/1)
+    case request(url, :head, log) do
+      {:ok, meta} = ok ->
+        Log.append(log, "preflight.completed", meta |> Map.from_struct() |> Map.put(:url, url))
+        ok
 
-    case Req.request(req) do
-      {:ok, %Req.Response{status: 405}} ->
-        execute_get(req_opts)
+      {:unusable, reason} = unusable ->
+        Log.append(log, "preflight.blocked", Map.put(reason, :url, url), level: :warning)
+        unusable
 
-      {:ok, %Req.Response{} = response} ->
-        {:ok, build_meta(response, url, "HEAD"), []}
-
-      {:error, reason} ->
-        {:error, reason}
+      {:unreachable, reason} = unreachable ->
+        data = %{url: url, error: inspect(reason)}
+        Log.append(log, "preflight.failed", data, level: :warning)
+        unreachable
     end
   end
 
-  defp execute_get(req_opts) do
-    req =
-      req_opts
-      |> Keyword.merge(method: :get, raw: true, into: fn {:data, _}, acc -> {:halt, acc} end)
-      |> Req.new()
-      |> Req.Request.append_response_steps(capture_url: &capture_final_url/1)
+  @doc """
+  Checks that `url` is http or https and that it resolves to a public
+  address.
+  """
+  @spec check_url(String.t()) ::
+          :ok | {:unusable, Crawler.reject_reason()} | {:unreachable, term()}
+  def check_url(url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host}
+      when scheme in ["http", "https"] and is_binary(host) and host != "" ->
+        check_address(host)
 
-    head_failed_event =
-      {"preflight_fallback", %{"msg" => "preflight_head_failed", "status" => 405}}
+      %URI{scheme: scheme} when is_binary(scheme) and scheme not in ["http", "https"] ->
+        {:unusable, %{reason: :unsupported_scheme, scheme: scheme}}
 
-    case Req.request(req) do
-      {:ok, %Req.Response{} = response} ->
-        url = Keyword.fetch!(req_opts, :url)
-        {:ok, build_meta(response, url, "GET"), [head_failed_event]}
-
-      {:error, reason} ->
-        {:error, reason}
+      _ ->
+        {:unusable, %{reason: :invalid_url}}
     end
   end
 
-  defp build_meta(%Req.Response{status: status, headers: headers} = response, url, method) do
-    content_type =
-      headers
-      |> get_header("content-type")
-      |> normalize_content_type()
+  defp check_address(host) do
+    case Linkhut.Network.check_address(host) do
+      :ok ->
+        :ok
 
-    final_url = get_final_url(response, url)
-    content_length = get_content_length(headers)
-    scheme = URI.parse(final_url).scheme || URI.parse(url).scheme
+      {:error, {:dns_failed, _host} = reason} ->
+        {:unreachable, reason}
 
+      {:error, {:reserved, range, host}} ->
+        {:unusable, %{reason: :reserved_address, host: host, range: range}}
+    end
+  end
+
+  defp request(url, method, log) do
+    case url |> req(method) |> Req.run() do
+      {_request, %Req.Response{status: 405}} when method == :head ->
+        Log.append(log, "preflight.head_rejected", %{url: url, status: 405})
+        request(url, :get, log)
+
+      {request, %Req.Response{} = response} ->
+        final_url = URI.to_string(request.url)
+
+        case check_url(final_url) do
+          :ok -> {:ok, build_meta(response, final_url, method)}
+          {:unusable, reason} -> {:unusable, Map.put(reason, :redirect, final_url)}
+          {:unreachable, _reason} = unreachable -> unreachable
+        end
+
+      {_request, exception} ->
+        {:unreachable, exception}
+    end
+  end
+
+  defp req(url, method) do
+    [
+      url: url,
+      method: method,
+      max_redirects: @max_redirects,
+      retry: false,
+      headers: [user_agent: Crawler.user_agent()]
+    ]
+    |> Keyword.merge(Application.get_env(:linkhut, :req_options, []))
+    |> Keyword.merge(body_options(method))
+    |> Req.new()
+  end
+
+  defp body_options(:get), do: [raw: true, into: fn {:data, _}, acc -> {:halt, acc} end]
+  defp body_options(:head), do: []
+
+  defp build_meta(%Req.Response{status: status, headers: headers}, url, method) do
     %PreflightMeta{
-      scheme: scheme,
-      content_type: content_type,
-      final_url: final_url,
+      scheme: URI.parse(url).scheme,
+      content_type: headers |> get_header("content-type") |> MIME.media_type(),
+      final_url: url,
       status: status,
-      content_length: content_length,
-      method: method
+      content_length: get_content_length(headers),
+      method: method |> Atom.to_string() |> String.upcase()
     }
   end
 
@@ -89,24 +119,6 @@ defmodule Linkhut.Archiving.Preflight.HTTP do
       _ -> nil
     end
   end
-
-  defp normalize_content_type(nil), do: nil
-
-  defp normalize_content_type(content_type) do
-    content_type
-    |> String.split(";")
-    |> hd()
-    |> String.trim()
-    |> String.downcase()
-  end
-
-  defp capture_final_url({request, response}) do
-    final_url = URI.to_string(request.url)
-    {request, Req.Response.put_private(response, :final_url, final_url)}
-  end
-
-  defp get_final_url(%Req.Response{private: %{final_url: url}}, _original_url), do: url
-  defp get_final_url(_response, original_url), do: original_url
 
   defp get_content_length(headers) do
     case get_header(headers, "content-length") do

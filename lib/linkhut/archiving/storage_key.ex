@@ -5,9 +5,9 @@ defmodule Linkhut.Archiving.StorageKey do
   Storage keys are prefixed strings persisted to the database. The prefix
   determines which backend owns the content:
 
-  - `"local:<path>"` — local filesystem
-  - `"external:<url>"` — third-party hosted content (e.g., Wayback Machine)
-  - `"s3://<endpoint>/<bucket>/<object_key>"` — S3-compatible object storage
+  - `"local:<path>"`: local filesystem
+  - `"external:<url>"`: content hosted by an external service (e.g., Wayback Machine)
+  - `"s3://<endpoint>/<bucket>/<object_key>"`: S3-compatible object storage
   """
 
   @type t :: String.t()

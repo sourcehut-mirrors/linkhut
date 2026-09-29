@@ -9,8 +9,17 @@ defmodule Linkhut.Archiving.Scheduler do
   round-robin interleaving and shuffling the user list.
   """
 
+  import Ecto.Query
+
+  alias Linkhut.Accounts.User
   alias Linkhut.Archiving
+  alias Linkhut.Archiving.LinkArchival
+  alias Linkhut.Links.Link
+  alias Linkhut.Repo
+
   require Logger
+
+  @domain_cooldown_seconds 120
 
   @doc """
   Schedules pending archives for eligible users based on the archiving mode.
@@ -25,7 +34,7 @@ defmodule Linkhut.Archiving.Scheduler do
   end
 
   defp fill_queue(users) do
-    available_slots = Archiving.available_archiver_slots()
+    available_slots = available_archiver_slots()
 
     if available_slots <= 0 do
       Logger.debug("Archive queues full, skipping scheduling")
@@ -36,16 +45,14 @@ defmodule Linkhut.Archiving.Scheduler do
   end
 
   defp schedule_candidates(users, available_slots) do
-    cooldown_domains = Archiving.domains_on_cooldown()
+    cooldown_domains = domains_on_cooldown()
     candidates_per_user = available_slots * 3
 
     users
     |> Enum.shuffle()
     |> Enum.map(fn user ->
-      Archiving.list_unarchived_links_for_user(user, candidates_per_user)
-      |> Enum.reject(fn link ->
-        MapSet.member?(cooldown_domains, Archiving.extract_domain(link.url))
-      end)
+      list_due_links(user, candidates_per_user)
+      |> Enum.reject(&MapSet.member?(cooldown_domains, String.downcase(&1.metadata.host || "")))
     end)
     |> interleave()
     |> Enum.take(available_slots)
@@ -71,5 +78,55 @@ defmodule Linkhut.Archiving.Scheduler do
 
   defp enqueue(link) do
     Linkhut.Archiving.Workers.Archiver.enqueue(link)
+  end
+
+  @doc "Lists a user's links that are due for archiving, newest first."
+  def list_due_links(%User{} = user, limit \\ 50) do
+    crawlers = Linkhut.Config.archiving(:crawlers, [])
+
+    from(l in Link,
+      as: :link,
+      where: l.user_id == ^user.id,
+      where: ^LinkArchival.due(crawlers),
+      order_by: [desc: l.inserted_at],
+      limit: ^limit
+    )
+    |> Repo.all()
+  end
+
+  defp domains_on_cooldown do
+    cutoff = DateTime.add(DateTime.utc_now(), -@domain_cooldown_seconds)
+
+    from(a in LinkArchival,
+      join: l in Link,
+      on: l.id == a.link_id,
+      where: a.updated_at > ^cutoff,
+      where: not is_nil(fragment("?->>'host'", l.metadata)),
+      distinct: true,
+      select: fragment("lower(?->>'host')", l.metadata)
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp available_archiver_slots do
+    queue_limit = archiver_queue_limit()
+
+    active =
+      from(j in Oban.Job,
+        where: j.queue == "archiver",
+        where: j.state in ["available", "scheduled", "executing", "retryable"],
+        select: count(j.id)
+      )
+      |> Repo.one()
+
+    max(queue_limit - active, 0)
+  end
+
+  defp archiver_queue_limit do
+    case Application.get_env(:linkhut, Oban)[:queues] do
+      queues when is_list(queues) -> Keyword.get(queues, :archiver, 5)
+      _ -> 5
+    end
   end
 end

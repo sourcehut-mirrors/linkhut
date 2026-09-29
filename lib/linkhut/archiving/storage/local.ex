@@ -146,8 +146,7 @@ defmodule Linkhut.Archiving.Storage.Local do
     end
   end
 
-  # Opts must be hierarchically complete: user_id required if link_id given,
-  # link_id required if crawl_run_id given.
+  # Opts must be hierarchically complete: user_id required if link_id given.
   defp build_storage_root(opts) do
     Linkhut.Config.archiving(:data_dir)
     |> maybe_join(Keyword.get(opts, :user_id))

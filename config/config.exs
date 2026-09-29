@@ -86,8 +86,6 @@ config :linkhut, Oban,
     {"0 * * * *", Linkhut.Archiving.Workers.StorageCleaner},
     # Mark stale snapshots as failed
     {"*/15 * * * *", Linkhut.Archiving.Workers.StaleSnapshotSweeper},
-    # Reconcile links with uncovered sources
-    {"0 3 * * *", Linkhut.Archiving.Workers.Reconciler},
     # Mark stuck imports as failed
     {"0 * * * *", Linkhut.DataTransfer.Workers.StuckImportReconciler}
   ]

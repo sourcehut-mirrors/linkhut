@@ -415,10 +415,7 @@ defmodule Linkhut.Links do
 
   defp maybe_schedule_archive({:ok, %Link{} = link} = result, %User{} = user) do
     if Archiving.can_create_archives?(user) do
-      # Schedule with small random delay to avoid thundering herd
-      # 0-5 minutes
-      delay = :rand.uniform(300)
-      Linkhut.Archiving.Workers.Archiver.enqueue(link, schedule_in: delay)
+      Linkhut.Archiving.Workers.Archiver.enqueue(link)
     end
 
     result

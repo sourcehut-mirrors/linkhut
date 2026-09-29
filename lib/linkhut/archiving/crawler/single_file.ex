@@ -2,9 +2,10 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   @moduledoc "Crawler that uses the SingleFile CLI to capture a full page as a single HTML file."
 
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.Direct
 
   alias Linkhut.Archiving.Crawler
-  alias Linkhut.Archiving.Crawler.Context
+  alias Linkhut.Archiving.{Log, PreflightMeta}
 
   require Logger
 
@@ -23,7 +24,7 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
     }
 
   @impl true
-  def network_access, do: :target_url
+  def applies_to, do: [schemes: ["http", "https"], hosts: :any, except_hosts: []]
 
   @impl true
   def queue, do: :crawler
@@ -34,26 +35,29 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
   @delay_to_sigkill_ms 60_000
 
   @impl true
-  def can_handle?(_url, %{content_type: content_type, status: status})
-      when is_integer(status) and status < 400 do
-    Linkhut.Archiving.MIME.webpage?(content_type)
+  def accepts(_url, %PreflightMeta{status: status, content_type: content_type}) do
+    cond do
+      status >= 400 ->
+        {:reject, %{reason: :http_error, status: status}}
+
+      Linkhut.Archiving.MIME.format(content_type) != "webpage" ->
+        {:reject, %{reason: :unsupported_format}}
+
+      true ->
+        {:ok, "webpage"}
+    end
   end
 
-  def can_handle?(_url, _preflight_meta), do: false
-
   @impl true
-  def fetch(%Context{link_id: link_id, url: url}) do
-    staging_dir =
-      Path.join(staging_base_dir(), "linkhut_crawl_#{:erlang.unique_integer([:positive])}")
-
-    File.mkdir_p!(staging_dir)
+  def fetch(url, opts) do
+    staging_dir = Keyword.fetch!(opts, :staging_dir)
 
     args = [
       "--user-agent",
       Crawler.user_agent(),
       url,
       "--filename-template",
-      "#{link_id}",
+      "snapshot",
       "--output-directory",
       staging_dir
     ]
@@ -66,8 +70,7 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
         {:ok,
          {:file,
           %{
-            path: Path.join(staging_dir, "#{link_id}"),
-            id: link_id,
+            path: Path.join(staging_dir, "snapshot"),
             code: 0,
             cmd: "single-file",
             args: args,
@@ -76,19 +79,15 @@ defmodule Linkhut.Archiving.Crawler.SingleFile do
           }}}
 
       {_output, :timeout} ->
-        File.rm_rf(staging_dir)
         {:error, %{msg: "SingleFile timed out after #{@timeout_ms}ms"}}
 
       {:error, reason} ->
-        File.rm_rf(staging_dir)
         {:error, %{msg: reason}}
 
       {output, code} ->
         Logger.warning("SingleFile exited with code #{code} for #{url}: #{output}")
-        File.rm_rf(staging_dir)
+        Log.append(opts[:log], "singlefile.exited", %{code: code}, level: :warning)
         {:error, %{msg: "SingleFile exited with code #{code}"}}
     end
   end
-
-  defp staging_base_dir, do: Linkhut.Config.archiving(:staging_dir, System.tmp_dir!())
 end

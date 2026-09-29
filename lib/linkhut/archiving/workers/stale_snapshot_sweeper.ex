@@ -1,18 +1,8 @@
 defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
   @moduledoc """
-  Periodic worker that finds snapshots stuck in non-terminal states
-  and marks them as `:failed`.
-
-  Two sweep passes:
-
-  1. **Stale threshold** — snapshots in `:crawling` or `:retryable` for
-     longer than `@stale_threshold_minutes` without an active Oban job.
-     Covers node crashes, OOM kills, etc.
-
-  2. **Discarded/cancelled jobs** — snapshots in any non-terminal state
-     (`:pending`, `:crawling`, `:retryable`) whose Oban job has been
-     discarded or cancelled. Covers jobs that exhausted all attempts
-     without the crawler updating the snapshot.
+  Worker that marks snapshots as failed when they are stuck as `:pending` or
+  `:crawling` for more than 30 minutes and when there's no active job working
+  on them.
   """
 
   use Oban.Worker,
@@ -23,93 +13,53 @@ defmodule Linkhut.Archiving.Workers.StaleSnapshotSweeper do
   import Ecto.Query
 
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.{Snapshot, Steps}
-  alias Linkhut.Archiving.Workers.Crawler
+  alias Linkhut.Archiving.{LinkArchival, Log, Snapshot}
   alias Linkhut.Repo
 
   require Logger
 
   @stale_threshold_minutes 30
-  @crawler_worker inspect(Crawler)
+  @live_job_states ["available", "executing", "scheduled", "retryable"]
 
   @impl Oban.Worker
   def perform(%Oban.Job{}) do
-    sweep_stale_snapshots()
-    sweep_discarded_jobs()
-    :ok
-  end
-
-  defp sweep_stale_snapshots do
     cutoff = DateTime.add(DateTime.utc_now(), -@stale_threshold_minutes, :minute)
 
-    stale_snapshots =
-      Snapshot
-      |> where([s], s.state in [:crawling, :retryable])
-      |> where([s], s.updated_at < ^cutoff)
-      |> Repo.all()
-
-    active_snapshot_ids =
-      from(j in Oban.Job,
-        where: j.worker == @crawler_worker,
-        where: j.state in ["available", "executing", "scheduled", "retryable"],
-        select: fragment("(?->>'snapshot_id')::bigint", j.args)
-      )
-      |> Repo.all()
-      |> MapSet.new()
-
-    stale_snapshots
-    |> Enum.reject(fn s -> s.id in active_snapshot_ids end)
+    from(s in Snapshot,
+      as: :snapshot,
+      where: s.state in [:pending, :crawling] and s.updated_at < ^cutoff,
+      where:
+        not exists(
+          from j in Oban.Job,
+            where: j.id == parent_as(:snapshot).job_id and j.state in @live_job_states
+        )
+    )
+    |> Repo.all()
     |> Enum.each(&mark_failed/1)
-  end
-
-  defp sweep_discarded_jobs do
-    discarded_snapshot_ids =
-      from(j in Oban.Job,
-        where: j.worker == @crawler_worker,
-        where: j.state in ["discarded", "cancelled"],
-        select: fragment("(?->>'snapshot_id')::bigint", j.args)
-      )
-      |> Repo.all()
-      |> MapSet.new()
-
-    if MapSet.size(discarded_snapshot_ids) > 0 do
-      Snapshot
-      |> where([s], s.id in ^MapSet.to_list(discarded_snapshot_ids))
-      |> where([s], s.state in [:pending, :crawling, :retryable])
-      |> Repo.all()
-      |> Enum.each(&mark_failed/1)
-    end
   end
 
   defp mark_failed(%Snapshot{} = snapshot) do
     Logger.warning("Marking stale snapshot #{snapshot.id} as failed (stuck in #{snapshot.state})")
 
-    case Archiving.update_snapshot(snapshot, %{
-           state: :failed,
-           failed_at: DateTime.utc_now(),
-           archive_metadata: %{
-             error: "snapshot stuck in #{snapshot.state}, marked failed by sweeper",
-             error_code: "stale"
-           }
-         }) do
-      {:ok, _} ->
-        Steps.append_to_crawl_run(
-          snapshot.crawl_run_id,
-          "failed",
-          %{
-            "msg" => "stale_snapshot_swept",
-            "previous_state" => to_string(snapshot.state)
-          },
-          snapshot_id: snapshot.id,
-          source: snapshot.source
+    attrs = %{
+      failed_at: DateTime.utc_now(),
+      archive_metadata: %{
+        error: "snapshot stuck in #{snapshot.state}, marked failed by sweeper",
+        error_code: "stale"
+      }
+    }
+
+    with {:ok, _snapshot} <- Archiving.mark_snapshot(snapshot, :failed, attrs) do
+      run_id =
+        Repo.one(
+          from a in LinkArchival, where: a.snapshot_id == ^snapshot.id, select: a.crawl_run_id
         )
 
-        Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
-
-      {:error, changeset} ->
-        Logger.warning(
-          "Failed to mark stale snapshot #{snapshot.id} as failed: #{inspect(changeset.errors)}"
-        )
+      snapshot
+      |> Log.for_snapshot(run_id)
+      |> Log.append("crawler.abandoned", %{previous_state: to_string(snapshot.state)},
+        level: :error
+      )
     end
   end
 end

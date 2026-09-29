@@ -9,8 +9,7 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
   """
 
   @behaviour Linkhut.Archiving.Crawler
-
-  alias Linkhut.Archiving.Crawler.Context
+  @behaviour Linkhut.Archiving.Crawler.External
 
   @cdx_url "https://web.archive.org/cdx/search/cdx"
 
@@ -24,7 +23,7 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
   def meta, do: %{tool_name: "Wayback CDX API", tool_version: nil, version: module_version()}
 
   @impl true
-  def network_access, do: :third_party
+  def applies_to, do: [schemes: ["http", "https"], hosts: :any, except_hosts: ["web.archive.org"]]
 
   @impl true
   def queue, do: :crawler
@@ -33,20 +32,25 @@ defmodule Linkhut.Archiving.Crawler.WaybackMachine do
   def rate_limit, do: {60_000, 40}
 
   @impl true
-  def can_handle?(url, _preflight_meta) do
+  def accepts(url) do
     case URI.parse(url) do
       %URI{scheme: scheme, host: host}
       when scheme in ["http", "https"] and is_binary(host) and host != "" ->
-        not localhost?(host)
+        if localhost?(host),
+          do: {:reject, %{reason: :reserved_address, host: host}},
+          else: {:ok, "reference"}
+
+      %URI{scheme: scheme} when is_binary(scheme) and scheme not in ["http", "https"] ->
+        {:reject, %{reason: :unsupported_scheme, scheme: scheme}}
 
       _ ->
-        false
+        {:reject, %{reason: :invalid_url}}
     end
   end
 
   @impl true
-  def fetch(%Context{url: url, link_inserted_at: link_inserted_at}) do
-    timestamp = format_timestamp(link_inserted_at || DateTime.utc_now())
+  def fetch(url, opts) do
+    timestamp = format_timestamp(opts[:bookmarked_at] || DateTime.utc_now())
 
     case query_cdx(url, timestamp) do
       {:ok, capture} ->

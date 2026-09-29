@@ -11,7 +11,7 @@ defmodule LinkhutWeb.Settings.StatsController do
 
     archive_stats =
       if conn.assigns.viewer.can_view_archives?,
-        do: Linkhut.Archiving.archive_stats_for_user(user),
+        do: Linkhut.Archiving.Stats.archive_stats_for_user(user),
         else: nil
 
     render(conn, :stats,

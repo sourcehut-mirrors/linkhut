@@ -33,6 +33,7 @@ defmodule Linkhut.Factory do
       user_id: build(:user).id,
       url: sequence(:url, &"http://link-#{&1}.example.net"),
       normalized_url: fn link -> Linkhut.Links.Url.normalize(link.url) end,
+      metadata: &struct(Linkhut.Links.Link.LinkMetadata, Map.from_struct(URI.parse(&1.url))),
       title: sequence(:title, &"link-#{&1}"),
       notes: "An awesome link description",
       tags: ["test", "auto-generated"],
@@ -55,15 +56,9 @@ defmodule Linkhut.Factory do
 
     {link_id, attrs} = Map.pop_lazy(attrs, :link_id, fn -> insert(:link, user_id: user_id).id end)
 
-    {crawl_run_id, attrs} =
-      Map.pop_lazy(attrs, :crawl_run_id, fn ->
-        insert(:crawl_run, user_id: user_id, link_id: link_id, state: :complete).id
-      end)
-
     snapshot = %Linkhut.Archiving.Snapshot{
       user_id: user_id,
       link_id: link_id,
-      crawl_run_id: crawl_run_id,
       format: "webpage",
       source: "singlefile",
       state: :complete,
@@ -77,27 +72,17 @@ defmodule Linkhut.Factory do
     merge_attributes(snapshot, attrs)
   end
 
-  def crawl_run_factory(attrs) do
-    {user_id, attrs} =
-      Map.pop_lazy(attrs, :user_id, fn -> insert(:user, credential: build(:credential)).id end)
+  def create_snapshot(link_id, user_id, attrs \\ %{}) do
+    %Linkhut.Archiving.Snapshot{link_id: link_id, user_id: user_id}
+    |> Linkhut.Archiving.Snapshot.create_changeset(attrs)
+    |> Linkhut.Repo.insert()
+  end
 
-    {link_id, attrs} = Map.pop_lazy(attrs, :link_id, fn -> insert(:link, user_id: user_id).id end)
+  def crawl_run_factory do
+    %Linkhut.Archiving.CrawlRun{link_id: fn -> insert(:link, user_id: insert(:user).id).id end}
+  end
 
-    crawl_run = %Linkhut.Archiving.CrawlRun{
-      user_id: user_id,
-      link_id: link_id,
-      url: sequence(:url, &"http://archive-#{&1}.example.net"),
-      state: :processing,
-      steps: [
-        %{
-          "step" => "created",
-          "detail" => %{"msg" => "created"},
-          "at" => DateTime.utc_now() |> DateTime.to_iso8601()
-        }
-      ],
-      total_size_bytes: 0
-    }
-
-    merge_attributes(crawl_run, attrs)
+  def link_archival_factory do
+    %Linkhut.Archiving.LinkArchival{version: "1"}
   end
 end

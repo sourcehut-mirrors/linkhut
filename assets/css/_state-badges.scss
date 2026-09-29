@@ -1,4 +1,4 @@
-// State badges — reusable colored pills for status indicators.
+// State badges
 
 .state {
     padding: 1px $spacing-tiny;
@@ -10,14 +10,11 @@
         background-color: var(--status-pending);
     }
 
-    &.retryable,
-    &.processing,
     &.in-progress {
         color: var(--status-progress-fg);
         background-color: var(--status-progress);
     }
 
-    &.not-archivable,
     &.not-available {
         color: var(--status-neutral-fg);
         background-color: var(--status-neutral);

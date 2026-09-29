@@ -7,7 +7,7 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   import LinkhutWeb.NavigationComponents, only: [nav_link: 1]
 
-  import LinkhutWeb.Helpers, only: [format_date_absolute: 2, format_time: 2, time_ago: 1]
+  import LinkhutWeb.Helpers, only: [format_date_absolute: 2, time_ago: 1]
 
   import Linkhut.Formatting, only: [format_bytes: 1, format_processing_time: 1]
   import Linkhut.Archiving.Format, only: [format_display_name: 1, source_display_name: 1]
@@ -89,15 +89,6 @@ defmodule LinkhutWeb.SnapshotHTML do
   attr :timezone, :string, default: nil
 
   def details(assigns) do
-    crawl_run = assigns.snapshot.crawl_run
-
-    timeline =
-      if crawl_run,
-        do: Archiving.steps_for_snapshot(crawl_run.steps, assigns.snapshot.id),
-        else: []
-
-    assigns = assign(assigns, :timeline, timeline)
-
     ~H"""
     <details class="snapshot-details">
       <summary>Details</summary>
@@ -175,8 +166,6 @@ defmodule LinkhutWeb.SnapshotHTML do
           </tr>
         </tbody>
       </table>
-      <h4 :if={@timeline != []} class="step-timeline-header">Timeline</h4>
-      <.step_timeline :if={@timeline != []} steps={@timeline} timezone={@timezone} />
     </details>
     """
   end
@@ -190,8 +179,9 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   def current_snapshots(assigns) do
     ~H"""
-    <section :if={@snapshots != []} class="current-snapshots">
-      <table class="snapshot-table">
+    <section class="current-snapshots">
+      <p :if={@snapshots == []} class="empty-state">This link has no snapshots.</p>
+      <table :if={@snapshots != []} class="snapshot-table">
         <thead>
           <tr>
             <th>Format</th>
@@ -236,51 +226,6 @@ defmodule LinkhutWeb.SnapshotHTML do
   defp accepted_upload_types, do: Enum.join(Archiving.accepted_upload_types(), ",")
 
   # --- Archive-centric components ---
-
-  attr :archive, :map, required: true
-  attr :link, :map, required: true
-  attr :timezone, :string, default: nil
-
-  def crawl_run_group(assigns) do
-    assigns =
-      assigns
-      |> assign(:max_retry_count, max_retry_count(assigns.archive.snapshots))
-      |> assign(:timeline, sort_timeline(assigns.archive.steps || []))
-
-    ~H"""
-    <div class={"crawl-run #{archive_state_class(@archive.state)}"}>
-      <div class="crawl-run-header">
-        <span class="crawl-run-time" title={time_ago(@archive.inserted_at)}>
-          {format_date_absolute(@archive.inserted_at, @timezone)}
-        </span>
-        <div class="crawl-run-header-right">
-          <span :if={@archive.state == :failed && @max_retry_count > 0} class="crawl-run-retries">
-            {ngettext("1 retry", "%{count} retries", @max_retry_count)}
-          </span>
-          <.state_badge state={@archive.state}>{archive_state_label(@archive.state)}</.state_badge>
-        </div>
-      </div>
-      <div :if={@archive.error} class="crawl-run-error">{@archive.error}</div>
-      <.step_timeline :if={@timeline != []} steps={@timeline} timezone={@timezone} />
-    </div>
-    """
-  end
-
-  attr :steps, :list, required: true
-  attr :timezone, :string, default: nil
-
-  def step_timeline(assigns) do
-    ~H"""
-    <ol class="step-timeline">
-      <li :for={step <- @steps} class={"step-timeline-item #{step_class(step)}"} data-source={step["source"]}>
-        <time :if={step["at"]} class="step-time">{format_step_time(step["at"], @timezone)}</time>
-        <span :if={step["source"]} class="step-source">{step["source"]}</span>
-        <span class="step-name">{step_display_name(step)}</span>
-        <span :if={step["detail"]} class="step-detail">{LinkhutWeb.Archiving.StepDescriptions.render(step["detail"])}</span>
-      </li>
-    </ol>
-    """
-  end
 
   attr :serve_url, :string, required: true
   attr :title, :string, default: nil
@@ -348,7 +293,6 @@ defmodule LinkhutWeb.SnapshotHTML do
   """
   def state_label(:pending), do: "Pending"
   def state_label(:crawling), do: "Crawling"
-  def state_label(:retryable), do: "Retrying"
   def state_label(:complete), do: "Complete"
   def state_label(:not_available), do: "Not Available"
   def state_label(:failed), do: "Failed"
@@ -363,18 +307,6 @@ defmodule LinkhutWeb.SnapshotHTML do
   def error_code_label("stale"), do: gettext("timed out")
   def error_code_label("crawler_error"), do: gettext("crawler error")
   def error_code_label(_), do: gettext("unknown error")
-
-  @doc """
-  Returns a CSS class suffix for a snapshot state.
-  """
-  def state_class(:pending), do: "pending"
-  def state_class(:crawling), do: "crawling"
-  def state_class(:retryable), do: "retryable"
-  def state_class(:complete), do: "complete"
-  def state_class(:not_available), do: "not-available"
-  def state_class(:failed), do: "failed"
-  def state_class(:pending_deletion), do: "pending-deletion"
-  def state_class(_), do: ""
 
   @doc """
   Extracts the final URL from a snapshot's archive_metadata.
@@ -421,70 +353,11 @@ defmodule LinkhutWeb.SnapshotHTML do
   # --- Archive helpers ---
 
   @doc """
-  Returns a human-readable label for an archive state.
-  """
-  def archive_state_label(:pending), do: "Queued"
-  def archive_state_label(:processing), do: "Processing"
-  def archive_state_label(:complete), do: "Complete"
-  def archive_state_label(:not_archivable), do: "Not Archivable"
-  def archive_state_label(:failed), do: "Failed"
-  def archive_state_label(:pending_deletion), do: "Pending deletion"
-  def archive_state_label(_), do: "Unknown"
-
-  @doc """
-  Returns a CSS class suffix for an archive state.
-  """
-  def archive_state_class(:pending), do: "pending"
-  def archive_state_class(:processing), do: "processing"
-  def archive_state_class(:complete), do: "complete"
-  def archive_state_class(:not_archivable), do: "not-archivable"
-  def archive_state_class(:failed), do: "failed"
-  def archive_state_class(:pending_deletion), do: "pending-deletion"
-  def archive_state_class(_), do: ""
-
-  @doc """
-  Formats an ISO 8601 timestamp string for step timeline display.
-  Returns a short time representation or the raw string on error.
-  """
-  def format_step_time(iso_string, timezone) when is_binary(iso_string) do
-    case DateTime.from_iso8601(iso_string) do
-      {:ok, dt, _} -> format_time(dt, timezone)
-      _ -> iso_string
-    end
-  end
-
-  @doc """
   Extracts the original URL from a snapshot's archive_metadata.
   Returns nil if not available.
   """
   def original_url(%{archive_metadata: %{"original_url" => url}}) when is_binary(url), do: url
   def original_url(_), do: nil
-
-  @doc """
-  Returns true if any archive is still being processed (active with no complete snapshots).
-  """
-  def any_processing?(archives) do
-    Enum.any?(archives, &(&1.state in [:pending, :processing]))
-  end
-
-  @doc """
-  Returns a CSS class for a pipeline step based on its name.
-  """
-  def step_class(%{"step" => "not_archivable"}), do: "step-failed"
-  def step_class(%{"step" => "not_available"}), do: "step-not-available"
-  def step_class(%{"step" => "failed"}), do: "step-failed"
-  def step_class(%{"step" => "complete"}), do: "step-complete"
-  def step_class(%{"step" => "completed"}), do: "step-complete"
-  def step_class(_), do: ""
-
-  @doc """
-  Returns a human-readable display name for a pipeline step.
-  """
-  def step_display_name(%{"step" => step}) when is_binary(step) do
-    step |> String.replace("_", " ") |> String.capitalize()
-  end
-
-  def step_display_name(_), do: "Unknown"
 
   @doc """
   Extracts the content type from a snapshot's archive_metadata.
@@ -543,33 +416,6 @@ defmodule LinkhutWeb.SnapshotHTML do
 
   defp parse_wayback_timestamp(_), do: :error
 
-  @doc """
-  Returns the maximum retry_count across a list of snapshots.
-  Returns 0 for empty lists or when all counts are nil/0.
-  """
-  def max_retry_count([]), do: 0
-
-  def max_retry_count(snapshots) when is_list(snapshots) do
-    snapshots
-    |> Enum.map(&(Map.get(&1, :retry_count) || 0))
-    |> Enum.max(fn -> 0 end)
-  end
-
   defp snapshot_source(%{source: source}), do: source
   defp snapshot_source(_), do: "unknown"
-
-  defp sort_timeline(steps) do
-    group_starts =
-      steps
-      |> Enum.filter(& &1["snapshot_id"])
-      |> Enum.group_by(& &1["snapshot_id"])
-      |> Map.new(fn {id, group} -> {id, Enum.min_by(group, & &1["at"])["at"]} end)
-
-    Enum.sort_by(steps, fn step ->
-      case step["snapshot_id"] do
-        nil -> {step["at"], 0, step["at"]}
-        id -> {group_starts[id], 1, step["at"]}
-      end
-    end)
-  end
 end

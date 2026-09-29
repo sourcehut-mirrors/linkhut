@@ -4,7 +4,7 @@ defmodule Linkhut.Archiving.Snapshot do
   use Ecto.Schema
   import Ecto.Changeset
   alias Linkhut.Accounts.User
-  alias Linkhut.Archiving.{CrawlRun, SchemaHelpers}
+  alias Linkhut.Archiving.SchemaHelpers
   alias Linkhut.Links.Link
 
   @type t :: Ecto.Schema.t()
@@ -13,7 +13,6 @@ defmodule Linkhut.Archiving.Snapshot do
     field :link_id, :id
     field :user_id, :id
     field :job_id, :id
-    field :crawl_run_id, :id
     field :format, :string
     field :source, :string
 
@@ -21,7 +20,6 @@ defmodule Linkhut.Archiving.Snapshot do
       values: [
         :pending,
         :crawling,
-        :retryable,
         :complete,
         :not_available,
         :failed,
@@ -42,7 +40,6 @@ defmodule Linkhut.Archiving.Snapshot do
 
     belongs_to :link, Link, define_field: false
     belongs_to :user, User, define_field: false
-    belongs_to :crawl_run, CrawlRun, define_field: false
 
     timestamps(type: :utc_datetime)
   end
@@ -66,7 +63,7 @@ defmodule Linkhut.Archiving.Snapshot do
     snapshot
     |> cast(
       attrs,
-      [:link_id, :user_id, :crawl_run_id, :format, :source, :crawler_meta] ++ @updatable_fields
+      [:link_id, :user_id, :format, :source, :crawler_meta] ++ @updatable_fields
     )
     |> validate_required([:link_id, :user_id, :format, :source])
     |> SchemaHelpers.normalize_json_fields([:archive_metadata, :crawler_meta])

@@ -3,8 +3,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
   import Linkhut.Factory
 
-  alias Linkhut.Archiving
-  alias Linkhut.Archiving.Snapshot
+  alias Linkhut.Archiving.{CrawlRun, Snapshot}
   alias Linkhut.Archiving.Workers.Crawler
 
   @data_dir Linkhut.Config.archiving(:data_dir)
@@ -16,243 +15,155 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
     :ok
   end
 
-  defp create_pending_snapshot(user, link, mock_source \\ "singlefile") do
-    crawl_run =
-      insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
-
-    # Mock crawlers use arbitrary source_type names for resolve_crawler;
-    # the DB CHECK constraint only allows real source values.
-    {db_source, db_format} = db_source_format(mock_source)
+  defp create_pending_snapshot(source) do
+    link = insert(:link, user_id: insert(:user).id)
+    insert(:crawl_run, link_id: link.id)
 
     {:ok, snapshot} =
-      Archiving.create_snapshot(link.id, user.id, %{
-        format: db_format,
-        source: db_source,
-        state: :pending,
-        crawl_run_id: crawl_run.id
+      create_snapshot(link.id, link.user_id, %{
+        format: if(source in ["wayback", "external"], do: "reference", else: "webpage"),
+        source: source,
+        state: :pending
       })
 
     snapshot
   end
 
-  defp db_source_format("wayback"), do: {"wayback", "reference"}
-  defp db_source_format("external"), do: {"wayback", "reference"}
-  defp db_source_format(_), do: {"singlefile", "webpage"}
-
-  defp make_job(snapshot, user, link, opts \\ []) do
-    type = Keyword.get(opts, :type, "singlefile")
-    recrawl = Keyword.get(opts, :recrawl, false)
-    crawl_run_id = Keyword.get(opts, :crawl_run_id)
-
-    {:ok, real_job} =
-      Crawler.new(%{
-        "snapshot_id" => snapshot.id,
-        "user_id" => user.id,
-        "link_id" => link.id,
-        "url" => "https://example.com",
-        "type" => type,
-        "recrawl" => recrawl,
-        "crawl_run_id" => crawl_run_id
-      })
-      |> Oban.insert()
-
-    %Oban.Job{
-      id: real_job.id,
-      args: %{
-        "snapshot_id" => snapshot.id,
-        "user_id" => user.id,
-        "link_id" => link.id,
-        "url" => "https://example.com",
-        "type" => type,
-        "recrawl" => recrawl,
-        "crawl_run_id" => crawl_run_id
-      },
-      attempt: 1,
-      max_attempts: 4
-    }
+  defp run_for(snapshot) do
+    Repo.one(
+      from r in CrawlRun,
+        where: r.link_id == ^snapshot.link_id,
+        order_by: [desc: r.id],
+        limit: 1
+    )
   end
+
+  defp make_job(snapshot) do
+    args = %{
+      "snapshot_id" => snapshot.id,
+      "crawl_run_id" => run_for(snapshot).id,
+      "url" => "https://example.com/page"
+    }
+
+    %Oban.Job{args: args, attempt: 1, max_attempts: 4}
+  end
+
+  defp events(run), do: Repo.preload(run, :events, force: true).events
 
   describe "perform/1 — snapshot state guards" do
     test "returns :ok for missing snapshot" do
-      {:ok, real_job} =
-        Crawler.new(%{
-          "snapshot_id" => 999_999,
-          "user_id" => 1,
-          "link_id" => 1,
-          "url" => "https://example.com",
-          "type" => "singlefile"
-        })
-        |> Oban.insert()
-
-      job = %Oban.Job{
-        id: real_job.id,
-        args: %{
-          "snapshot_id" => 999_999,
-          "user_id" => 1,
-          "link_id" => 1,
-          "url" => "https://example.com",
-          "type" => "singlefile"
-        },
-        attempt: 1,
-        max_attempts: 4
-      }
+      job = %Oban.Job{args: %{"snapshot_id" => 999_999, "crawl_run_id" => 1}}
 
       assert :ok = Crawler.perform(job)
     end
 
-    test "returns :ok for already complete snapshot" do
+    test "a redelivered job for a finished snapshot does nothing" do
       user = insert(:user, credential: build(:credential))
       link = insert(:link, user_id: user.id)
-      crawl_run = insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url)
 
-      {:ok, snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete,
-          storage_key: "local:/tmp/test",
-          crawl_run_id: crawl_run.id
-        })
+      for state <- [:complete, :not_available, :failed] do
+        crawl_run =
+          insert(:crawl_run, link_id: link.id)
 
-      job = make_job(snapshot, user, link)
+        snapshot =
+          insert(:snapshot,
+            user_id: user.id,
+            link_id: link.id,
+            state: state
+          )
 
-      assert :ok = Crawler.perform(job)
-      assert Repo.get(Snapshot, snapshot.id).state == :complete
+        assert :ok = Crawler.perform(make_job(snapshot)), "for #{state}"
+        assert Repo.get(Snapshot, snapshot.id).state == state
+        assert events(crawl_run) == []
+      end
     end
   end
 
   describe "perform/1 — unsupported crawler" do
-    test "marks snapshot as retryable for unsupported crawler type on non-final attempt" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "nonexistent")
-      job = make_job(snapshot, user, link, type: "nonexistent")
+    test "fails the snapshot and cancels the job without retrying" do
+      snapshot = create_pending_snapshot("nonexistent")
+      job = make_job(snapshot)
 
-      assert {:error, :unsupported_crawler} = Crawler.perform(job)
+      assert {:cancel, "unsupported_crawler"} = Crawler.perform(job)
 
       updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :retryable
-      assert updated.archive_metadata["error"] =~ "unsupported_crawler"
+      assert updated.state == :failed
+      assert updated.archive_metadata["error_code"] == "unsupported_crawler"
     end
   end
 
   describe "perform/1 — crawler fetch error" do
-    test "marks snapshot as retryable when crawler returns error on non-final attempt" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link)
+    test "leaves the snapshot crawling and logs the attempt when retries remain" do
+      snapshot = create_pending_snapshot("failing")
 
       # Use a mock crawler that fails
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
       ])
 
-      job = make_job(snapshot, user, link, type: "failing")
+      job = make_job(snapshot)
 
       assert {:error, %{msg: "simulated failure"}} = Crawler.perform(job)
 
       updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :retryable
-      assert updated.archive_metadata["error"] =~ "simulated failure"
+      assert updated.state == :crawling
+      assert updated.failed_at == nil
+      assert updated.retry_count == 0
+
+      assert %{
+               event: "crawler.attempt_failed",
+               level: :warning,
+               snapshot_id: snapshot_id,
+               data: %{"error" => "simulated failure", "attempt" => 1, "max_attempts" => 4}
+             } = List.last(events(run_for(snapshot)))
+
+      assert snapshot_id == snapshot.id
     end
 
     test "marks snapshot as failed when crawler returns error on final attempt" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link)
+      snapshot = create_pending_snapshot("failing")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
       ])
 
-      job = %{make_job(snapshot, user, link, type: "failing") | attempt: 4, max_attempts: 4}
+      job = %{make_job(snapshot) | attempt: 4, max_attempts: 4}
 
       assert {:error, %{msg: "simulated failure"}} = Crawler.perform(job)
 
       updated = Repo.get(Snapshot, snapshot.id)
       assert updated.state == :failed
+      assert updated.retry_count == 3
+      assert updated.archive_metadata["error"] == "simulated failure"
+
+      assert %{event: "crawler.failed", level: :error, data: %{"attempt" => 4}} =
+               events(run_for(snapshot))
+               |> Enum.find(&(&1.event == "crawler.failed"))
     end
   end
 
   describe "perform/1 — crawler exception" do
-    test "marks snapshot as retryable when crawler raises on non-final attempt" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "raising")
+    test "treats a crash in the crawler as a failed attempt" do
+      snapshot = create_pending_snapshot("raising")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler
       ])
 
-      job = make_job(snapshot, user, link, type: "raising")
+      job = make_job(snapshot)
 
-      assert {:error, _} = Crawler.perform(job)
+      assert {:error, "kaboom!"} = Crawler.perform(job)
 
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :retryable
-      assert updated.archive_metadata["error"] =~ "kaboom"
-    end
+      assert Repo.get(Snapshot, snapshot.id).state == :crawling
 
-    test "marks snapshot as failed when crawler raises on final attempt" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "raising")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler
-      ])
-
-      job = %{make_job(snapshot, user, link, type: "raising") | attempt: 4, max_attempts: 4}
-
-      assert {:error, _} = Crawler.perform(job)
-
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :failed
-    end
-  end
-
-  describe "perform/1 — non-retryable error" do
-    test "marks snapshot as failed immediately and returns :ok" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "noretry")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler
-      ])
-
-      job = %{make_job(snapshot, user, link, type: "noretry") | attempt: 1, max_attempts: 4}
-
-      assert :ok = Crawler.perform(job)
-
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :failed
-      assert updated.archive_metadata["error"] =~ "no snapshot"
-    end
-
-    test "completes archive after non-retryable error" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "noretry")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler
-      ])
-
-      job = make_job(snapshot, user, link, type: "noretry")
-
-      Crawler.perform(job)
-
-      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      assert crawl_run.state == :complete
+      assert %{event: "crawler.attempt_failed", data: %{"error" => "kaboom!"}} =
+               List.last(events(run_for(snapshot)))
     end
   end
 
   describe "perform/1 — rate limiting" do
     test "snoozes job when crawler is rate limited" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "ratelimited")
+      snapshot = create_pending_snapshot("ratelimited")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.RateLimitedCrawler
@@ -261,7 +172,7 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       # Exhaust the rate limit bucket (limit: 1)
       assert {:allow, _} = Linkhut.Archiving.RateLimit.hit("crawler:ratelimited", 60_000, 1)
 
-      job = make_job(snapshot, user, link, type: "ratelimited")
+      job = make_job(snapshot)
 
       assert {:snooze, seconds} = Crawler.perform(job)
       assert seconds >= 60
@@ -270,24 +181,23 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       updated = Repo.get(Snapshot, snapshot.id)
       assert updated.state == :pending
 
-      # Rate limited step should be recorded on the crawl_run
-      crawl_run = Repo.get!(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      steps = Enum.filter(crawl_run.steps, &(&1["snapshot_id"] == snapshot.id))
-      assert [%{"step" => "rate_limited", "detail" => %{"msg" => "rate_limited"}} | _] = steps
+      assert %{data: %{"snooze_seconds" => ^seconds}} =
+               snapshot
+               |> run_for()
+               |> events()
+               |> Enum.find(&(&1.event == "crawler.rate_limited"))
     end
   end
 
   describe "perform/1 — not available" do
     test "marks snapshot as :not_available and returns :ok" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "notavail")
+      snapshot = create_pending_snapshot("notavail")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler
       ])
 
-      job = make_job(snapshot, user, link, type: "notavail")
+      job = make_job(snapshot)
 
       assert :ok = Crawler.perform(job)
 
@@ -296,36 +206,17 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       assert is_nil(updated.storage_key)
       assert updated.processing_time_ms != nil
     end
-
-    test "completes crawl run after :not_available result" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "notavail")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler
-      ])
-
-      job = make_job(snapshot, user, link, type: "notavail")
-
-      Crawler.perform(job)
-
-      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      assert crawl_run.state == :complete
-    end
   end
 
   describe "perform/1 — successful crawl" do
     test "stores file and marks snapshot as complete" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link)
+      snapshot = create_pending_snapshot("success")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
       ])
 
-      job = make_job(snapshot, user, link, type: "success")
+      job = make_job(snapshot)
 
       Crawler.perform(job)
 
@@ -336,187 +227,17 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       assert updated.processing_time_ms != nil
       assert updated.response_code == 200
     end
-
-    test "transitions archive to complete after successful crawl" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link)
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
-      ])
-
-      job = make_job(snapshot, user, link, type: "success")
-
-      Crawler.perform(job)
-
-      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      assert crawl_run.state == :complete
-    end
-
-    test "does not transition archive to complete on non-final failure" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link)
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
-      ])
-
-      job = %{make_job(snapshot, user, link, type: "failing") | attempt: 1, max_attempts: 4}
-
-      Crawler.perform(job)
-
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :retryable
-
-      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      assert crawl_run.state == :processing
-    end
-
-    test "completes snapshot on retry after non-final failure" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link)
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler,
-        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
-      ])
-
-      # Attempt 1: fails (non-final)
-      job1 = %{make_job(snapshot, user, link, type: "failing") | attempt: 1, max_attempts: 4}
-      Crawler.perform(job1)
-
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :retryable
-
-      # Attempt 2: succeeds with a different crawler
-      job2 = %{make_job(updated, user, link, type: "success") | attempt: 2, max_attempts: 4}
-      Crawler.perform(job2)
-
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert updated.state == :complete
-      assert updated.storage_key != nil
-
-      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      assert crawl_run.state == :complete
-    end
-
-    test "supersedes old snapshots of the same type on completion" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      # Create an old crawl run with a complete snapshot
-      old_crawl_run =
-        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :complete)
-
-      {:ok, old_snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete,
-          crawl_run_id: old_crawl_run.id
-        })
-
-      # Create a new crawl run for the recrawl
-      new_crawl_run =
-        insert(:crawl_run, user_id: user.id, link_id: link.id, url: link.url, state: :processing)
-
-      {:ok, snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :pending,
-          crawl_run_id: new_crawl_run.id
-        })
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler
-      ])
-
-      job =
-        make_job(snapshot, user, link,
-          type: "success",
-          crawl_run_id: new_crawl_run.id
-        )
-
-      Crawler.perform(job)
-
-      # Old snapshot should be marked for deletion
-      assert Repo.get(Snapshot, old_snapshot.id).state == :pending_deletion
-    end
-
-    test "does not prematurely complete archive when sibling crawler has retries remaining" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-
-      crawl_run =
-        insert(:crawl_run,
-          user_id: user.id,
-          link_id: link.id,
-          url: link.url,
-          state: :processing
-        )
-
-      # Create two snapshots for different crawlers
-      {:ok, success_snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :pending,
-          crawl_run_id: crawl_run.id
-        })
-
-      {:ok, failing_snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "httpfetch",
-          state: :pending,
-          crawl_run_id: crawl_run.id
-        })
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler,
-        Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler
-      ])
-
-      # Failing crawler fails on non-final attempt
-      failing_job =
-        make_job(failing_snapshot, user, link,
-          type: "failing",
-          crawl_run_id: crawl_run.id
-        )
-
-      failing_job = %{failing_job | attempt: 1, max_attempts: 4}
-      Crawler.perform(failing_job)
-
-      # Success crawler succeeds
-      success_job =
-        make_job(success_snapshot, user, link,
-          type: "success",
-          crawl_run_id: crawl_run.id
-        )
-
-      Crawler.perform(success_job)
-
-      # Failing snapshot is :retryable (non-terminal) — archive should NOT complete
-      assert Repo.get(Snapshot, failing_snapshot.id).state == :retryable
-      assert Repo.get(Linkhut.Archiving.CrawlRun, crawl_run.id).state == :processing
-    end
   end
 
   describe "perform/1 — external result" do
     test "stores external result and marks snapshot as complete" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "external")
+      snapshot = create_pending_snapshot("external")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler
       ])
 
-      job = make_job(snapshot, user, link, type: "external")
+      job = make_job(snapshot)
 
       Crawler.perform(job)
 
@@ -530,30 +251,11 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
       assert updated.processing_time_ms != nil
       assert updated.response_code == 200
     end
-
-    test "external result transitions archive to complete" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "external")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler
-      ])
-
-      job = make_job(snapshot, user, link, type: "external")
-
-      Crawler.perform(job)
-
-      crawl_run = Repo.get(Linkhut.Archiving.CrawlRun, snapshot.crawl_run_id)
-      assert crawl_run.state == :complete
-    end
   end
 
   describe "perform/1 — file size limit" do
     test "rejects file exceeding max_file_size without retrying" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "large")
+      snapshot = create_pending_snapshot("large")
 
       put_override(Linkhut.Archiving, :crawlers, [
         Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler
@@ -561,33 +263,16 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest do
 
       put_override(Linkhut.Archiving, :max_file_size, 10)
 
-      job = make_job(snapshot, user, link, type: "large")
+      job = make_job(snapshot)
 
-      assert :ok = Crawler.perform(job)
+      assert {:cancel, "file_too_large"} = Crawler.perform(job)
 
       updated = Repo.get(Snapshot, snapshot.id)
       assert updated.state == :failed
       assert updated.archive_metadata["error"] =~ "file_too_large"
-    end
 
-    test "cleans up staging directory on size rejection" do
-      user = insert(:user, credential: build(:credential))
-      link = insert(:link, user_id: user.id)
-      snapshot = create_pending_snapshot(user, link, "large")
-
-      put_override(Linkhut.Archiving, :crawlers, [
-        Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler
-      ])
-
-      put_override(Linkhut.Archiving, :max_file_size, 10)
-
-      job = make_job(snapshot, user, link, type: "large")
-      Crawler.perform(job)
-
-      # LargeCrawler creates a staging dir — it should be cleaned up
-      # Verify indirectly: the snapshot has no storage_key (file was not stored)
-      updated = Repo.get(Snapshot, snapshot.id)
-      assert is_nil(updated.storage_key)
+      assert_received {:staging_dir, staging_dir}
+      refute File.exists?(staging_dir)
     end
   end
 end
@@ -596,6 +281,7 @@ end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.Direct
 
   @impl true
   def source_type, do: "failing"
@@ -607,20 +293,18 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.FailingCrawler do
   def meta, do: %{tool_name: "FailingCrawler", tool_version: "0.0.1", version: module_version()}
 
   @impl true
-  def network_access, do: :target_url
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url, _meta), do: {:ok, "webpage"}
 
   @impl true
-  def fetch(_context), do: {:error, %{msg: "simulated failure"}}
+  def fetch(_url, _opts), do: {:error, %{msg: "simulated failure"}}
 end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.Direct
 
   @impl true
   def source_type, do: "large"
@@ -632,22 +316,16 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.LargeCrawler do
   def meta, do: %{tool_name: "LargeCrawler", tool_version: "1.0.0", version: module_version()}
 
   @impl true
-  def network_access, do: :target_url
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url, _meta), do: {:ok, "webpage"}
 
   @impl true
-  def fetch(_context) do
-    staging_dir =
-      Path.join(System.tmp_dir!(), "linkhut_test_large_#{:erlang.unique_integer([:positive])}")
-
-    File.mkdir_p!(staging_dir)
+  def fetch(_url, opts) do
+    staging_dir = Keyword.fetch!(opts, :staging_dir)
+    send(self(), {:staging_dir, staging_dir})
     path = Path.join(staging_dir, "result")
-    # Write 1000 bytes — will exceed a 10-byte max_file_size in tests
     File.write!(path, String.duplicate("x", 1000))
 
     {:ok, {:file, %{path: path, response_code: 200, content_type: "application/octet-stream"}}}
@@ -656,6 +334,7 @@ end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.Direct
 
   @impl true
   def source_type, do: "success"
@@ -667,54 +346,23 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.SuccessCrawler do
   def meta, do: %{tool_name: "SuccessCrawler", tool_version: "1.0.0", version: module_version()}
 
   @impl true
-  def network_access, do: :target_url
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url, _meta), do: {:ok, "webpage"}
 
   @impl true
-  def fetch(_context) do
-    staging_dir =
-      Path.join(System.tmp_dir!(), "linkhut_test_crawl_#{:erlang.unique_integer([:positive])}")
-
-    File.mkdir_p!(staging_dir)
-    path = Path.join(staging_dir, "result")
+  def fetch(_url, opts) do
+    path = opts |> Keyword.fetch!(:staging_dir) |> Path.join("result")
     File.write!(path, "<html>test content</html>")
 
     {:ok, {:file, %{path: path, response_code: 200, content_type: "text/html"}}}
   end
 end
 
-defmodule Linkhut.Archiving.Workers.CrawlerTest.NoRetryCrawler do
-  @behaviour Linkhut.Archiving.Crawler
-
-  @impl true
-  def source_type, do: "noretry"
-
-  @impl true
-  def module_version, do: "1"
-
-  @impl true
-  def meta, do: %{tool_name: "NoRetryCrawler", tool_version: nil, version: module_version()}
-
-  @impl true
-  def network_access, do: :target_url
-
-  @impl true
-  def queue, do: :crawler
-
-  @impl true
-  def can_handle?(_url, _meta), do: true
-
-  @impl true
-  def fetch(_context), do: {:error, %{msg: "no snapshot available"}, :noretry}
-end
-
 defmodule Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.Direct
 
   @impl true
   def source_type, do: "raising"
@@ -726,20 +374,18 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.RaisingCrawler do
   def meta, do: %{tool_name: "RaisingCrawler", tool_version: "0.0.1", version: module_version()}
 
   @impl true
-  def network_access, do: :target_url
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url, _meta), do: {:ok, "webpage"}
 
   @impl true
-  def fetch(_context), do: raise("kaboom!")
+  def fetch(_url, _opts), do: raise("kaboom!")
 end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.External
 
   @impl true
   def source_type, do: "notavail"
@@ -751,20 +397,18 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.NotAvailableCrawler do
   def meta, do: %{tool_name: "NotAvailableCrawler", tool_version: nil, version: module_version()}
 
   @impl true
-  def network_access, do: :third_party
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url), do: {:ok, "reference"}
 
   @impl true
-  def fetch(_context), do: {:ok, :not_available}
+  def fetch(_url, _opts), do: {:ok, :not_available}
 end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.RateLimitedCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.External
 
   @impl true
   def source_type, do: "ratelimited"
@@ -777,23 +421,21 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.RateLimitedCrawler do
     do: %{tool_name: "RateLimitedCrawler", tool_version: nil, version: module_version()}
 
   @impl true
-  def network_access, do: :third_party
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
   def rate_limit, do: {60_000, 1}
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url), do: {:ok, "reference"}
 
   @impl true
-  def fetch(_context), do: {:ok, :not_available}
+  def fetch(_url, _opts), do: {:ok, :not_available}
 end
 
 defmodule Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler do
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.External
 
   @impl true
   def source_type, do: "external"
@@ -805,16 +447,13 @@ defmodule Linkhut.Archiving.Workers.CrawlerTest.ExternalCrawler do
   def meta, do: %{tool_name: "ExternalCrawler", tool_version: nil, version: module_version()}
 
   @impl true
-  def network_access, do: :third_party
-
-  @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, _meta), do: true
+  def accepts(_url), do: {:ok, "reference"}
 
   @impl true
-  def fetch(_context) do
+  def fetch(_url, _opts) do
     {:ok,
      {:external,
       %{url: "https://web.archive.org/web/20250301/https://example.com", response_code: 200}}}

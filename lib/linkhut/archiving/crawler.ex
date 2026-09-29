@@ -1,111 +1,102 @@
 defmodule Linkhut.Archiving.Crawler do
   @moduledoc """
-  Defines the behaviour for a crawler.
+  Defines the general behaviour for a crawler.
+
+  Actual crawlers must also implement one of the `Direct` or `External`
+  behaviours.
   """
 
-  defmodule Context do
-    @moduledoc "Structured context passed to crawler `fetch/1` callbacks."
-
-    @enforce_keys [:user_id, :link_id, :url, :snapshot_id]
-    defstruct [
-      :user_id,
-      :link_id,
-      :url,
-      :snapshot_id,
-      :preflight_meta,
-      :link_inserted_at,
-      cookies: []
-    ]
-
-    @type t :: %__MODULE__{
-            user_id: integer(),
-            link_id: integer(),
-            url: String.t(),
-            snapshot_id: integer(),
-            preflight_meta: Linkhut.Archiving.PreflightMeta.t() | nil,
-            link_inserted_at: DateTime.t() | nil,
-            cookies: list()
-          }
-  end
-
-  @typedoc """
-  Metadata returned by the preflight step. Contents vary by scheme.
-
-  Common optional keys:
-    - `:scheme` — the URL scheme (e.g. "http", "gemini", "ftp")
-    - `:content_type` — MIME type, if detectable
-    - `:content_length` — size in bytes, if known
-    - `:final_url` — resolved URL after redirects
-
-  HTTP/HTTPS also includes:
-    - `:status` — HTTP status code
-  """
-  @type preflight_meta :: Linkhut.Archiving.PreflightMeta.t() | nil
-
-  @typedoc """
-  Static identity metadata for the crawler, stored on each snapshot.
-
-  Keys:
-    - `:tool_name` -- human-readable tool name (e.g. "SingleFile", "Req")
-    - `:tool_version` -- backend tool version string, or nil if unknown
-    - `:version` -- crawler module version (from `module_version/0`)
-  """
+  @typedoc "Identifies the crawler and its tool and version."
   @type crawler_meta :: %{
           tool_name: String.t(),
           tool_version: String.t() | nil,
           version: String.t()
         }
 
-  @typedoc """
-  Indicates what network access pattern a crawler uses.
+  @typedoc "Archive format a crawler produces, e.g. `webpage` or `reference`."
+  @type format :: Linkhut.Archiving.MIME.archive_format()
 
-  - `:target_url` — crawler connects to the user-supplied URL (SSRF checks required)
-  - `:third_party` — crawler only talks to a fixed external service (safe after SSRF failure)
+  @typedoc """
+  Why a crawler won't fetch the provided URL.
   """
-  @type network_access :: :target_url | :third_party
+  @type reject_reason :: %{required(:reason) => atom(), optional(atom()) => term()}
+
+  @type acceptance :: {:ok, format()} | {:reject, reject_reason()}
 
   @callback source_type() :: String.t()
   @callback meta() :: crawler_meta()
+  @callback queue() :: atom()
 
-  @doc """
-  Returns the crawler module's own version string. Bump this when the
-  module's logic changes in a way that warrants re-crawling existing
-  bookmarks (e.g. supporting a new content type, changing fetch strategy).
-
-  This is separate from the backend tool version returned by `meta/0`.
-  """
+  @doc "The crawler module's version."
   @callback module_version() :: String.t()
 
-  @callback can_handle?(url :: String.t(), preflight_meta()) :: boolean()
+  @doc "The URL schemes and hosts the crawler handles."
+  @callback applies_to() :: [
+              schemes: [String.t()],
+              hosts: :any | [String.t()],
+              except_hosts: [String.t()]
+            ]
 
-  @callback fetch(Context.t()) ::
+  @optional_callbacks [applies_to: 0]
+
+  @doc """
+  Fetches `url`. The options:
+
+    - `:staging_dir`: directory where the crawler will temporarily download
+      resources to
+    - `:format`: the archive format the crawler accepted the URL with
+    - `:bookmarked_at`: timestamp of when the link was bookmarked
+    - `:log`: the archiving log handle to use for logging events
+  """
+  @callback fetch(url :: String.t(), opts :: keyword()) ::
               {:ok, {:file, map()}}
               | {:ok, {:external, map()}}
               | {:ok, :not_available}
               | {:error, map()}
               | {:error, map(), :noretry}
 
-  @callback network_access() :: network_access()
-  @callback queue() :: atom()
+  defmodule External do
+    @moduledoc """
+    Crawler that relies on an external service to provide the snapshot for the
+    bookmarked URL.
+    """
 
-  @doc """
-  Optional. Returns a rate limit tuple `{scale_ms, limit}` for this crawler.
+    @callback accepts(url :: String.t()) :: Linkhut.Archiving.Crawler.acceptance()
 
-  When implemented, the crawler worker checks `Hammer.check_rate/3` before
-  each fetch and returns `{:snooze, seconds}` to Oban when the limit is
-  exceeded, deferring the job without consuming an attempt.
-  """
-  @callback rate_limit() :: {scale_ms :: pos_integer(), limit :: pos_integer()}
+    @doc "Rate limit for the external service."
+    @callback rate_limit() :: {scale_ms :: pos_integer(), limit :: pos_integer()}
 
-  @optional_callbacks [rate_limit: 0]
+    @optional_callbacks [rate_limit: 0]
+  end
+
+  defmodule Direct do
+    @moduledoc "Crawler that fetches the bookmarked URL to generate a snapshot."
+
+    @callback accepts(url :: String.t(), Linkhut.Archiving.PreflightMeta.t()) ::
+                Linkhut.Archiving.Crawler.acceptance()
+  end
+
+  @default_applies_to [schemes: ["http", "https"], hosts: :any, except_hosts: []]
+
+  @doc "Returns which URLs the crawler applies to."
+  @spec applies_to(module()) :: keyword()
+  def applies_to(module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :applies_to, 0),
+      do: Keyword.merge(@default_applies_to, module.applies_to()),
+      else: @default_applies_to
+  end
+
+  @doc "Returns true if the given crawler relies on an external service."
+  @spec external?(module()) :: boolean()
+  def external?(module) do
+    External in (module.module_info(:attributes)
+                 |> Keyword.get_values(:behaviour)
+                 |> List.flatten())
+  end
 
   @base_user_agent "LinkhutArchiver/1.0 (web page snapshot for personal archiving)"
 
-  @doc """
-  Returns the User-Agent string for crawler HTTP requests.
-
-  Appends the configured `user_agent_suffix` (if any) inside the comment parentheses.
-  """
+  @doc "Returns the User-Agent for crawler requests."
   def user_agent do
     case Linkhut.Config.archiving(:user_agent_suffix) do
       suffix when is_binary(suffix) and suffix != "" ->

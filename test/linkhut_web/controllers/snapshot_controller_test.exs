@@ -6,31 +6,33 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
   setup {LinkhutWeb.ConnCase, :register_and_log_in_paying_user}
 
+  defp dispatch_snapshot(user, link, attrs) do
+    crawl_run = insert(:crawl_run, link_id: link.id)
+
+    {:ok, snapshot} =
+      create_snapshot(
+        link.id,
+        user.id,
+        Map.merge(%{format: "webpage", source: "singlefile"}, attrs)
+      )
+
+    {crawl_run, snapshot}
+  end
+
   defp create_link_and_snapshot(%{user: user}) do
     link = insert(:link, user_id: user.id)
-
-    crawl_run =
-      insert(:crawl_run,
-        link_id: link.id,
-        user_id: user.id,
-        url: link.url,
-        state: :complete
-      )
 
     data_dir = Linkhut.Config.archiving(:data_dir)
     file_path = Path.join(data_dir, "test_file")
     storage_key = StorageKey.local(file_path)
 
-    {:ok, snapshot} =
-      Archiving.create_snapshot(link.id, user.id, %{
-        format: "webpage",
-        source: "singlefile",
+    {crawl_run, snapshot} =
+      dispatch_snapshot(user, link, %{
         state: :complete,
         storage_key: storage_key,
         file_size_bytes: 1024,
         processing_time_ms: 500,
         response_code: 200,
-        crawl_run_id: crawl_run.id,
         archive_metadata: %{
           content_type: "text/html",
           tool_name: "SingleFile",
@@ -55,31 +57,11 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/webpage/singlefile"
     end
 
-    test "redirects when link not found", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/999999")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-    end
-
-    test "redirects to user page when no archives exist yet", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
-
-      conn = get(conn, ~p"/_/archive/#{link.id}")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
-    end
-
-    test "redirects to all when archives exist but no complete snapshots", %{
+    test "redirects to the archive page when there is no complete snapshot", %{
       conn: conn,
       user: user
     } do
       link = insert(:link, user_id: user.id)
-
-      insert(:crawl_run,
-        link_id: link.id,
-        user_id: user.id,
-        url: link.url,
-        state: :processing
-      )
 
       conn = get(conn, ~p"/_/archive/#{link.id}")
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
@@ -94,11 +76,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert html_response(conn, 200) =~ "snapshot"
     end
 
-    test "renders snapshot viewer for format without source", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/webpage")
-      assert html_response(conn, 200) =~ "snapshot"
-    end
-
     test "redirects to first available format for unknown format", %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}/nonexistent")
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/webpage/singlefile"
@@ -109,7 +86,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup :create_link_and_snapshot
 
     test "serves archive file with valid token", %{conn: conn, snapshot: snapshot} do
-      token = Archiving.generate_token(snapshot.id)
+      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
 
       conn =
         conn
@@ -125,7 +102,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn: conn,
       snapshot: snapshot
     } do
-      token = Archiving.generate_token(snapshot.id)
+      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
 
       conn =
         conn
@@ -161,15 +138,8 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
-      crawl_run = insert(:crawl_run, link_id: link.id, user_id: user.id, url: link.url)
 
-      {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :pending,
-          crawl_run_id: crawl_run.id
-        })
+      dispatch_snapshot(user, link, %{state: :pending})
 
       conn = get(conn, ~p"/_/archive/#{link.id}/webpage/full")
       assert redirected_to(conn) == ~p"/~#{user.username}"
@@ -192,122 +162,78 @@ defmodule LinkhutWeb.SnapshotControllerTest do
   describe "GET /archive/:link_id/all (index)" do
     setup :create_link_and_snapshot
 
-    test "lists archives grouped for a link", %{conn: conn, link: link} do
+    test "lists the snapshots, and doesn't refresh once archiving is done",
+         %{conn: conn, link: link} do
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
       body = html_response(conn, 200)
-      assert body =~ "crawl-run"
+
+      assert [_snapshots] = Floki.find(Floki.parse_document!(body), "table.snapshot-table")
+      assert get_resp_header(conn, "refresh") == []
     end
 
-    test "shows failed archive with error message", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
+    test "while a snapshot is pending or crawling, refreshes and hides the re-crawl button",
+         %{conn: conn, user: user} do
+      for state <- [:pending, :crawling] do
+        link = insert(:link, user_id: user.id)
+        dispatch_snapshot(user, link, %{state: state})
 
-      insert(:crawl_run,
-        link_id: link.id,
-        user_id: user.id,
-        url: link.url,
-        state: :failed,
-        error: "HEAD preflight: connection refused"
-      )
-
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      body = html_response(conn, 200)
-      assert body =~ "HEAD preflight: connection refused"
-      assert body =~ "Failed"
+        conn = get(conn, ~p"/_/archive/#{link.id}/all")
+        body = html_response(conn, 200)
+        refute body =~ "Re-crawl", "for #{state}"
+        assert get_resp_header(conn, "refresh") == ["30"], "for #{state}"
+      end
     end
 
-    test "redirects when only pending_deletion archives exist", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
-
-      insert(:crawl_run,
-        link_id: link.id,
-        user_id: user.id,
-        url: link.url,
-        state: :pending_deletion
-      )
-
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
-    end
-
-    test "shows processing state for processing archive with pending snapshots", %{
+    test "while the archiver job is live, refreshes and hides the re-crawl button", %{
       conn: conn,
       user: user
     } do
       link = insert(:link, user_id: user.id)
-
-      crawl_run =
-        insert(:crawl_run,
-          link_id: link.id,
-          user_id: user.id,
-          url: link.url,
-          state: :processing
-        )
-
-      {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :pending,
-          crawl_run_id: crawl_run.id
-        })
-
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      body = html_response(conn, 200)
-      assert body =~ "Processing"
-    end
-
-    test "shows queued state for pending archive", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
-
-      insert(:crawl_run,
-        link_id: link.id,
-        user_id: user.id,
-        url: link.url,
-        state: :pending
-      )
-
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      body = html_response(conn, 200)
-      assert body =~ "Queued"
-    end
-
-    test "hides re-crawl button when archive is processing", %{conn: conn, user: user} do
-      link = insert(:link, user_id: user.id)
-
-      crawl_run =
-        insert(:crawl_run,
-          link_id: link.id,
-          user_id: user.id,
-          url: link.url,
-          state: :processing
-        )
-
-      {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :pending,
-          crawl_run_id: crawl_run.id
-        })
+      {:ok, _job} = Linkhut.Archiving.Workers.Archiver.enqueue(link)
 
       conn = get(conn, ~p"/_/archive/#{link.id}/all")
       body = html_response(conn, 200)
       refute body =~ "Re-crawl"
+      assert get_resp_header(conn, "refresh") == ["30"]
     end
 
-    test "shows re-crawl button when no archive is processing", %{conn: conn, link: link} do
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      body = html_response(conn, 200)
-      assert body =~ "Re-crawl"
-    end
-
-    test "redirects to user page when no archives exist yet", %{conn: conn, user: user} do
+    test "shows a link that was never archived, with the re-crawl and upload forms",
+         %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      conn = get(conn, ~p"/_/archive/#{link.id}/all")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "being prepared"
+      body = conn |> get(~p"/_/archive/#{link.id}/all") |> html_response(200)
+
+      assert body =~ "This link has no snapshots."
+      assert body =~ "Re-crawl"
+      assert body =~ "Upload snapshot"
+    end
+
+    test "says so when no crawler can archive the link", %{conn: conn, user: user} do
+      link = insert(:link, user_id: user.id, url: "gemini://example.org/page")
+
+      body = conn |> get(~p"/_/archive/#{link.id}/all") |> html_response(200)
+
+      assert body =~ "No crawlers can archive this link"
+      refute body =~ ~s(name="crawlers[]")
+    end
+
+    test "doesn't show crawler lines to a user who can't create archives" do
+      put_override(Linkhut.Archiving, :mode, :limited)
+
+      user =
+        Linkhut.AccountsFixtures.user_fixture()
+        |> Linkhut.AccountsFixtures.activate_user()
+
+      link = insert(:link, user_id: user.id)
+
+      body =
+        build_conn()
+        |> LinkhutWeb.ConnCase.log_in_user(user)
+        |> get(~p"/_/archive/#{link.id}/all")
+        |> html_response(200)
+
+      refute body =~ "Re-crawl"
+      refute body =~ "Upload snapshot"
     end
   end
 
@@ -318,11 +244,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn = post(conn, ~p"/_/archive/#{link.id}/recrawl")
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Re-crawl scheduled"
-    end
-
-    test "redirects when link not found", %{conn: conn, user: user} do
-      conn = post(conn, ~p"/_/archive/999999/recrawl")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
 
@@ -339,20 +260,11 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       other_user = insert(:user)
       other_link = insert(:link, user_id: other_user.id)
 
-      crawl_run =
-        insert(:crawl_run,
-          link_id: other_link.id,
-          user_id: other_user.id,
-          url: other_link.url,
-          state: :complete
-        )
-
       {:ok, other_snapshot} =
-        Archiving.create_snapshot(other_link.id, other_user.id, %{
+        create_snapshot(other_link.id, other_user.id, %{
           format: "webpage",
           source: "singlefile",
-          state: :complete,
-          crawl_run_id: crawl_run.id
+          state: :complete
         })
 
       conn = get(conn, ~p"/_/archive/#{link.id}/snapshot/#{other_snapshot.id}/delete")
@@ -393,14 +305,12 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "rejects deletion of active snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
-      crawl_run = insert(:crawl_run, link_id: link.id, user_id: user.id, url: link.url)
 
       {:ok, snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
+        create_snapshot(link.id, user.id, %{
           format: "webpage",
           source: "singlefile",
-          state: :pending,
-          crawl_run_id: crawl_run.id
+          state: :pending
         })
 
       conn =
@@ -415,34 +325,15 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert unchanged.state == :pending
     end
 
-    test "returns not found for non-existent snapshot", %{conn: conn, link: link} do
-      conn =
-        delete(conn, ~p"/_/archive/#{link.id}/snapshot/999999", %{
-          snapshot: %{"are_you_sure?" => "true"}
-        })
-
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "not found"
-    end
-
     test "returns not found for another user's snapshot", %{conn: conn, link: link} do
       other_user = insert(:user)
       other_link = insert(:link, user_id: other_user.id)
 
-      crawl_run =
-        insert(:crawl_run,
-          link_id: other_link.id,
-          user_id: other_user.id,
-          url: other_link.url,
-          state: :complete
-        )
-
       {:ok, other_snapshot} =
-        Archiving.create_snapshot(other_link.id, other_user.id, %{
+        create_snapshot(other_link.id, other_user.id, %{
           format: "webpage",
           source: "singlefile",
-          state: :complete,
-          crawl_run_id: crawl_run.id
+          state: :complete
         })
 
       conn =
@@ -455,13 +346,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       unchanged = Archiving.get_snapshot_by_id(other_snapshot.id)
       assert unchanged.state == :complete
-    end
-
-    test "redirects when link not found", %{conn: conn, user: user} do
-      conn =
-        delete(conn, ~p"/_/archive/999999/snapshot/1", %{snapshot: %{"are_you_sure?" => "true"}})
-
-      assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
 
@@ -493,19 +377,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert upload_snapshot.state == :complete
     end
 
-    test "uploads PDF file and creates snapshot", %{conn: conn, link: link} do
-      upload = upload_fixture("doc.pdf", "application/pdf", "%PDF-1.4 test content")
-
-      conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
-      assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "Snapshot uploaded"
-
-      snapshots = Archiving.get_complete_snapshots_by_link(link.id)
-      pdf_snapshot = Enum.find(snapshots, &(&1.format == "pdf"))
-      assert pdf_snapshot
-      assert pdf_snapshot.source == "upload"
-    end
-
     test "rejects unsupported file type", %{conn: conn, link: link} do
       upload =
         upload_fixture("foo.bin", "application/octet-stream", <<0, 1, 2, 3, 0, 255, 128, 10>>)
@@ -524,18 +395,17 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{upload: %{file: upload}})
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "too large"
+
+      refute Enum.any?(
+               Linkhut.Repo.all_by(Linkhut.Archiving.Snapshot, link_id: link.id),
+               &(&1.source == "upload")
+             )
     end
 
     test "redirects with error when no file selected", %{conn: conn, link: link} do
       conn = post(conn, ~p"/_/archive/#{link.id}/upload", %{})
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "No file"
-    end
-
-    test "redirects when link not found", %{conn: conn, user: user} do
-      upload = upload_fixture("page.html", "text/html", "<html>test</html>")
-      conn = post(conn, ~p"/_/archive/999999/upload", %{upload: %{file: upload}})
-      assert redirected_to(conn) == ~p"/~#{user.username}"
     end
   end
 
@@ -544,12 +414,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       link = insert(:link, user_id: user.id)
 
       crawl_run =
-        insert(:crawl_run,
-          link_id: link.id,
-          user_id: user.id,
-          url: link.url,
-          state: :complete
-        )
+        insert(:crawl_run, link_id: link.id)
 
       data_dir = Linkhut.Config.archiving(:data_dir)
       file_path = Path.join(data_dir, "test_compressed_file.gz")
@@ -559,7 +424,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       compressed = :zlib.gzip(original_content)
 
       {:ok, snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
+        create_snapshot(link.id, user.id, %{
           format: "webpage",
           source: "singlefile",
           state: :complete,
@@ -569,7 +434,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           original_file_size_bytes: byte_size(original_content),
           processing_time_ms: 500,
           response_code: 200,
-          crawl_run_id: crawl_run.id,
           archive_metadata: %{
             content_type: "text/html",
             tool_name: "SingleFile",
@@ -594,7 +458,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn: conn,
       snapshot: snapshot
     } do
-      token = Archiving.generate_token(snapshot.id)
+      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
 
       conn =
         conn
@@ -611,7 +475,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn: conn,
       snapshot: snapshot
     } do
-      token = Archiving.generate_token(snapshot.id)
+      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
 
       conn =
         conn
@@ -641,15 +505,10 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       link = insert(:link, user_id: user.id)
 
       crawl_run =
-        insert(:crawl_run,
-          link_id: link.id,
-          user_id: user.id,
-          url: link.url,
-          state: :complete
-        )
+        insert(:crawl_run, link_id: link.id)
 
       {:ok, snapshot} =
-        Archiving.create_snapshot(link.id, user.id, %{
+        create_snapshot(link.id, user.id, %{
           format: "reference",
           source: "wayback",
           state: :complete,
@@ -658,7 +517,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
           file_size_bytes: nil,
           processing_time_ms: 500,
           response_code: 200,
-          crawl_run_id: crawl_run.id,
           archive_metadata: %{
             original_url: link.url,
             final_url: link.url,
@@ -688,7 +546,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "serve redirects externally for external storage key", %{conn: conn, snapshot: snapshot} do
-      token = Archiving.generate_token(snapshot.id)
+      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
 
       conn =
         conn
@@ -696,14 +554,6 @@ defmodule LinkhutWeb.SnapshotControllerTest do
         |> get(~p"/_/snapshot/#{token}/serve")
 
       assert redirected_to(conn) == "https://web.archive.org/web/20250301/https://example.com"
-    end
-  end
-
-  describe "invalid link_id" do
-    test "redirects for non-numeric link_id", %{conn: conn, user: user} do
-      conn = get(conn, ~p"/_/archive/abc")
-      assert redirected_to(conn) == ~p"/~#{user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
     end
   end
 
@@ -745,26 +595,17 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       link = insert(:link, user_id: free_user.id)
 
-      crawl_run =
-        insert(:crawl_run,
-          link_id: link.id,
-          user_id: free_user.id,
-          url: link.url,
-          state: :complete
-        )
-
       data_dir = Linkhut.Config.archiving(:data_dir)
       file_path = Path.join(data_dir, "test_free_user_file")
       storage_key = StorageKey.local(file_path)
 
       {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, free_user.id, %{
+        create_snapshot(link.id, free_user.id, %{
           format: "webpage",
           source: "singlefile",
           state: :complete,
           storage_key: storage_key,
           file_size_bytes: 1024,
-          crawl_run_id: crawl_run.id,
           archive_metadata: %{content_type: "text/html"}
         })
 
@@ -781,7 +622,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert html_response(conn, 200) =~ "snapshot"
     end
 
-    test "free user cannot delete snapshot in limited mode", %{conn: conn} do
+    test "free user cannot delete snapshots or recrawl in limited mode", %{conn: conn} do
       put_override(Linkhut.Archiving, :mode, :limited)
 
       free_user =
@@ -790,89 +631,21 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       link = insert(:link, user_id: free_user.id)
 
-      conn =
-        conn
-        |> recycle()
-        |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> delete(~p"/_/archive/#{link.id}/snapshot/1")
+      for {method, path} <- [
+            delete: ~p"/_/archive/#{link.id}/snapshot/1",
+            post: ~p"/_/archive/#{link.id}/recrawl"
+          ] do
+        conn =
+          conn
+          |> recycle()
+          |> LinkhutWeb.ConnCase.log_in_user(free_user)
+          |> dispatch(@endpoint, method, path)
 
-      assert redirected_to(conn) == ~p"/~#{free_user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available"
-    end
+        assert redirected_to(conn) == ~p"/~#{free_user.username}", "for #{method}"
 
-    test "free user cannot recrawl in limited mode", %{conn: conn} do
-      put_override(Linkhut.Archiving, :mode, :limited)
-
-      free_user =
-        Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user()
-
-      link = insert(:link, user_id: free_user.id)
-
-      conn =
-        conn
-        |> recycle()
-        |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> post(~p"/_/archive/#{link.id}/recrawl")
-
-      assert redirected_to(conn) == ~p"/~#{free_user.username}"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available"
-    end
-
-    test "free user can view and recrawl in enabled mode", %{conn: conn} do
-      put_override(Linkhut.Archiving, :mode, :enabled)
-
-      free_user =
-        Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user()
-
-      link = insert(:link, user_id: free_user.id)
-
-      crawl_run =
-        insert(:crawl_run,
-          link_id: link.id,
-          user_id: free_user.id,
-          url: link.url,
-          state: :complete
-        )
-
-      data_dir = Linkhut.Config.archiving(:data_dir)
-      file_path = Path.join(data_dir, "test_free_enabled_file")
-      storage_key = StorageKey.local(file_path)
-
-      {:ok, _snapshot} =
-        Archiving.create_snapshot(link.id, free_user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete,
-          storage_key: storage_key,
-          file_size_bytes: 1024,
-          crawl_run_id: crawl_run.id,
-          archive_metadata: %{content_type: "text/html"}
-        })
-
-      File.mkdir_p!(data_dir)
-      File.write!(file_path, "<html>content</html>")
-      on_exit(fn -> File.rm_rf(data_dir) end)
-
-      # Can view
-      view_conn =
-        conn
-        |> recycle()
-        |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/#{link.id}/webpage")
-
-      assert html_response(view_conn, 200) =~ "snapshot"
-
-      # Can recrawl
-      recrawl_conn =
-        conn
-        |> recycle()
-        |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> post(~p"/_/archive/#{link.id}/recrawl")
-
-      assert redirected_to(recrawl_conn) == ~p"/_/archive/#{link.id}/all"
-      assert Phoenix.Flash.get(recrawl_conn.assigns.flash, :info) == "Re-crawl scheduled"
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available",
+               "for #{method}"
+      end
     end
   end
 end

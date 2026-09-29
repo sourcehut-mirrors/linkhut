@@ -1,437 +1,238 @@
 defmodule Linkhut.Archiving.Workers.Crawler do
-  @moduledoc """
-  Runs a specific crawler (e.g. SingleFile), stores the result via
-  `Linkhut.Archiving.Storage`, and updates the existing snapshot record.
-  """
+  @moduledoc "Worker that runs a crawler, stores its result and marks the snapshot as complete"
 
   use Oban.Worker,
     queue: :crawler,
     # Initial attempt + 3 retries
     max_attempts: 4
 
+  import Ecto.Query, only: [from: 2]
+
   alias Linkhut.Archiving
-  alias Linkhut.Archiving.Crawler.Context
-  alias Linkhut.Archiving.PreflightMeta
-  alias Linkhut.Archiving.RateLimit
-  alias Linkhut.Archiving.Steps
+  alias Linkhut.Archiving.{Log, RateLimit, Snapshot}
+  alias Linkhut.Archiving.StorageKey
+  alias Linkhut.Links.Link
+  alias Linkhut.Repo
 
   require Logger
 
+  @terminal_states [:complete, :not_available, :failed, :pending_deletion]
+
+  @doc """
+  Enqueues the job that runs the crawler for `snapshot` in the crawl run
+  `run_id`, on `url`. `opts` are Oban job options.
+  """
+  @spec enqueue(Snapshot.t(), integer(), String.t(), keyword()) ::
+          {:ok, Oban.Job.t()} | {:error, term()}
+  def enqueue(%Snapshot{} = snapshot, run_id, url, opts) do
+    %{"snapshot_id" => snapshot.id, "crawl_run_id" => run_id, "url" => url}
+    |> new(opts)
+    |> Oban.insert()
+  end
+
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args} = job) do
-    %{
-      "snapshot_id" => snapshot_id,
-      "user_id" => user_id,
-      "link_id" => link_id,
-      "url" => url,
-      "type" => type
-    } = args
-
-    start_time = System.monotonic_time(:millisecond)
-
-    case Archiving.get_snapshot_by_id(snapshot_id) do
-      nil -> :ok
-      %{state: state} when state in [:complete, :pending_deletion] -> :ok
-      snapshot -> run_crawler(snapshot, job, type, user_id, link_id, url, args, start_time)
-    end
-  end
-
-  defp run_crawler(snapshot, job, type, user_id, link_id, url, args, start_time) do
-    case resolve_crawler(type) do
+  def perform(%Oban.Job{args: %{"snapshot_id" => snapshot_id, "crawl_run_id" => run_id}} = job) do
+    case Repo.get(Snapshot, snapshot_id) do
       nil ->
-        update_failed(snapshot, job, :unsupported_crawler, start_time)
-
-      module ->
-        case check_rate_limit(module) do
-          :ok ->
-            do_fetch(snapshot, job, module, user_id, link_id, url, args, start_time)
-
-          {:rate_limited, scale_ms} ->
-            jitter = :rand.uniform(max(div(scale_ms, 4000), 1))
-            snooze_seconds = max(div(scale_ms, 1000) + jitter, 1)
-
-            Steps.append_to_crawl_run(
-              snapshot.crawl_run_id,
-              "rate_limited",
-              %{
-                "msg" => "rate_limited",
-                "crawler" => type,
-                "snooze_seconds" => snooze_seconds
-              },
-              snapshot_id: snapshot.id,
-              source: snapshot.source
-            )
-
-            {:snooze, snooze_seconds}
-        end
-    end
-  end
-
-  defp do_fetch(snapshot, job, module, user_id, link_id, url, args, start_time) do
-    crawl_detail =
-      if job.attempt > 1,
-        do: %{"msg" => "crawling_retry", "attempt" => job.attempt},
-        else: %{"msg" => "crawling"}
-
-    {:ok, snapshot} =
-      Archiving.update_snapshot(snapshot, %{state: :crawling})
-
-    Steps.append_to_crawl_run(snapshot.crawl_run_id, "crawling", crawl_detail,
-      snapshot_id: snapshot.id,
-      source: snapshot.source
-    )
-
-    preflight_meta = decode_preflight_meta(args)
-    link_inserted_at = decode_datetime(args["link_inserted_at"])
-
-    context = %Context{
-      user_id: user_id,
-      link_id: link_id,
-      url: url,
-      snapshot_id: snapshot.id,
-      preflight_meta: preflight_meta,
-      link_inserted_at: link_inserted_at
-    }
-
-    try do
-      case module.fetch(context) do
-        {:ok, {:file, result}} ->
-          handle_file_result(snapshot, job, result, url, args, start_time)
-
-        {:ok, {:external, result}} ->
-          handle_external_result(snapshot, job, result, url, args, start_time)
-
-        {:ok, :not_available} ->
-          handle_not_available(snapshot, job, args, start_time)
-
-        {:error, error, :noretry} ->
-          update_failed_final(snapshot, job, error, start_time)
-
-        {:error, error} ->
-          update_failed(snapshot, job, error, start_time)
-      end
-    rescue
-      exception ->
-        Logger.error(
-          "Crawler #{inspect(module)} crashed for snapshot #{snapshot.id}: " <>
-            Exception.message(exception) <>
-            "\n" <> Exception.format_stacktrace(__STACKTRACE__)
-        )
-
-        update_failed(snapshot, job, Exception.message(exception), start_time)
-    end
-  end
-
-  defp handle_file_result(snapshot, job, result, url, _args, start_time) do
-    processing_time = System.monotonic_time(:millisecond) - start_time
-    file_size = get_file_size(result[:path])
-    staging_dir = Path.dirname(result[:path])
-    max_file_size = Linkhut.Config.archiving(:max_file_size)
-
-    if is_integer(file_size) and file_size > max_file_size do
-      File.rm_rf(staging_dir)
-
-      update_failed_final(
-        snapshot,
-        job,
-        %{msg: "file_too_large", size: file_size, max: max_file_size},
-        start_time
-      )
-    else
-      content_type = result[:content_type] || "application/octet-stream"
-      warn_on_missing_content_type(snapshot, result[:content_type])
-
-      case Archiving.Storage.store({:file, result[:path]}, snapshot, content_type: content_type) do
-        {:ok, storage_key, store_meta} ->
-          File.rm_rf(staging_dir)
-
-          Archiving.update_snapshot(snapshot, %{
-            state: :complete,
-            storage_key: storage_key,
-            processing_time_ms: processing_time,
-            file_size_bytes: store_meta.file_size_bytes,
-            encoding: store_meta.encoding,
-            original_file_size_bytes: if(store_meta.encoding, do: file_size, else: nil),
-            response_code: result[:response_code] || 200,
-            archive_metadata: %{
-              content_type: result[:content_type],
-              original_url: url,
-              final_url: result[:final_url] || url
-            }
-          })
-
-          Steps.append_to_crawl_run(
-            snapshot.crawl_run_id,
-            "complete",
-            build_stored_msg(store_meta, file_size),
-            snapshot_id: snapshot.id,
-            source: snapshot.source
-          )
-
-          Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
-
-          Archiving.cleanup_superseded_snapshots(
-            snapshot.id,
-            snapshot.link_id,
-            snapshot.format,
-            :complete,
-            snapshot.source
-          )
-
-          Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
-          :ok
-
-        {:error, storage_error} ->
-          File.rm_rf(staging_dir)
-          update_failed(snapshot, job, storage_error, start_time)
-      end
-    end
-  end
-
-  defp handle_external_result(snapshot, _job, result, url, _args, start_time) do
-    processing_time = System.monotonic_time(:millisecond) - start_time
-    storage_key = Linkhut.Archiving.StorageKey.external(result[:url])
-
-    metadata =
-      %{
-        original_url: url,
-        final_url: result[:final_url] || url
-      }
-      |> Map.merge(Map.drop(result, [:url, :response_code, :final_url]))
-
-    case Archiving.update_snapshot(snapshot, %{
-           state: :complete,
-           storage_key: storage_key,
-           processing_time_ms: processing_time,
-           file_size_bytes: nil,
-           response_code: result[:response_code],
-           archive_metadata: metadata
-         }) do
-      {:ok, _} ->
-        Steps.append_to_crawl_run(
-          snapshot.crawl_run_id,
-          "complete",
-          %{"msg" => "external_snapshot", "url" => result[:url]},
-          snapshot_id: snapshot.id,
-          source: snapshot.source
-        )
-
-        Archiving.cleanup_superseded_snapshots(
-          snapshot.id,
-          snapshot.link_id,
-          snapshot.format,
-          :complete,
-          snapshot.source
-        )
-
-        Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
         :ok
 
-      {:error, changeset} ->
-        Logger.warning(
-          "Failed to update snapshot #{snapshot.id} with external result: #{inspect(changeset.errors)}"
-        )
+      %Snapshot{state: state} when state in @terminal_states ->
+        :ok
 
-        {:error, changeset}
+      snapshot ->
+        crawl(snapshot, run_id, resolve_crawler(snapshot.source), job)
     end
   end
 
-  defp handle_not_available(snapshot, _job, _args, start_time) do
-    processing_time = System.monotonic_time(:millisecond) - start_time
-
-    case Archiving.update_snapshot(snapshot, %{
-           state: :not_available,
-           processing_time_ms: processing_time
-         }) do
-      {:ok, _} ->
-        Steps.append_to_crawl_run(
-          snapshot.crawl_run_id,
-          "not_available",
-          %{"msg" => "not_available"},
-          snapshot_id: snapshot.id,
-          source: snapshot.source
-        )
-
-      {:error, changeset} ->
-        Logger.warning(
-          "Failed to update snapshot #{snapshot.id} to not_available: #{inspect(changeset.errors)}"
-        )
-    end
-
-    Archiving.cleanup_superseded_snapshots(
-      snapshot.id,
-      snapshot.link_id,
-      snapshot.format,
-      :not_available,
-      snapshot.source
-    )
-
-    Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
-    :ok
-  end
-
-  defp warn_on_missing_content_type(snapshot, nil),
-    do: Logger.warning("Crawler result for snapshot #{snapshot.id} missing content_type")
-
-  defp warn_on_missing_content_type(_, _), do: :ok
-
-  defp build_stored_msg(store_meta, file_size) do
-    base = %{"msg" => "stored", "size" => Linkhut.Formatting.format_bytes(file_size)}
-
-    if store_meta.encoding do
-      Map.merge(base, %{
-        "compressed_size" => Linkhut.Formatting.format_bytes(store_meta.file_size_bytes),
-        "encoding" => store_meta.encoding
-      })
-    else
-      base
-    end
-  end
-
-  defp resolve_crawler(type) do
+  defp resolve_crawler(source) do
     Linkhut.Config.archiving(:crawlers, [])
-    |> Enum.find(fn module -> module.source_type() == type end)
+    |> Enum.find(&(&1.source_type() == source))
   end
 
-  defp check_rate_limit(module) do
-    if function_exported?(module, :rate_limit, 0) do
-      {scale_ms, limit} = module.rate_limit()
-      key = "crawler:#{module.source_type()}"
+  defp crawl(snapshot, run_id, nil, job) do
+    attempt = %{url: nil, job: job, ms: 0, log: Log.for_snapshot(snapshot, run_id)}
+    finish(snapshot, {:error, %{msg: "unsupported_crawler"}, :noretry}, attempt)
+  end
 
-      case RateLimit.hit(key, scale_ms, limit) do
-        {:allow, _count} -> :ok
-        {:deny, _limit} -> {:rate_limited, scale_ms}
+  defp crawl(snapshot, run_id, crawler, job) do
+    log = Log.for_snapshot(snapshot, run_id)
+
+    with :ok <- check_rate_limit(crawler, log) do
+      snapshot = start_attempt(snapshot, log, job.attempt)
+      url = job.args["url"]
+      staging_dir = staging_dir(snapshot)
+
+      opts = [
+        staging_dir: staging_dir,
+        format: snapshot.format,
+        bookmarked_at: bookmarked_at(snapshot),
+        log: log
+      ]
+
+      try do
+        {micros, result} = :timer.tc(fn -> safe_fetch(crawler, url, opts, snapshot) end)
+        finish(snapshot, result, %{url: url, job: job, ms: div(micros, 1000), log: log})
+      after
+        File.rm_rf(staging_dir)
       end
+    end
+  end
+
+  defp start_attempt(snapshot, log, attempt) do
+    {:ok, snapshot} = Archiving.update_snapshot(snapshot, %{state: :crawling})
+    Log.append(log, "crawler.started", %{attempt: attempt})
+    snapshot
+  end
+
+  defp check_rate_limit(crawler, log) do
+    with true <- function_exported?(crawler, :rate_limit, 0),
+         {scale_ms, limit} = crawler.rate_limit(),
+         {:deny, _limit} <- RateLimit.hit("crawler:#{crawler.source_type()}", scale_ms, limit) do
+      jitter = :rand.uniform(max(div(scale_ms, 4000), 1))
+      seconds = max(div(scale_ms, 1000) + jitter, 1)
+
+      Log.append(log, "crawler.rate_limited", %{snooze_seconds: seconds})
+
+      {:snooze, seconds}
     else
-      :ok
+      _ -> :ok
     end
   end
 
-  defp get_file_size(path) when is_binary(path) do
-    case File.stat(path) do
-      {:ok, %{size: size}} -> size
-      _ -> nil
-    end
+  defp staging_dir(snapshot) do
+    dir =
+      Linkhut.Config.archiving(:staging_dir, System.tmp_dir!())
+      |> Path.join("snapshot-#{snapshot.id}-#{System.unique_integer([:positive])}")
+
+    File.mkdir_p!(dir)
+    dir
   end
 
-  defp get_file_size(_), do: nil
-
-  defp error_info(%{msg: msg}) when is_binary(msg), do: {msg, msg}
-  defp error_info(:unsupported_crawler), do: {"unsupported_crawler", "unsupported_crawler"}
-  defp error_info(msg) when is_binary(msg), do: {msg, "crawler_error"}
-  defp error_info(error), do: {inspect(error), "crawler_error"}
-
-  defp decode_preflight_meta(%{"preflight_meta" => meta}) when is_map(meta),
-    do: PreflightMeta.from_map(meta)
-
-  defp decode_preflight_meta(_), do: nil
-
-  defp decode_datetime(iso8601) when is_binary(iso8601) do
-    case DateTime.from_iso8601(iso8601) do
-      {:ok, dt, _offset} -> dt
-      _ -> nil
-    end
+  defp bookmarked_at(snapshot) do
+    Repo.one(from l in Link, where: l.id == ^snapshot.link_id, select: l.inserted_at)
   end
 
-  defp decode_datetime(_), do: nil
-
-  # Non-retryable failure: mark snapshot as :failed immediately and return :ok
-  # to tell Oban not to retry. Used when the error is definitive (e.g. "no
-  # Wayback Machine snapshot available") and retrying would be pointless.
-  defp update_failed_final(snapshot, job, error, start_time) do
-    processing_time = System.monotonic_time(:millisecond) - start_time
-    {error_msg, error_code} = error_info(error)
-
-    failed_detail = %{
-      "msg" => "crawler_failed_final",
-      "error" => error_msg,
-      "attempt" => job.attempt,
-      "max_attempts" => job.attempt
-    }
-
-    case Archiving.update_snapshot(snapshot, %{
-           state: :failed,
-           retry_count: job.attempt - 1,
-           failed_at: DateTime.utc_now(),
-           processing_time_ms: processing_time,
-           archive_metadata: %{error: error_msg, error_code: error_code}
-         }) do
-      {:ok, _} ->
-        Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", failed_detail,
-          snapshot_id: snapshot.id,
-          source: snapshot.source
-        )
-
-      {:error, changeset} ->
-        Logger.warning(
-          "Failed to update snapshot #{snapshot.id} to failed state: #{inspect(changeset.errors)}"
-        )
-    end
-
-    Archiving.cleanup_superseded_snapshots(
-      snapshot.id,
-      snapshot.link_id,
-      snapshot.format,
-      :failed,
-      snapshot.source
-    )
-
-    Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
-    :ok
-  end
-
-  # Non-final failures set the snapshot to :retryable (non-terminal), which
-  # prevents maybe_complete_crawl_run from marking the crawl run as :complete
-  # while Oban still has retries pending.  Only the final attempt sets :failed
-  # (terminal), after which maybe_complete_crawl_run is called.
-  defp update_failed(snapshot, job, error, start_time) do
-    processing_time = System.monotonic_time(:millisecond) - start_time
-    final_attempt? = job.attempt >= job.max_attempts
-    {error_msg, error_code} = error_info(error)
-
-    msg =
-      if final_attempt?,
-        do: "crawler_failed_final",
-        else: "crawler_failed_will_retry"
-
-    failed_detail = %{
-      "msg" => msg,
-      "error" => error_msg,
-      "attempt" => job.attempt,
-      "max_attempts" => job.max_attempts
-    }
-
-    case Archiving.update_snapshot(snapshot, %{
-           state: if(final_attempt?, do: :failed, else: :retryable),
-           retry_count: job.attempt - 1,
-           failed_at: DateTime.utc_now(),
-           processing_time_ms: processing_time,
-           archive_metadata: %{error: error_msg, error_code: error_code}
-         }) do
-      {:ok, _} ->
-        Steps.append_to_crawl_run(snapshot.crawl_run_id, "failed", failed_detail,
-          snapshot_id: snapshot.id,
-          source: snapshot.source
-        )
-
-      {:error, changeset} ->
-        Logger.warning(
-          "Failed to update snapshot #{snapshot.id} to failed state: #{inspect(changeset.errors)}"
-        )
-    end
-
-    if final_attempt? do
-      Archiving.cleanup_superseded_snapshots(
-        snapshot.id,
-        snapshot.link_id,
-        snapshot.format,
-        :failed,
-        snapshot.source
+  defp safe_fetch(crawler, url, opts, snapshot) do
+    crawler.fetch(url, opts)
+  rescue
+    exception ->
+      Logger.error(
+        "Crawler #{inspect(crawler)} crashed for snapshot #{snapshot.id}: " <>
+          Exception.message(exception) <>
+          "\n" <> Exception.format_stacktrace(__STACKTRACE__)
       )
 
-      Archiving.maybe_complete_crawl_run(snapshot.crawl_run_id)
+      {:error, Exception.message(exception)}
+  end
+
+  defp finish(snapshot, {:ok, {:file, file}}, attempt) do
+    case store(snapshot, file, attempt.url) do
+      {:ok, attrs, data} -> mark(snapshot, :complete, attrs, {"crawler.stored", data}, attempt)
+      error -> finish(snapshot, error, attempt)
     end
+  end
+
+  defp finish(snapshot, {:ok, {:external, result}}, attempt) do
+    attrs = %{
+      storage_key: StorageKey.external(result[:url]),
+      response_code: result[:response_code],
+      archive_metadata:
+        Map.merge(
+          %{original_url: attempt.url, final_url: result[:final_url] || attempt.url},
+          Map.drop(result, [:url, :response_code, :final_url])
+        )
+    }
+
+    mark(snapshot, :complete, attrs, {"crawler.linked", %{url: result[:url]}}, attempt)
+  end
+
+  defp finish(snapshot, {:ok, :not_available}, attempt) do
+    mark(snapshot, :not_available, %{}, {"crawler.not_available", %{}}, attempt)
+  end
+
+  defp finish(snapshot, {:error, error, :noretry}, attempt) do
+    {:cancel, fail(snapshot, error, attempt)}
+  end
+
+  defp finish(_snapshot, {:error, error}, %{job: %{attempt: n, max_attempts: max}} = attempt)
+       when n < max do
+    {message, _code} = error_info(error)
+
+    Log.append(
+      attempt.log,
+      "crawler.attempt_failed",
+      %{error: message, attempt: n, max_attempts: max},
+      level: :warning
+    )
 
     {:error, error}
   end
+
+  defp finish(snapshot, {:error, error}, attempt) do
+    fail(snapshot, error, attempt)
+    {:error, error}
+  end
+
+  defp store(snapshot, file, url) do
+    if is_nil(file[:content_type]),
+      do: Logger.warning("Crawler result for snapshot #{snapshot.id} missing content_type")
+
+    content_type = file[:content_type] || "application/octet-stream"
+
+    case Archiving.store_file(snapshot, file[:path], content_type) do
+      {:ok, stored} ->
+        {:ok, stored_attrs(stored, file, url), stored_data(stored)}
+
+      {:error, {:file_too_large, size, max}} ->
+        {:error, %{msg: "file_too_large", size: size, max: max}, :noretry}
+
+      error ->
+        error
+    end
+  end
+
+  defp stored_attrs(stored, file, url) do
+    Map.merge(stored, %{
+      response_code: file[:response_code] || 200,
+      archive_metadata: %{
+        content_type: file[:content_type],
+        original_url: url,
+        final_url: file[:final_url] || url
+      }
+    })
+  end
+
+  defp stored_data(stored) do
+    %{
+      size_bytes: stored.original_file_size_bytes || stored.file_size_bytes,
+      stored_bytes: if(stored.encoding, do: stored.file_size_bytes),
+      encoding: stored.encoding
+    }
+  end
+
+  defp mark(snapshot, state, attrs, {event, data}, attempt, log_opts \\ []) do
+    attrs = Map.put(attrs, :processing_time_ms, attempt.ms)
+
+    with {:ok, _snapshot} <- Archiving.mark_snapshot(snapshot, state, attrs) do
+      Log.append(attempt.log, event, data, log_opts)
+    end
+  end
+
+  defp fail(snapshot, error, %{job: job} = attempt) do
+    {message, code} = error_info(error)
+
+    attrs = %{
+      retry_count: job.attempt - 1,
+      failed_at: DateTime.utc_now(),
+      archive_metadata: %{error: message, error_code: code}
+    }
+
+    data = %{error: message, attempt: job.attempt, max_attempts: job.max_attempts}
+    mark(snapshot, :failed, attrs, {"crawler.failed", data}, attempt, level: :error)
+    message
+  end
+
+  defp error_info(%{msg: msg}) when is_binary(msg), do: {msg, msg}
+  defp error_info(msg) when is_binary(msg), do: {msg, "crawler_error"}
+  defp error_info(error), do: {inspect(error), "crawler_error"}
 end

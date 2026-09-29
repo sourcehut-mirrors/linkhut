@@ -7,9 +7,10 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   """
 
   @behaviour Linkhut.Archiving.Crawler
+  @behaviour Linkhut.Archiving.Crawler.Direct
 
-  alias Linkhut.Archiving.Crawler
-  alias Linkhut.Archiving.Crawler.Context
+  alias Linkhut.Archiving.{Crawler, MIME, PreflightMeta}
+  alias Req.Response
 
   @tool_name "Req"
   @allowed_types_default [:pdf, :text, :json]
@@ -25,182 +26,133 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
   def meta, do: %{tool_name: @tool_name, tool_version: req_version(), version: module_version()}
 
   @impl true
-  def network_access, do: :target_url
+  def applies_to, do: [schemes: ["http", "https"], hosts: :any, except_hosts: []]
 
   @impl true
   def queue, do: :crawler
 
   @impl true
-  def can_handle?(_url, nil), do: false
+  def accepts(_url, %PreflightMeta{} = meta) do
+    format = MIME.format(meta.content_type)
 
-  def can_handle?(_url, preflight_meta) do
-    status = Map.get(preflight_meta, :status)
-    content_type = Map.get(preflight_meta, :content_type)
-    content_length = Map.get(preflight_meta, :content_length)
+    cond do
+      meta.status >= 400 ->
+        {:reject, %{reason: :http_error, status: meta.status}}
 
-    is_integer(status) and status < 400 and
-      content_type in allowed_types() and
-      (not is_integer(content_length) or content_length <= max_bytes())
+      format not in allowed_formats() ->
+        {:reject, %{reason: :unsupported_format}}
+
+      is_integer(meta.content_length) and meta.content_length > max_bytes() ->
+        {:reject, %{reason: :file_too_large, content_length: meta.content_length}}
+
+      true ->
+        {:ok, format}
+    end
   end
 
   @impl true
-  def fetch(%Context{url: url, link_id: link_id, preflight_meta: preflight_meta}) do
-    staging_dir =
-      Path.join(staging_base_dir(), "linkhut_httpfetch_#{:erlang.unique_integer([:positive])}")
-
-    File.mkdir_p!(staging_dir)
-    path = Path.join(staging_dir, "#{link_id}")
-
-    expected_content_type =
-      case preflight_meta do
-        %{content_type: ct} when is_binary(ct) -> ct
-        _ -> nil
-      end
-
-    task =
-      Task.async(fn ->
-        do_download(url, path, expected_content_type)
-      end)
+  def fetch(url, opts) do
+    path = opts |> Keyword.fetch!(:staging_dir) |> Path.join("download")
+    format = Keyword.fetch!(opts, :format)
+    task = Task.async(fn -> download(url, path, format) end)
 
     case Task.yield(task, @overall_timeout_ms) || Task.shutdown(task, 5_000) do
       {:ok, result} ->
         result
 
       nil ->
-        File.rm_rf(staging_dir)
         {:error, %{msg: "download timed out after #{@overall_timeout_ms}ms"}}
     end
   end
 
-  defp do_download(url, path, expected_content_type) do
-    case File.open(path, [:write, :raw]) do
-      {:ok, file} ->
-        stream_and_process(url, path, expected_content_type, file)
+  defp download(url, path, format) do
+    case File.open(path, [:write, :raw], &request(url, &1)) do
+      {:ok, {:ok, response}} ->
+        process_response(path, format, response)
+
+      {:ok, {:error, reason}} ->
+        {:error, %{msg: "download failed: #{inspect(reason)}"}}
 
       {:error, reason} ->
         {:error, %{msg: "failed to open staging file: #{inspect(reason)}"}}
     end
   end
 
-  defp stream_and_process(url, path, expected_content_type, file) do
-    Process.delete(:httpfetch_write_error)
+  defp request(url, file) do
     max = max_bytes()
-    staging_dir = Path.dirname(path)
-    byte_counter = :counters.new(1, [:atomics])
 
-    into_fun = build_stream_handler(file, byte_counter, max)
-    req_opts = build_req_opts(url, into_fun)
-
-    result =
-      case Req.request(Req.new(req_opts)) do
-        {:ok, %Req.Response{status: status}} ->
-          total_bytes = :counters.get(byte_counter, 1)
-          has_write_error = Process.get(:httpfetch_write_error, false)
-          process_response(path, expected_content_type, status, total_bytes, max, has_write_error)
-
-        {:error, reason} ->
-          {:error, %{msg: "download failed: #{inspect(reason)}"}}
-      end
-
-    File.close(file)
-
-    case result do
-      {:ok, _} ->
-        result
-
-      {:error, _} ->
-        File.rm_rf(staging_dir)
-        result
-    end
-  end
-
-  defp build_stream_handler(file, byte_counter, max) do
-    fn {:data, chunk}, {req, resp} ->
-      :counters.add(byte_counter, 1, byte_size(chunk))
-
-      case :file.write(file, chunk) do
-        :ok -> :ok
-        {:error, _} -> Process.put(:httpfetch_write_error, true)
-      end
-
-      if Process.get(:httpfetch_write_error) || :counters.get(byte_counter, 1) > max do
-        {:halt, {req, resp}}
-      else
-        {:cont, {req, resp}}
-      end
-    end
-  end
-
-  defp build_req_opts(url, into_fun) do
-    # Redirects disabled — we use the SSRF-checked final_url from preflight.
     [
       url: url,
       method: :get,
       redirect: false,
       retry: false,
       receive_timeout: 60_000,
-      into: into_fun,
+      into: &write_chunk(file, max, &1, &2),
       raw: true,
       headers: [user_agent: Crawler.user_agent()]
     ]
     |> Keyword.merge(Application.get_env(:linkhut, :req_options, []))
+    |> Req.request()
   end
 
-  defp process_response(_path, _ct, _status, _total_bytes, _max, true = _has_write_error) do
-    {:error, %{msg: "disk write error during download"}}
-  end
+  defp write_chunk(file, max, {:data, chunk}, {req, resp}) do
+    size = byte_size(chunk)
+    resp = Response.update_private(resp, :bytes, size, &(&1 + size))
 
-  defp process_response(_path, _ct, _status, total_bytes, max, _has_write_error)
-       when total_bytes > max do
-    {:error, %{msg: "file exceeds max size (#{max} bytes)"}}
-  end
-
-  defp process_response(_path, _ct, status, _total_bytes, _max, _has_write_error)
-       when status not in 200..299 do
-    {:error, %{msg: "HTTP #{status}", response_code: status}}
-  end
-
-  defp process_response(path, expected_content_type, status, _total_bytes, _max, _has_write_error) do
-    case verify_content(path, expected_content_type) do
+    case :file.write(file, chunk) do
       :ok ->
-        {:ok,
-         {:file,
-          %{
-            path: path,
-            response_code: status,
-            content_type: expected_content_type
-          }}}
+        if Response.get_private(resp, :bytes) > max,
+          do: {:halt, {req, resp}},
+          else: {:cont, {req, resp}}
 
-      {:error, reason} ->
-        {:error, %{msg: "content verification failed: #{reason}"}}
+      {:error, _reason} ->
+        {:halt, {req, Response.put_private(resp, :write_error, true)}}
     end
   end
 
-  @doc false
-  def verify_content(path, content_type) do
-    with group when not is_nil(group) <- Linkhut.Archiving.MIME.group(content_type),
-         {:ok, detected_type} <- Linkhut.Archiving.MIME.detect(path) do
-      case Linkhut.Archiving.MIME.compatible_with?(detected_type, group) do
-        true ->
-          :ok
+  defp process_response(path, format, %Response{status: status} = response) do
+    cond do
+      Response.get_private(response, :write_error) ->
+        {:error, %{msg: "disk write error during download"}}
 
-        false ->
-          {:error, "not a valid #{group} file (mime-type: #{detected_type})"}
-      end
-    else
-      nil ->
-        # note: succeed on unknown (might want to change this)
-        :ok
+      status not in 200..299 ->
+        {:error, %{msg: "HTTP #{status}", response_code: status}}
+
+      true ->
+        case verify_content(path, format) do
+          :ok ->
+            {:ok,
+             {:file, %{path: path, response_code: status, content_type: content_type(response)}}}
+
+          {:error, reason} ->
+            {:error, %{msg: "content verification failed: #{reason}"}}
+        end
+    end
+  end
+
+  defp content_type(response) do
+    response
+    |> Response.get_header("content-type")
+    |> List.first()
+    |> MIME.media_type()
+  end
+
+  defp verify_content(path, format) do
+    case MIME.detect(path) do
+      {:ok, detected_type} ->
+        if MIME.format(detected_type) == format,
+          do: :ok,
+          else: {:error, "not a valid #{format} file (mime-type: #{detected_type})"}
 
       {:error, reason} ->
         {:error, "cannot validate file: #{inspect(reason)}"}
     end
   end
 
-  defp allowed_types do
+  defp allowed_formats do
     Linkhut.Config.archiving(:direct_file, [])
     |> Keyword.get(:allowed_types, @allowed_types_default)
-    |> Linkhut.Archiving.MIME.types()
+    |> Enum.map(&to_string/1)
   end
 
   defp max_bytes do
@@ -213,6 +165,4 @@ defmodule Linkhut.Archiving.Crawler.HttpFetch do
       vsn -> to_string(vsn)
     end
   end
-
-  defp staging_base_dir, do: Linkhut.Config.archiving(:staging_dir, System.tmp_dir!())
 end

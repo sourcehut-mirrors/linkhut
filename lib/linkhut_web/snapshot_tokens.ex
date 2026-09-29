@@ -1,4 +1,4 @@
-defmodule Linkhut.Archiving.Tokens do
+defmodule LinkhutWeb.SnapshotTokens do
   @moduledoc "Manages short-lived tokens for snapshot access"
 
   @token_validity_minutes 15

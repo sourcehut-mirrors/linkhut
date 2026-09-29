@@ -6,146 +6,75 @@ defmodule Linkhut.Archiving.CleanupTest do
   alias Linkhut.Archiving
   alias Linkhut.Archiving.Snapshot
 
-  defp create_setup do
-    user = insert(:user, credential: build(:credential))
-    link = insert(:link, user_id: user.id)
-    {user, link}
-  end
-
-  defp create_snapshot_in_run(user, link, {format, source}, state, opts \\ []) do
-    crawl_run_state = Keyword.get(opts, :crawl_run_state, :complete)
-
-    crawl_run =
-      insert(:crawl_run,
-        user_id: user.id,
+  defp snapshots(link, specs) do
+    for {format, source, state} <- specs do
+      insert(:snapshot,
+        user_id: link.user_id,
         link_id: link.id,
-        url: link.url,
-        state: crawl_run_state
-      )
-
-    {:ok, snapshot} =
-      Archiving.create_snapshot(link.id, user.id, %{
         format: format,
         source: source,
-        state: state,
-        crawl_run_id: crawl_run.id
-      })
-
-    {crawl_run, snapshot}
+        state: state
+      )
+    end
   end
 
-  @singlefile {"webpage", "singlefile"}
-  @wayback {"reference", "wayback"}
-
-  describe "cleanup_superseded_snapshots/5" do
-    test "complete supersedes older complete snapshots of the same format and source" do
-      {user, link} = create_setup()
-      {_old_cr, old_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-      {_new_cr, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :complete,
-        "singlefile"
+  defp mark(link, {format, source}, state) do
+    pending =
+      insert(:snapshot,
+        user_id: link.user_id,
+        link_id: link.id,
+        format: format,
+        source: source,
+        state: :pending
       )
 
-      assert Repo.get(Snapshot, old_snapshot.id).state == :pending_deletion
-      assert Repo.get(Snapshot, new_snapshot.id).state == :complete
+    {:ok, snapshot} = Archiving.mark_snapshot(pending, state, %{})
+    snapshot
+  end
+
+  defp states(snapshots), do: Enum.map(snapshots, &Repo.get(Snapshot, &1.id).state)
+
+  setup do
+    user = insert(:user, credential: build(:credential))
+    %{link: insert(:link, user_id: user.id)}
+  end
+
+  describe "mark_snapshot/3 replaces older snapshots of the same link and format" do
+    test "replaces older snapshots in the same or a worse state", %{link: link} do
+      for {state, expected} <- [
+            complete: [:pending_deletion, :pending_deletion, :pending_deletion],
+            not_available: [:complete, :pending_deletion, :pending_deletion],
+            failed: [:complete, :not_available, :pending_deletion]
+          ] do
+        link = insert(:link, user_id: link.user_id)
+
+        older =
+          snapshots(link, [
+            {"webpage", "singlefile", :complete},
+            {"webpage", "httpfetch", :not_available},
+            {"webpage", "singlefile", :failed}
+          ])
+
+        mark(link, {"webpage", "singlefile"}, state)
+
+        assert states(older) == expected, "for #{state}"
+      end
     end
+  end
 
-    test "complete supersedes older not_available and failed snapshots" do
-      {user, link} = create_setup()
-      {_, na_snapshot} = create_snapshot_in_run(user, link, @singlefile, :not_available)
-      {_, failed_snapshot} = create_snapshot_in_run(user, link, @singlefile, :failed)
-      {_, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
+  describe "mark_snapshot/3 on a snapshot marked for deletion while it was crawled" do
+    test "remains as pending deletion", %{link: link} do
+      [crawling] = snapshots(link, [{"webpage", "singlefile", :crawling}])
+      :ok = Archiving.mark_snapshots_for_deletion(link.id)
+      [older] = snapshots(link, [{"webpage", "singlefile", :failed}])
 
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :complete,
-        "singlefile"
-      )
+      assert {:ok, _} =
+               Archiving.mark_snapshot(crawling, :complete, %{storage_key: "local:/tmp/x"})
 
-      assert Repo.get(Snapshot, na_snapshot.id).state == :pending_deletion
-      assert Repo.get(Snapshot, failed_snapshot.id).state == :pending_deletion
-      assert Repo.get(Snapshot, new_snapshot.id).state == :complete
-    end
+      assert %{state: :pending_deletion, storage_key: "local:/tmp/x"} =
+               Repo.get(Snapshot, crawling.id)
 
-    test "not_available supersedes older not_available and failed but not complete" do
-      {user, link} = create_setup()
-      {_, complete_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-      {_, na_snapshot} = create_snapshot_in_run(user, link, @singlefile, :not_available)
-      {_, failed_snapshot} = create_snapshot_in_run(user, link, @singlefile, :failed)
-      {_, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :not_available)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :not_available,
-        "singlefile"
-      )
-
-      assert Repo.get(Snapshot, complete_snapshot.id).state == :complete
-      assert Repo.get(Snapshot, na_snapshot.id).state == :pending_deletion
-      assert Repo.get(Snapshot, failed_snapshot.id).state == :pending_deletion
-      assert Repo.get(Snapshot, new_snapshot.id).state == :not_available
-    end
-
-    test "failed only supersedes older failed snapshots" do
-      {user, link} = create_setup()
-      {_, complete_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-      {_, na_snapshot} = create_snapshot_in_run(user, link, @singlefile, :not_available)
-      {_, old_failed} = create_snapshot_in_run(user, link, @singlefile, :failed)
-      {_, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :failed)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :failed,
-        "singlefile"
-      )
-
-      assert Repo.get(Snapshot, complete_snapshot.id).state == :complete
-      assert Repo.get(Snapshot, na_snapshot.id).state == :not_available
-      assert Repo.get(Snapshot, old_failed.id).state == :pending_deletion
-      assert Repo.get(Snapshot, new_snapshot.id).state == :failed
-    end
-
-    test "does not affect snapshots of different sources" do
-      {user, link} = create_setup()
-      {_, wayback_snapshot} = create_snapshot_in_run(user, link, @wayback, :complete)
-      {_, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :complete,
-        "singlefile"
-      )
-
-      assert Repo.get(Snapshot, wayback_snapshot.id).state == :complete
-    end
-
-    test "is a no-op for non-terminal states" do
-      {user, link} = create_setup()
-      {_, old_snapshot} = create_snapshot_in_run(user, link, @singlefile, :complete)
-      {_, new_snapshot} = create_snapshot_in_run(user, link, @singlefile, :pending)
-
-      Archiving.cleanup_superseded_snapshots(
-        new_snapshot.id,
-        link.id,
-        "webpage",
-        :pending,
-        "singlefile"
-      )
-
-      assert Repo.get(Snapshot, old_snapshot.id).state == :complete
+      assert states([older]) == [:failed]
     end
   end
 end

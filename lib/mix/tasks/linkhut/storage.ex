@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Linkhut.Storage do
   end
 
   defp show_stats do
-    db_bytes = Archiving.storage_used()
+    db_bytes = Archiving.Stats.storage_used()
     {:ok, disk_bytes} = Storage.storage_used()
 
     shell_info("Storage (DB total):   #{Linkhut.Formatting.format_bytes(db_bytes)}")
@@ -171,7 +171,6 @@ defmodule Mix.Tasks.Linkhut.Storage do
              original_file_size_bytes: original_size
            }) do
       File.rm(path)
-      Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
       {:ok, saved_bytes}
     else
       {:error, reason} when is_atom(reason) ->
@@ -286,7 +285,6 @@ defmodule Mix.Tasks.Linkhut.Storage do
              original_file_size_bytes: nil
            }) do
       File.rm(path)
-      Archiving.recompute_crawl_run_size_by_id(snapshot.crawl_run_id)
       :ok
     else
       {:error, reason} when is_atom(reason) ->

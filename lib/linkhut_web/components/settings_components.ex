@@ -40,50 +40,6 @@ defmodule LinkhutWeb.SettingsComponents do
     """
   end
 
-  attr :rows, :list, required: true
-
-  def state_table(assigns) do
-    ~H"""
-    <table>
-      <thead>
-        <tr>
-          <th>State</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={{state, count} <- @rows}>
-          <td>{state}</td>
-          <td>{count}</td>
-        </tr>
-      </tbody>
-    </table>
-    """
-  end
-
-  attr :rows, :list, required: true
-
-  def queue_table(assigns) do
-    ~H"""
-    <table>
-      <thead>
-        <tr>
-          <th>Queue</th>
-          <th>State</th>
-          <th>Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={row <- @rows}>
-          <td>{row.queue}</td>
-          <td>{row.state}</td>
-          <td>{row.count}</td>
-        </tr>
-      </tbody>
-    </table>
-    """
-  end
-
   @doc "Grouped breakdown of snapshots: by type, then by state within each type."
   attr :groups, :list, required: true
 
