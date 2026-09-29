@@ -1,7 +1,7 @@
 services:
   postgres:
-    image: postgres:15-alpine
-    network_mode: bridge
+    image: docker://postgres:15-alpine
+    network_mode: host
     environment:
       PGDATA: /linkhut
       POSTGRES_USER: postgres
@@ -11,7 +11,8 @@ services:
     ports:
       - "5432:5432"
   minio:
-    image: pgsty/minio:latest
+    image: docker://pgsty/minio:latest
+    network_mode: host
     ports:
       - "9000:9000"  # API port
       - "9001:9001"  # Console port
@@ -22,12 +23,13 @@ services:
       - "minio-data:/data"
     command: ["server", "/data", "--console-address", ":9001"]
   createbuckets:
-    image: pgsty/mc:latest
+    image: docker://pgsty/mc:latest
+    network_mode: host
     depends_on:
       - minio
     entrypoint: >
       /bin/sh -c "
-      mc alias set myminio http://minio:9000 miniouser miniopassword;
+      mc alias set myminio http://localhost:9000 miniouser miniopassword;
       mc ready myminio;
       mc mb --ignore-existing myminio/linkhut-dev;
       exit 0;
