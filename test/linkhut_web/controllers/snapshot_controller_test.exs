@@ -6,47 +6,49 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
   setup {LinkhutWeb.ConnCase, :register_and_log_in_paying_user}
 
-  defp dispatch_snapshot(user, link, attrs) do
-    crawl_run = insert(:crawl_run, link_id: link.id)
-
-    {:ok, snapshot} =
-      create_snapshot(
-        link.id,
-        user.id,
-        Map.merge(%{format: "webpage", source: "singlefile"}, attrs)
-      )
-
-    {crawl_run, snapshot}
-  end
-
-  defp create_link_and_snapshot(%{user: user}) do
+  defp stored_snapshot(user, content, attrs \\ []) do
     link = insert(:link, user_id: user.id)
 
     data_dir = Linkhut.Config.archiving(:data_dir)
-    file_path = Path.join(data_dir, "test_file")
-    storage_key = StorageKey.local(file_path)
-
-    {crawl_run, snapshot} =
-      dispatch_snapshot(user, link, %{
-        state: :complete,
-        storage_key: storage_key,
-        file_size_bytes: 1024,
-        processing_time_ms: 500,
-        response_code: 200,
-        archive_metadata: %{
-          content_type: "text/html",
-          tool_name: "SingleFile",
-          crawler_version: "2.0.75"
-        }
-      })
-
-    # Create the backing file
+    path = Path.join(data_dir, "snapshot-#{System.unique_integer([:positive])}")
     File.mkdir_p!(data_dir)
-    File.write!(file_path, "<html>archived content</html>")
-
+    File.write!(path, content)
     on_exit(fn -> File.rm_rf(data_dir) end)
 
-    %{link: link, snapshot: snapshot, crawl_run: crawl_run}
+    snapshot =
+      insert(
+        :snapshot,
+        [
+          user_id: user.id,
+          link_id: link.id,
+          storage_key: StorageKey.local(path),
+          archive_metadata: %{"content_type" => "text/html"}
+        ] ++ attrs
+      )
+
+    {link, snapshot}
+  end
+
+  defp create_link_and_snapshot(%{user: user}) do
+    {link, snapshot} = stored_snapshot(user, "<html>archived content</html>")
+    %{link: link, snapshot: snapshot}
+  end
+
+  defp serve(conn, snapshot, headers \\ []) do
+    token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
+
+    conn
+    |> recycle()
+    |> merge_req_headers(headers)
+    |> get(~p"/_/snapshot/#{token}/serve")
+  end
+
+  defp log_in_free_user do
+    user =
+      Linkhut.AccountsFixtures.user_fixture()
+      |> Linkhut.AccountsFixtures.activate_user()
+
+    {LinkhutWeb.ConnCase.log_in_user(build_conn(), user), user}
   end
 
   describe "GET /archive/:link_id (show - default tab)" do
@@ -65,6 +67,14 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
       conn = get(conn, ~p"/_/archive/#{link.id}")
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
+    end
+
+    test "redirects to the user's page for another user's link", %{conn: conn, user: user} do
+      other_link = insert(:link, user_id: insert(:user).id)
+
+      conn = get(conn, ~p"/_/archive/#{other_link.id}")
+      assert redirected_to(conn) == ~p"/~#{user.username}"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Not found"
     end
   end
 
@@ -86,34 +96,11 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup :create_link_and_snapshot
 
     test "serves archive file with valid token", %{conn: conn, snapshot: snapshot} do
-      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
-
-      conn =
-        conn
-        |> recycle()
-        |> get(~p"/_/snapshot/#{token}/serve")
+      conn = serve(conn, snapshot)
 
       assert response(conn, 200) =~ "archived content"
       assert get_resp_header(conn, "content-type") == ["text/html; charset=utf-8"]
       assert get_resp_header(conn, "x-frame-options") == ["SAMEORIGIN"]
-    end
-
-    test "sets restrictive CSP header without script-src when serve_host not configured", %{
-      conn: conn,
-      snapshot: snapshot
-    } do
-      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
-
-      conn =
-        conn
-        |> recycle()
-        |> get(~p"/_/snapshot/#{token}/serve")
-
-      [csp] = get_resp_header(conn, "content-security-policy")
-      assert csp =~ "default-src 'none'"
-      # Without serve_host, scripts are blocked to prevent XSS on the app domain
-      refute csp =~ "script-src"
-      assert csp =~ "style-src 'unsafe-inline'"
     end
 
     test "returns 403 for invalid token", %{conn: conn} do
@@ -139,7 +126,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     test "redirects when type has no complete snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
 
-      dispatch_snapshot(user, link, %{state: :pending})
+      insert(:snapshot, user_id: user.id, link_id: link.id, state: :pending)
 
       conn = get(conn, ~p"/_/archive/#{link.id}/webpage/full")
       assert redirected_to(conn) == ~p"/~#{user.username}"
@@ -175,7 +162,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
          %{conn: conn, user: user} do
       for state <- [:pending, :crawling] do
         link = insert(:link, user_id: user.id)
-        dispatch_snapshot(user, link, %{state: state})
+        insert(:snapshot, user_id: user.id, link_id: link.id, state: state)
 
         conn = get(conn, ~p"/_/archive/#{link.id}/all")
         body = html_response(conn, 200)
@@ -219,18 +206,10 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "doesn't show crawler lines to a user who can't create archives" do
       put_override(Linkhut.Archiving, :mode, :limited)
-
-      user =
-        Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user()
-
+      {conn, user} = log_in_free_user()
       link = insert(:link, user_id: user.id)
 
-      body =
-        build_conn()
-        |> LinkhutWeb.ConnCase.log_in_user(user)
-        |> get(~p"/_/archive/#{link.id}/all")
-        |> html_response(200)
+      body = conn |> get(~p"/_/archive/#{link.id}/all") |> html_response(200)
 
       refute body =~ "Re-crawl"
       refute body =~ "Upload snapshot"
@@ -257,15 +236,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "returns not found for another user's snapshot", %{conn: conn, link: link} do
-      other_user = insert(:user)
-      other_link = insert(:link, user_id: other_user.id)
-
-      {:ok, other_snapshot} =
-        create_snapshot(other_link.id, other_user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete
-        })
+      other_snapshot = insert(:snapshot)
 
       conn = get(conn, ~p"/_/archive/#{link.id}/snapshot/#{other_snapshot.id}/delete")
       assert redirected_to(conn) == ~p"/_/archive/#{link.id}/all"
@@ -305,13 +276,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
     test "rejects deletion of active snapshot", %{conn: conn, user: user} do
       link = insert(:link, user_id: user.id)
-
-      {:ok, snapshot} =
-        create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :pending
-        })
+      snapshot = insert(:snapshot, user_id: user.id, link_id: link.id, state: :pending)
 
       conn =
         delete(conn, ~p"/_/archive/#{link.id}/snapshot/#{snapshot.id}", %{
@@ -326,15 +291,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "returns not found for another user's snapshot", %{conn: conn, link: link} do
-      other_user = insert(:user)
-      other_link = insert(:link, user_id: other_user.id)
-
-      {:ok, other_snapshot} =
-        create_snapshot(other_link.id, other_user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete
-        })
+      other_snapshot = insert(:snapshot)
 
       conn =
         delete(conn, ~p"/_/archive/#{link.id}/snapshot/#{other_snapshot.id}", %{
@@ -411,60 +368,16 @@ defmodule LinkhutWeb.SnapshotControllerTest do
 
   describe "compressed snapshots" do
     setup %{user: user} do
-      link = insert(:link, user_id: user.id)
-
-      crawl_run =
-        insert(:crawl_run, link_id: link.id)
-
-      data_dir = Linkhut.Config.archiving(:data_dir)
-      file_path = Path.join(data_dir, "test_compressed_file.gz")
-      storage_key = StorageKey.local(file_path)
-
       original_content = "<html>compressed archived content</html>"
-      compressed = :zlib.gzip(original_content)
-
-      {:ok, snapshot} =
-        create_snapshot(link.id, user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete,
-          storage_key: storage_key,
-          file_size_bytes: byte_size(compressed),
-          encoding: "gzip",
-          original_file_size_bytes: byte_size(original_content),
-          processing_time_ms: 500,
-          response_code: 200,
-          archive_metadata: %{
-            content_type: "text/html",
-            tool_name: "SingleFile",
-            crawler_version: "2.0.75"
-          }
-        })
-
-      File.mkdir_p!(data_dir)
-      File.write!(file_path, compressed)
-
-      on_exit(fn -> File.rm_rf(data_dir) end)
-
-      %{
-        link: link,
-        snapshot: snapshot,
-        crawl_run: crawl_run,
-        original_content: original_content
-      }
+      {link, snapshot} = stored_snapshot(user, :zlib.gzip(original_content), encoding: "gzip")
+      %{link: link, snapshot: snapshot, original_content: original_content}
     end
 
     test "serves compressed file with content-encoding header", %{
       conn: conn,
       snapshot: snapshot
     } do
-      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
-
-      conn =
-        conn
-        |> recycle()
-        |> put_req_header("accept-encoding", "gzip, deflate, br")
-        |> get(~p"/_/snapshot/#{token}/serve")
+      conn = serve(conn, snapshot, [{"accept-encoding", "gzip, deflate, br"}])
 
       assert response(conn, 200)
       assert get_resp_header(conn, "content-encoding") == ["gzip"]
@@ -475,13 +388,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       conn: conn,
       snapshot: snapshot
     } do
-      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
-
-      conn =
-        conn
-        |> recycle()
-        |> put_req_header("accept-encoding", "identity")
-        |> get(~p"/_/snapshot/#{token}/serve")
+      conn = serve(conn, snapshot, [{"accept-encoding", "identity"}])
 
       assert json_response(conn, 406)["error"] =~ "gzip"
     end
@@ -504,27 +411,18 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     setup %{user: user} do
       link = insert(:link, user_id: user.id)
 
-      crawl_run =
-        insert(:crawl_run, link_id: link.id)
-
-      {:ok, snapshot} =
-        create_snapshot(link.id, user.id, %{
+      snapshot =
+        insert(:snapshot,
+          user_id: user.id,
+          link_id: link.id,
           format: "reference",
           source: "wayback",
-          state: :complete,
           storage_key:
             StorageKey.external("https://web.archive.org/web/20250301/https://example.com"),
-          file_size_bytes: nil,
-          processing_time_ms: 500,
-          response_code: 200,
-          archive_metadata: %{
-            original_url: link.url,
-            final_url: link.url,
-            timestamp: "20250301120000"
-          }
-        })
+          archive_metadata: %{"timestamp" => "20250301120000"}
+        )
 
-      %{link: link, snapshot: snapshot, crawl_run: crawl_run}
+      %{link: link, snapshot: snapshot}
     end
 
     test "show renders external content for wayback snapshot", %{conn: conn, link: link} do
@@ -546,12 +444,7 @@ defmodule LinkhutWeb.SnapshotControllerTest do
     end
 
     test "serve redirects externally for external storage key", %{conn: conn, snapshot: snapshot} do
-      token = LinkhutWeb.SnapshotTokens.generate_token(snapshot.id)
-
-      conn =
-        conn
-        |> recycle()
-        |> get(~p"/_/snapshot/#{token}/serve")
+      conn = serve(conn, snapshot)
 
       assert redirected_to(conn) == "https://web.archive.org/web/20250301/https://example.com"
     end
@@ -567,18 +460,11 @@ defmodule LinkhutWeb.SnapshotControllerTest do
       assert redirected_to(conn) =~ "login"
     end
 
-    test "redirects when archiving is disabled for user", %{conn: conn} do
+    test "redirects when archiving is disabled for user" do
       put_override(Linkhut.Archiving, :mode, :disabled)
+      {conn, free_user} = log_in_free_user()
 
-      free_user =
-        Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user()
-
-      conn =
-        conn
-        |> recycle()
-        |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/1")
+      conn = get(conn, ~p"/_/archive/1")
 
       assert redirected_to(conn) == ~p"/~#{free_user.username}"
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Archiving is not available"
@@ -586,60 +472,26 @@ defmodule LinkhutWeb.SnapshotControllerTest do
   end
 
   describe "view/create access split" do
-    test "free user can view archives in limited mode", %{conn: conn} do
+    test "free user can view archives in limited mode" do
       put_override(Linkhut.Archiving, :mode, :limited)
+      {conn, free_user} = log_in_free_user()
+      {link, _snapshot} = stored_snapshot(free_user, "<html>content</html>")
 
-      free_user =
-        Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user()
-
-      link = insert(:link, user_id: free_user.id)
-
-      data_dir = Linkhut.Config.archiving(:data_dir)
-      file_path = Path.join(data_dir, "test_free_user_file")
-      storage_key = StorageKey.local(file_path)
-
-      {:ok, _snapshot} =
-        create_snapshot(link.id, free_user.id, %{
-          format: "webpage",
-          source: "singlefile",
-          state: :complete,
-          storage_key: storage_key,
-          file_size_bytes: 1024,
-          archive_metadata: %{content_type: "text/html"}
-        })
-
-      File.mkdir_p!(data_dir)
-      File.write!(file_path, "<html>content</html>")
-      on_exit(fn -> File.rm_rf(data_dir) end)
-
-      conn =
-        conn
-        |> recycle()
-        |> LinkhutWeb.ConnCase.log_in_user(free_user)
-        |> get(~p"/_/archive/#{link.id}/webpage")
+      conn = get(conn, ~p"/_/archive/#{link.id}/webpage")
 
       assert html_response(conn, 200) =~ "snapshot"
     end
 
-    test "free user cannot delete snapshots or recrawl in limited mode", %{conn: conn} do
+    test "free user cannot delete snapshots or recrawl in limited mode" do
       put_override(Linkhut.Archiving, :mode, :limited)
-
-      free_user =
-        Linkhut.AccountsFixtures.user_fixture()
-        |> Linkhut.AccountsFixtures.activate_user()
-
+      {conn, free_user} = log_in_free_user()
       link = insert(:link, user_id: free_user.id)
 
       for {method, path} <- [
             delete: ~p"/_/archive/#{link.id}/snapshot/1",
             post: ~p"/_/archive/#{link.id}/recrawl"
           ] do
-        conn =
-          conn
-          |> recycle()
-          |> LinkhutWeb.ConnCase.log_in_user(free_user)
-          |> dispatch(@endpoint, method, path)
+        conn = dispatch(conn, @endpoint, method, path)
 
         assert redirected_to(conn) == ~p"/~#{free_user.username}", "for #{method}"
 

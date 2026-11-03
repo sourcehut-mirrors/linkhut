@@ -5,11 +5,12 @@ defmodule LinkhutWeb.SnapshotController do
   alias Linkhut.Archiving.{Format, LinkArchival, StorageKey}
   alias LinkhutWeb.{Breadcrumb, SnapshotTokens}
 
-  plug :require_can_view_archives when action in [:show, :full, :download, :index]
-  plug :require_can_create_archives when action in [:recrawl, :upload, :remove_snapshot, :delete]
+  plug :require_archives, :view when action in [:show, :full, :download, :index]
+  plug :require_archives, :create when action in [:recrawl, :upload, :remove_snapshot, :delete]
+  plug :load_link when action != :serve
 
-  defp require_can_view_archives(conn, _opts) do
-    if Archiving.can_view_archives?(conn.assigns.current_user) do
+  defp require_archives(conn, access) do
+    if allowed?(conn.assigns.current_user, access) do
       conn
     else
       conn
@@ -19,14 +20,21 @@ defmodule LinkhutWeb.SnapshotController do
     end
   end
 
-  defp require_can_create_archives(conn, _opts) do
-    if Archiving.can_create_archives?(conn.assigns.current_user) do
-      conn
+  defp allowed?(user, :view), do: Archiving.can_view_archives?(user)
+  defp allowed?(user, :create), do: Archiving.can_create_archives?(user)
+
+  defp load_link(%{params: %{"link_id" => link_id}} = conn, _opts) do
+    user = conn.assigns.current_user
+
+    with {:ok, id} <- parse_link_id(link_id),
+         {:ok, link} <- Links.get_user_link(id, user.id) do
+      assign(conn, :link, link)
     else
-      conn
-      |> put_flash(:error, "Archiving is not available")
-      |> redirect(to: ~p"/~#{conn.assigns.current_user.username}")
-      |> halt()
+      _ ->
+        conn
+        |> put_flash(:error, "Not found")
+        |> redirect(to: ~p"/~#{user.username}")
+        |> halt()
     end
   end
 
@@ -34,44 +42,26 @@ defmodule LinkhutWeb.SnapshotController do
   Shows the snapshot viewer page with tabs for each format.
   Default tab (no format param) selects the first available format.
   """
-  def show(conn, %{"link_id" => link_id, "format" => format, "source" => source}) do
-    show_snapshot(conn, link_id, format, source)
-  end
+  def show(conn, %{"format" => format, "source" => source}),
+    do: show_snapshot(conn, format, source)
 
-  def show(conn, %{"link_id" => link_id, "format" => format}) do
-    show_snapshot(conn, link_id, format, nil)
-  end
+  def show(conn, %{"format" => format}), do: show_snapshot(conn, format, nil)
+  def show(conn, _params), do: show_snapshot(conn, nil, nil)
 
-  def show(conn, %{"link_id" => link_id}), do: show_snapshot(conn, link_id, nil, nil)
+  defp show_snapshot(conn, format, source) do
+    %{current_user: user, link: link} = conn.assigns
+    complete = Archiving.get_complete_snapshots_by_link(link.id)
 
-  defp show_snapshot(conn, link_id, format, source) do
-    user = conn.assigns.current_user
+    case {complete, find_snapshot(complete, format, source)} do
+      {[], _} ->
+        redirect(conn, to: ~p"/_/archive/#{link.id}/all")
 
-    with {:ok, link_id} <- parse_link_id(link_id),
-         {:ok, link} <- Links.get_user_link(link_id, user.id) do
-      complete = Archiving.get_complete_snapshots_by_link(link_id)
+      {_, nil} ->
+        first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
+        redirect(conn, to: ~p"/_/archive/#{link.id}/#{first.format}/#{first.source}")
 
-      case {complete, find_snapshot(complete, format, source)} do
-        {[], _} ->
-          redirect(conn, to: ~p"/_/archive/#{link_id}/all")
-
-        {_, nil} ->
-          first = Enum.min_by(complete, &Format.format_sort_key(&1.format))
-          redirect(conn, to: ~p"/_/archive/#{link_id}/#{first.format}/#{first.source}")
-
-        {_, snapshot} ->
-          render_snapshot(conn, user, link, snapshot, complete)
-      end
-    else
-      {:error, :not_found} ->
-        conn
-        |> put_flash(:error, "Snapshot not found")
-        |> redirect(to: ~p"/~#{user.username}")
-
-      :error ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
+      {_, snapshot} ->
+        render_snapshot(conn, user, link, snapshot, complete)
     end
   end
 
@@ -148,91 +138,12 @@ defmodule LinkhutWeb.SnapshotController do
   @doc """
   Generates a fresh serve token and redirects to the serve URL.
   """
-  def full(conn, %{"link_id" => link_id, "format" => format} = params) do
-    user = conn.assigns.current_user
+  def full(conn, %{"format" => format} = params) do
+    %{current_user: user, link: link} = conn.assigns
 
-    case parse_link_id(link_id) do
-      {:ok, link_id} ->
-        with {:ok, _link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <-
-               Archiving.get_latest_complete_snapshot(link_id, format, params["source"]) do
-          redirect_to_snapshot(conn, snapshot)
-        else
-          {:error, :not_found} ->
-            conn
-            |> put_flash(:error, "Snapshot not found")
-            |> redirect(to: ~p"/~#{user.username}")
-        end
-
-      :error ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
-    end
-  end
-
-  @doc """
-  Downloads the snapshot archive file.
-  """
-  def download(conn, %{"link_id" => link_id, "format" => format} = params) do
-    user = conn.assigns.current_user
-
-    case parse_link_id(link_id) do
-      {:ok, link_id} ->
-        with {:ok, link} <- Links.get_user_link(link_id, user.id),
-             {:ok, snapshot} <-
-               Archiving.get_latest_complete_snapshot(link_id, format, params["source"]) do
-          serve_download(conn, link, snapshot, link_id, format, user)
-        else
-          {:error, :not_found} ->
-            conn
-            |> put_flash(:error, "Snapshot not found")
-            |> redirect(to: ~p"/~#{user.username}")
-        end
-
-      :error ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
-    end
-  end
-
-  @doc """
-  Lists all archives (with nested snapshots) for a link.
-  """
-  def index(conn, %{"link_id" => link_id}) do
-    user = conn.assigns.current_user
-
-    case parse_link_id(link_id) do
-      {:ok, link_id} ->
-        render_index(conn, user, link_id)
-
-      :error ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
-    end
-  end
-
-  defp render_index(conn, user, link_id) do
-    case Links.get_user_link(link_id, user.id) do
-      {:ok, link} ->
-        current_snapshots = Archiving.get_current_snapshots_by_link(link_id)
-        complete_snapshots = Enum.filter(current_snapshots, &(&1.state == :complete))
-        tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete_snapshots, link_id)
-        archiving? = Archiving.archiving?(link)
-
-        conn
-        |> maybe_auto_refresh(archiving?)
-        |> render(:index, %{
-          link: link,
-          current_snapshots: current_snapshots,
-          tabs: tabs,
-          archiving: archiving?,
-          crawlers: link |> LinkArchival.applicable_crawlers() |> Enum.map(& &1.source_type()),
-          can_delete: Archiving.can_create_archives?(user),
-          breadcrumb: %Breadcrumb{user: user, url: link.url}
-        })
+    case Archiving.get_latest_complete_snapshot(link.id, format, params["source"]) do
+      {:ok, snapshot} ->
+        redirect_to_snapshot(conn, snapshot)
 
       {:error, :not_found} ->
         conn
@@ -242,177 +153,159 @@ defmodule LinkhutWeb.SnapshotController do
   end
 
   @doc """
-  Schedules a re-crawl for a link.
+  Downloads the snapshot archive file.
   """
-  def recrawl(conn, %{"link_id" => link_id} = params) do
-    user = conn.assigns.current_user
+  def download(conn, %{"format" => format} = params) do
+    %{current_user: user, link: link} = conn.assigns
 
-    case parse_link_id(link_id) do
-      {:ok, link_id} ->
-        case Links.get_user_link(link_id, user.id) do
-          {:ok, link} ->
-            {kind, message} =
-              case Archiving.enqueue_recrawl(link, recrawl_opts(params)) do
-                {:ok, %{conflict?: true}} -> {:info, "This link is already being archived"}
-                {:ok, :nothing_to_archive} -> {:error, "No crawler can archive this link"}
-                {:ok, _job} -> {:info, "Re-crawl scheduled"}
-                {:error, _reason} -> {:error, "Re-crawl failed"}
-              end
+    case Archiving.get_latest_complete_snapshot(link.id, format, params["source"]) do
+      {:ok, snapshot} ->
+        serve_download(conn, link, snapshot, user)
 
-            conn
-            |> put_flash(kind, message)
-            |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-          {:error, :not_found} ->
-            conn
-            |> put_flash(:error, "Link not found")
-            |> redirect(to: ~p"/~#{user.username}")
-        end
-
-      :error ->
+      {:error, :not_found} ->
         conn
-        |> put_flash(:error, "Not found")
+        |> put_flash(:error, "Snapshot not found")
         |> redirect(to: ~p"/~#{user.username}")
     end
   end
 
   @doc """
+  Lists all archives (with nested snapshots) for a link.
+  """
+  def index(conn, _params) do
+    %{current_user: user, link: link} = conn.assigns
+    current_snapshots = Archiving.get_current_snapshots_by_link(link.id)
+    complete_snapshots = Enum.filter(current_snapshots, &(&1.state == :complete))
+    tabs = LinkhutWeb.SnapshotHTML.build_tabs(complete_snapshots, link.id)
+    archiving? = Archiving.archiving?(link)
+
+    conn
+    |> maybe_auto_refresh(archiving?)
+    |> render(:index, %{
+      link: link,
+      current_snapshots: current_snapshots,
+      tabs: tabs,
+      archiving: archiving?,
+      crawlers: link |> LinkArchival.applicable_crawlers() |> Enum.map(& &1.source_type()),
+      can_delete: Archiving.can_create_archives?(user),
+      breadcrumb: %Breadcrumb{user: user, url: link.url}
+    })
+  end
+
+  @doc """
+  Schedules a re-crawl for a link.
+  """
+  def recrawl(conn, params) do
+    link = conn.assigns.link
+
+    {kind, message} =
+      case Archiving.enqueue_recrawl(link, recrawl_opts(params)) do
+        {:ok, %{conflict?: true}} -> {:info, "This link is already being archived"}
+        {:ok, :nothing_to_archive} -> {:error, "No crawler can archive this link"}
+        {:ok, _job} -> {:info, "Re-crawl scheduled"}
+        {:error, _reason} -> {:error, "Re-crawl failed"}
+      end
+
+    conn
+    |> put_flash(kind, message)
+    |> redirect(to: ~p"/_/archive/#{link.id}/all")
+  end
+
+  @doc """
   Shows the snapshot deletion confirmation page.
   """
-  def remove_snapshot(conn, %{"link_id" => link_id, "id" => id}) do
-    user = conn.assigns.current_user
-
+  def remove_snapshot(conn, %{"id" => id}) do
+    %{current_user: user, link: link} = conn.assigns
     user_id = user.id
 
-    with {:ok, link_id} <- parse_link_id(link_id),
-         {:ok, snapshot_id} <- parse_link_id(id),
-         {:ok, link} <- Links.get_user_link(link_id, user.id) do
-      case Archiving.get_snapshot_by_id(snapshot_id) do
-        %{user_id: ^user_id} = snapshot ->
-          render(conn, :remove_snapshot, %{
-            link: link,
-            snapshot: snapshot,
-            breadcrumb: %Breadcrumb{user: user, url: link.url}
-          })
-
-        _ ->
-          conn
-          |> put_flash(:error, "Snapshot not found")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-      end
+    with {:ok, snapshot_id} <- parse_link_id(id),
+         %{user_id: ^user_id} = snapshot <- Archiving.get_snapshot_by_id(snapshot_id) do
+      render(conn, :remove_snapshot, %{
+        link: link,
+        snapshot: snapshot,
+        breadcrumb: %Breadcrumb{user: user, url: link.url}
+      })
     else
-      {:error, :not_found} ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
-
       :error ->
         conn
         |> put_flash(:error, "Not found")
         |> redirect(to: ~p"/~#{user.username}")
+
+      _ ->
+        conn
+        |> put_flash(:error, "Snapshot not found")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
     end
   end
 
   @doc """
   Uploads a user-provided snapshot for a link.
   """
-  def upload(conn, %{"link_id" => link_id, "upload" => %{"file" => %Plug.Upload{} = upload}}) do
-    user = conn.assigns.current_user
+  def upload(conn, %{"upload" => %{"file" => %Plug.Upload{} = upload}}) do
+    %{current_user: user, link: link} = conn.assigns
 
-    with {:ok, link_id} <- parse_link_id(link_id),
-         {:ok, _link} <- Links.get_user_link(link_id, user.id) do
-      case Archiving.upload_snapshot(link_id, user.id, upload) do
-        {:ok, _snapshot} ->
-          conn
-          |> put_flash(:info, "Snapshot uploaded")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-        {:error, :unsupported_format} ->
-          conn
-          |> put_flash(:error, "Unsupported file type.")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-        {:error, {:file_too_large, _size, max}} ->
-          conn
-          |> put_flash(:error, "File too large (max #{Linkhut.Formatting.format_bytes(max)})")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-        {:error, _reason} ->
-          conn
-          |> put_flash(:error, "Upload failed")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-      end
-    else
-      {:error, :not_found} ->
+    case Archiving.upload_snapshot(link.id, user.id, upload) do
+      {:ok, _snapshot} ->
         conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
+        |> put_flash(:info, "Snapshot uploaded")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
 
-      :error ->
+      {:error, :unsupported_format} ->
         conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
+        |> put_flash(:error, "Unsupported file type.")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
+
+      {:error, {:file_too_large, _size, max}} ->
+        conn
+        |> put_flash(:error, "File too large (max #{Linkhut.Formatting.format_bytes(max)})")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
+
+      {:error, _reason} ->
+        conn
+        |> put_flash(:error, "Upload failed")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
     end
   end
 
-  def upload(conn, %{"link_id" => link_id}) do
-    user = conn.assigns.current_user
-
-    case parse_link_id(link_id) do
-      {:ok, link_id} ->
-        conn
-        |> put_flash(:error, "No file selected")
-        |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-      :error ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
-    end
+  def upload(conn, _params) do
+    conn
+    |> put_flash(:error, "No file selected")
+    |> redirect(to: ~p"/_/archive/#{conn.assigns.link.id}/all")
   end
 
   @doc """
   Deletes a snapshot (marks it as pending_deletion).
   """
-  def delete(conn, %{"link_id" => link_id, "id" => id, "snapshot" => %{"are_you_sure?" => "true"}}) do
-    user = conn.assigns.current_user
+  def delete(conn, %{"id" => id, "snapshot" => %{"are_you_sure?" => "true"}}) do
+    %{current_user: user, link: link} = conn.assigns
 
-    with {:ok, link_id} <- parse_link_id(link_id),
-         {:ok, snapshot_id} <- parse_link_id(id),
-         {:ok, _link} <- Links.get_user_link(link_id, user.id) do
-      case Archiving.request_snapshot_deletion(snapshot_id, user.id) do
-        {:ok, _snapshot} ->
-          conn
-          |> put_flash(:info, "Snapshot deleted")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-        {:error, :active} ->
-          conn
-          |> put_flash(:error, "Cannot delete a snapshot that is still being processed")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-
-        {:error, :not_found} ->
-          conn
-          |> put_flash(:error, "Snapshot not found")
-          |> redirect(to: ~p"/_/archive/#{link_id}/all")
-      end
+    with {:ok, snapshot_id} <- parse_link_id(id),
+         {:ok, _snapshot} <- Archiving.request_snapshot_deletion(snapshot_id, user.id) do
+      conn
+      |> put_flash(:info, "Snapshot deleted")
+      |> redirect(to: ~p"/_/archive/#{link.id}/all")
     else
-      {:error, :not_found} ->
-        conn
-        |> put_flash(:error, "Not found")
-        |> redirect(to: ~p"/~#{user.username}")
-
       :error ->
         conn
         |> put_flash(:error, "Not found")
         |> redirect(to: ~p"/~#{user.username}")
+
+      {:error, :active} ->
+        conn
+        |> put_flash(:error, "Cannot delete a snapshot that is still being processed")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
+
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "Snapshot not found")
+        |> redirect(to: ~p"/_/archive/#{link.id}/all")
     end
   end
 
-  def delete(conn, %{"link_id" => link_id, "id" => id}) do
+  def delete(conn, %{"id" => id}) do
     conn
     |> put_flash(:error, "Please confirm you want to delete this snapshot")
-    |> redirect(to: ~p"/_/archive/#{link_id}/snapshot/#{id}/delete")
+    |> redirect(to: ~p"/_/archive/#{conn.assigns.link.id}/snapshot/#{id}/delete")
   end
 
   defp redirect_to_snapshot(conn, snapshot) do
@@ -426,49 +319,24 @@ defmodule LinkhutWeb.SnapshotController do
     end
   end
 
-  defp serve_download(conn, link, snapshot, link_id, type, user) do
-    case StorageKey.parse(snapshot.storage_key) do
-      {:ok, {:s3, _}} ->
-        serve_s3_download(conn, link, snapshot, user)
-
-      _ ->
-        serve_local_download(conn, link, snapshot, link_id, type, user)
-    end
+  defp serve_download(conn, link, %{format: "reference"} = snapshot, _user) do
+    conn
+    |> put_flash(:info, "This snapshot is hosted externally and cannot be downloaded.")
+    |> redirect(to: ~p"/_/archive/#{link.id}/#{snapshot.format}")
   end
 
-  defp serve_s3_download(conn, link, snapshot, user) do
+  defp serve_download(conn, link, snapshot, user) do
     filename = download_filename(link.title, snapshot.inserted_at, snapshot)
     disposition = "attachment; filename=\"#{filename}\""
 
     case Archiving.Storage.resolve(snapshot.storage_key, disposition: disposition) do
+      {:ok, {:file, path}} ->
+        send_snapshot_download(conn, path, snapshot.encoding, filename)
+
       {:ok, {:redirect, url}} ->
         redirect(conn, external: url)
 
       {:error, _} ->
-        conn
-        |> put_flash(:error, "Snapshot not found")
-        |> redirect(to: ~p"/~#{user.username}")
-    end
-  end
-
-  defp serve_local_download(conn, link, snapshot, link_id, type, user) do
-    case Archiving.Storage.resolve(snapshot.storage_key) do
-      {:ok, {:file, path}} ->
-        filename = download_filename(link.title, snapshot.inserted_at, snapshot)
-
-        if snapshot.encoding do
-          send_decompressed_download(conn, path, snapshot.encoding, filename)
-        else
-          conn
-          |> send_download({:file, path}, filename: filename, charset: "utf-8")
-        end
-
-      {:ok, {:redirect, _url}} ->
-        conn
-        |> put_flash(:info, "This snapshot is hosted externally and cannot be downloaded.")
-        |> redirect(to: ~p"/_/archive/#{link_id}/#{type}")
-
-      {:error, :invalid_storage_key} ->
         conn
         |> put_flash(:error, "Snapshot not found")
         |> redirect(to: ~p"/~#{user.username}")
@@ -526,13 +394,13 @@ defmodule LinkhutWeb.SnapshotController do
     |> Enum.any?(&String.contains?(&1, encoding))
   end
 
-  defp send_decompressed_download(conn, path, "gzip", filename) do
+  defp send_snapshot_download(conn, path, "gzip", filename) do
     decompressed = path |> File.read!() |> :zlib.gunzip()
 
     send_download(conn, {:binary, decompressed}, filename: filename, charset: "utf-8")
   end
 
-  defp send_decompressed_download(conn, path, _encoding, filename) do
+  defp send_snapshot_download(conn, path, _encoding, filename) do
     send_download(conn, {:file, path}, filename: filename, charset: "utf-8")
   end
 
