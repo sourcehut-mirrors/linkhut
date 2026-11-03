@@ -1,9 +1,17 @@
 # Archiving
 
-Linkhut can capture point-in-time snapshots of bookmarked pages using
-[SingleFile](https://github.com/nicktogo/single-file-cli). Snapshots can be
-stored on the local filesystem or in S3-compatible object storage, and can be
-viewed, downloaded, or listed per bookmark.
+Linkhut can capture point-in-time snapshots of bookmarked pages using the 
+following tools:
+
+- SingleFile: saves a web page as a single HTML file, using
+  [single-file-cli](https://github.com/gildas-lormeau/single-file-cli).
+- HTTP Fetch: downloads files that aren't web pages (e.g: PDFs, plain
+  text, JSON and images).
+- Wayback Machine: searches the Internet Archive for an existing capture closest to
+when the link was bookmarked.
+- Finally, users can also upload their own snapshots as a single file (e.g.: html, pdf, plain text, images).
+
+Snapshots can be stored on the local filesystem or in S3-compatible object storage.
 
 ## Configuration
 
@@ -12,10 +20,15 @@ Archiving is configured under `config :linkhut, Linkhut.Archiving, [...]`.
 | Key                | Type       | Default    | Description |
 |--------------------|------------|------------|-------------|
 | `mode`             | atom       | `:disabled` | Controls who can use archiving (see below). |
-| `data_dir`         | string     | `""`       | Directory where snapshot files are stored. |
+| `data_dir`         | string     | (none)     | Directory where snapshot files are stored. |
 | `serve_host`       | string     | `nil`      | Hostname used when serving snapshots. Falls back to the request host. |
 | `storage`          | module     | `Storage.Local` | Storage backend module. |
 | `legacy_data_dirs` | list       | `[]`       | Additional directories to accept when resolving or deleting existing snapshots (useful during data directory migrations). |
+| `max_file_size`    | integer    | `70000000` | Maximum size of an archived file, in bytes. |
+| `staging_dir`      | string     | system temp directory | Temporary directory for crawler output before it's stored. |
+| `user_agent_suffix` | string    | `nil`      | Appended to the crawler User-Agent, e.g. the URL of the linkhut instance. |
+| `crawlers`         | list       | `Crawler.SingleFile`, `Crawler.HttpFetch`, `Crawler.WaybackMachine` | Crawler modules to run. |
+| `direct_file`      | keyword    | `[allowed_types: [:pdf, :text, :json, :image]]` | Formats HTTP Fetch downloads: any of `:pdf`, `:text`, `:json` and `:image`. |
 
 ### Local storage
 
@@ -64,7 +77,7 @@ In `runtime.exs`, the following environment variables are read:
 | `ARCHIVING_MODE` | `:mode` | `"enabled"`, `"limited"`, or `"disabled"` | `"disabled"` | Controls who can use archiving. |
 | `ARCHIVING_STORAGE` | `:storage` | `"local"` or `"s3"` | `"local"` | Storage backend for new snapshots. |
 | `ARCHIVING_DATA_DIR` | `:data_dir` | path string | (none) | Directory where local snapshot files are stored. |
-| `ARCHIVING_STAGING_DIR` | `:staging_dir` | path string | (none) | Temporary directory for crawler output before storage. Defaults to `data_dir` if unset. |
+| `ARCHIVING_STAGING_DIR` | `:staging_dir` | path string | (none) | Temporary directory for crawler output before storage. Defaults to the system temporary directory if unset. |
 | `ARCHIVING_SERVE_HOST` | `:serve_host` | hostname string | (none) | Dedicated hostname for serving archived HTML. |
 | `ARCHIVING_MAX_FILE_SIZE` | `:max_file_size` | integer (bytes) | `70000000` | Maximum size of archived files. |
 | `ARCHIVING_USER_AGENT_SUFFIX` | `:user_agent_suffix` | string | (none) | Appended to crawler User-Agent. |
@@ -93,7 +106,7 @@ In `runtime.exs`, the following environment variables are read:
 **Crawler Settings:**
 
 | Variable | Type | Default | Description |
-|---|---|---|---|---|
+|---|---|---|---|
 | `ARCHIVING_CRAWLER_SF_ARGS` | string | (none) | Command-line arguments used when invoking single-file-cli, (see: [single-file-cli options](https://github.com/gildas-lormeau/single-file-cli/blob/master/options.js)) |
 
 
@@ -115,7 +128,7 @@ types are gzip-compressed at rest.
 ### SSRF protection
 
 Before crawling a URL, Linkhut resolves its hostname and checks the resulting IP
-against a comprehensive list of reserved/non-routable address ranges (RFC 1918,
+against a list of reserved/non-routable address ranges (RFC 1918,
 link-local, loopback, CGN, cloud metadata, etc.). This prevents bookmarks from
 being used to probe internal services.
 
