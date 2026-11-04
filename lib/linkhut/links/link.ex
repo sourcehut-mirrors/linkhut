@@ -26,6 +26,8 @@ defmodule Linkhut.Links.Link do
     field :saves, :integer, default: 0, virtual: true
     field :score, :float, default: 0.0, virtual: true
     field :saved_by_current_user?, :boolean, virtual: true, default: false
+    field :title_highlighted, :string, virtual: true
+    field :notes_html_highlighted, :string, virtual: true
 
     embeds_one :metadata, LinkMetadata, on_replace: :update do
       field :scheme, :string

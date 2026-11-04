@@ -490,6 +490,30 @@ defmodule Linkhut.SearchTest do
     end
   end
 
+  describe "search highlighting" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      links =
+        create_links_for_user(user, [
+          %{
+            url: "https://example.com/database-optimization",
+            title: "Optimize queries so they run really fast",
+            notes: "About optimizing databases"
+          }
+        ])
+
+      %{links: links, context: %Context{visible_as: user.username}}
+    end
+
+    test "highlights matching terms in title and notes", %{context: context} do
+      [result] = run_search(context, "run database")
+
+      assert result.title_highlighted == "Optimize queries so they \u0001run\u0002 really fast"
+      assert result.notes_html_highlighted =~ "About optimizing <b>databases</b>"
+    end
+  end
+
   # Helpers
 
   defp create_links_for_user(user, specs) do

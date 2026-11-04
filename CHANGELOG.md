@@ -4,6 +4,7 @@ All notable changes to linkhut will be documented in this file.
 
 ## [Unreleased]
 
+- Search: matching terms are now highlighted in titles and notes.
 - Search: negated terms (i.e.: terms prefixed with `-`) now filter any bookmark that contains the term whether it's in the title, notes or tags (before it would only filter bookmarks if the term was found in the three places).
 - Add new configuration key for the directory where imports are uploaded: `DATA_TRANSFER_UPLOAD_DIR`. The default is under `/tmp/linkhut-uploads` but it is strongly recommended to change this to a durable folder so incomplete uploads can resume after a reboot.
 

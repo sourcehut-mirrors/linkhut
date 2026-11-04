@@ -29,7 +29,7 @@ defmodule LinkhutWeb.LinkComponents do
     <div class={["bookmark-card", highlight_owned?(@link, @viewer, @context) && "your-bookmark"]}>
       <div class="bookmark">
         <div :if={@show_title} data-posted-on={@link.inserted_at} data-saves={@link.saves} data-relevance={@link.score} class="title">
-          <h4><a rel="nofollow" class="taggedlink" href={@link.url}>{@link.title}</a></h4>
+          <h4><a rel="nofollow" class="taggedlink" href={@link.url}>{display_title(@link)}</a></h4>
           <span :if={@link.is_private} class="no-css-label">{gettext("Private")}</span>
           <a :if={show_saves?(@link, @context)} class="savers" data-count={@link.saves} data-label={gettext("people")} href={~p"/-#{@link.url}"}></a>
         </div>
@@ -37,7 +37,7 @@ defmodule LinkhutWeb.LinkComponents do
           <a rel="nofollow" href={@link.url}>{@link.url}</a>
         </div>
         <div :if={@show_notes} class="description">
-          {sanitize(@link.notes_html)}
+          {sanitize(@link.notes_html_highlighted || @link.notes_html)}
         </div>
         <div class="ownership">
           <span :if={not owned?(@link, @viewer)}>
@@ -93,6 +93,19 @@ defmodule LinkhutWeb.LinkComponents do
     </div>
     <hr />
     """
+  end
+
+  defp display_title(%Linkhut.Links.Link{title_highlighted: nil} = link), do: link.title
+
+  defp display_title(%Linkhut.Links.Link{title_highlighted: highlighted}) do
+    {start, stop} = Search.Ranking.title_highlight_markers()
+
+    highlighted
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+    |> String.replace(start, "<b>")
+    |> String.replace(stop, "</b>")
+    |> Phoenix.HTML.raw()
   end
 
   defp show_saves?(link, context), do: is_nil(context.url) and link.saves > 1

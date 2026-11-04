@@ -1,4 +1,5 @@
 defmodule LinkhutWeb.LinkXML do
+  @moduledoc false
   use LinkhutWeb, :xml
 
   import LinkhutWeb.Controllers.Utils

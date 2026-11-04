@@ -47,6 +47,7 @@ defmodule Linkhut.Search do
     |> Ranking.apply_text_filter(parsed)
     |> Ranking.apply_exclusions(parsed)
     |> Ranking.apply_scoring(parsed)
+    |> Ranking.apply_highlights(parsed)
     |> preload([_, _, u], user: u)
     |> Links.ordering(params)
   end

@@ -31,6 +31,8 @@ defmodule Linkhut.Search.Ranking do
   @tags_weight 1.0
   @grep_boost 0.5
   @min_grep_length 3
+  @title_highlight_start_marker "\u0001"
+  @title_highlight_stop_marker "\u0002"
 
   @doc """
   Adds a `WHERE` clause that filters links by full-text match.
@@ -72,6 +74,42 @@ defmodule Linkhut.Search.Ranking do
         )
     )
   end
+
+  @doc """
+  Adds `title_highlighted` and `notes_html_highlighted` using postgres' `ts_headline`.
+  No-op when the parsed query has no text.
+  """
+  @spec apply_highlights(Ecto.Query.t(), ParsedQuery.t()) :: Ecto.Query.t()
+  def apply_highlights(query, %ParsedQuery{text_query: ""}), do: query
+
+  def apply_highlights(query, %ParsedQuery{text_query: text_query, language: language}) do
+    select_merge(query, [l, _, _], %{
+      title_highlighted:
+        fragment(
+          "ts_headline(?::varchar::regconfig, ?, websearch_to_tsquery(?::varchar::regconfig, ?), ?)",
+          ^language,
+          l.title,
+          ^language,
+          ^text_query,
+          ^"StartSel=#{@title_highlight_start_marker}, StopSel=#{@title_highlight_stop_marker}, HighlightAll=true"
+        ),
+      notes_html_highlighted:
+        fragment(
+          "ts_headline(?::varchar::regconfig, ?, websearch_to_tsquery(?::varchar::regconfig, ?), ?)",
+          ^language,
+          l.notes_html,
+          ^language,
+          ^text_query,
+          "HighlightAll=true"
+        )
+    })
+  end
+
+  @doc """
+  Returns the title markers used to wrap matched words in.
+  """
+  @spec title_highlight_markers() :: {String.t(), String.t()}
+  def title_highlight_markers, do: {@title_highlight_start_marker, @title_highlight_stop_marker}
 
   @doc """
   Adds a `score` virtual field to the SELECT via `select_merge`.

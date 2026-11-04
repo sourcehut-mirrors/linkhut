@@ -79,4 +79,25 @@ defmodule LinkhutWeb.LinkControllerTest do
       assert body =~ ~s(expected)
     end
   end
+
+  describe "GET /~:username with a search query" do
+    test "highlights matches in the title and notes, escaping the title", %{conn: conn} do
+      user = insert(:user)
+
+      insert(:link,
+        user_id: user.id,
+        title: "Optimize queries so they <i>run really fast</i>",
+        notes: "About optimizing databases",
+        notes_html: "<p>About optimizing databases</p>"
+      )
+
+      body =
+        conn
+        |> get(~p"/~#{user.username}?#{[query: "run database"]}")
+        |> html_response(200)
+
+      assert body =~ "Optimize queries so they &lt;i&gt;<b>run</b> really fast&lt;/i&gt;"
+      assert body =~ "<p>About optimizing <b>databases</b></p>"
+    end
+  end
 end
