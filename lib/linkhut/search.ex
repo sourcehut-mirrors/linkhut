@@ -45,6 +45,7 @@ defmodule Linkhut.Search do
 
     links_for_context(updated_context, params)
     |> Ranking.apply_text_filter(parsed)
+    |> Ranking.apply_exclusions(parsed)
     |> Ranking.apply_scoring(parsed)
     |> preload([_, _, u], user: u)
     |> Links.ordering(params)

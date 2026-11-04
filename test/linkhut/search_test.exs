@@ -457,6 +457,39 @@ defmodule Linkhut.SearchTest do
     end
   end
 
+  describe "search with negated terms" do
+    setup do
+      user = AccountsFixtures.user_fixture()
+
+      links =
+        create_links_for_user(user, [
+          %{
+            url: "https://example.com/learning-rust",
+            title: "Learning Rust",
+            tags: ["programming"]
+          },
+          %{url: "https://example.com/systems", title: "Systems programming", tags: ["rust"]},
+          %{url: "https://example.com/rust-web", title: "Rust for the web", tags: ["web"]},
+          %{url: "https://example.com/web-design", title: "Web design basics", tags: ["design"]},
+          %{url: "https://example.com/gardening", title: "Gardening tips", tags: ["garden"]}
+        ])
+
+      %{links: links, context: %Context{visible_as: user.username}}
+    end
+
+    test "excludes links that mention the term in their title, notes or tags", %{
+      context: context,
+      links: links
+    } do
+      assert search_urls(context, "-rust") ==
+               Enum.sort([url_of(links, "Web design basics"), url_of(links, "Gardening tips")])
+    end
+
+    test "excludes links that match the other terms", %{context: context, links: links} do
+      assert search_urls(context, "web -rust") == [url_of(links, "Web design basics")]
+    end
+  end
+
   # Helpers
 
   defp create_links_for_user(user, specs) do

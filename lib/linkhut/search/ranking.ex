@@ -47,6 +47,33 @@ defmodule Linkhut.Search.Ranking do
   end
 
   @doc """
+  Adds a `WHERE` clause per negated term that excludes links matching it.
+  No-op when the parsed query has no excluded terms.
+  """
+  @spec apply_exclusions(Ecto.Query.t(), ParsedQuery.t()) :: Ecto.Query.t()
+  def apply_exclusions(query, %ParsedQuery{negated_terms: []}), do: query
+
+  def apply_exclusions(query, %ParsedQuery{negated_terms: terms, language: language}) do
+    Enum.reduce(terms, query, &exclude_term(&2, &1, language))
+  end
+
+  defp exclude_term(query, term, language) do
+    where(
+      query,
+      [_, _, _],
+      not fragment(
+        "coalesce(search_vector, ''::tsvector) @@ phraseto_tsquery(?::varchar::regconfig, ?)",
+        ^language,
+        ^term
+      ) and
+        not fragment(
+          "coalesce(tags_vector, ''::tsvector) @@ phraseto_tsquery('simple', ?)",
+          ^term
+        )
+    )
+  end
+
+  @doc """
   Adds a `score` virtual field to the SELECT via `select_merge`.
   When there is no text query, score is hardcoded to 1.0.
   """

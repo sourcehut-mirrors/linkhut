@@ -30,7 +30,7 @@ defmodule Linkhut.Search.QueryParser do
                    filters: %QueryFilters{sites: ["example.com"]}}
 
       iex> parse("site:foo.com -excluded test")
-      %ParsedQuery{raw: "site:foo.com -excluded test", text_query: "-excluded test",
+      %ParsedQuery{raw: "site:foo.com -excluded test", text_query: "test",
                    terms: ["test"], negated_terms: ["excluded"],
                    filters: %QueryFilters{sites: ["foo.com"]}}
   """
@@ -38,13 +38,13 @@ defmodule Linkhut.Search.QueryParser do
   def parse(query) when is_binary(query) do
     sanitized = sanitize(query)
     {after_sites, sites} = extract_filter(sanitized, @site_regex)
-    {text_query, url_parts} = extract_filter(after_sites, @inurl_regex)
-    {terms, negated_terms} = extract_terms(text_query)
+    {cleaned_query, url_parts} = extract_filter(after_sites, @inurl_regex)
+    {text_query, positive_terms, negated_terms} = extract_terms(cleaned_query)
 
     %ParsedQuery{
       raw: query,
       text_query: text_query,
-      terms: terms,
+      terms: positive_terms,
       negated_terms: negated_terms,
       filters: QueryFilters.new(sites: sites, url_parts: url_parts)
     }
@@ -91,6 +91,6 @@ defmodule Linkhut.Search.QueryParser do
       |> Enum.map(&String.replace(&1, ~r/^"|"$/, ""))
       |> Enum.reject(&(&1 == ""))
 
-    {positive_terms, negated_terms}
+    {Enum.join(positive, " "), positive_terms, negated_terms}
   end
 end
