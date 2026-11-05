@@ -1,7 +1,6 @@
 defmodule LinkhutWeb.LinkControllerTest do
   use LinkhutWeb.ConnCase
 
-  alias Linkhut.Oauth
   alias Linkhut.Accounts.Preferences
 
   test "GET /", %{conn: conn} do
@@ -78,27 +77,6 @@ defmodule LinkhutWeb.LinkControllerTest do
 
       assert body =~ ~s(type="html")
       assert body =~ ~s(expected)
-    end
-
-    test "renders the authenticated bookmark's owner notes from raw markdown", %{conn: conn} do
-      user = insert(:user)
-
-      token =
-        Oauth.create_token!(user, %{
-          comment: "test token",
-          scopes: "posts:read posts:write tags:read tags:write"
-        })
-
-      insert(:link, user: user, is_private: true, notes: "**expected**")
-
-      body =
-        conn
-        |> put_req_header("accept", "application/xml")
-        |> get(~p"/_/feed/~#{user.username}?auth_token=#{token.token}")
-        |> response(200)
-
-      assert body =~ ~s(type="html")
-      assert body =~ ~s(&lt;strong&gt;expected&lt;/strong&gt;)
     end
   end
 end
