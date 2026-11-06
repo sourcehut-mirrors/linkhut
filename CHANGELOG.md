@@ -2,7 +2,7 @@
 
 All notable changes to linkhut will be documented in this file.
 
-## [Unreleased]
+## [0.1.8] - 2026-11-06
 
 - Search: matching terms are now highlighted in titles and notes.
 - Search: negated terms (i.e.: terms prefixed with `-`) now filter any bookmark that contains the term whether it's in the title, notes or tags (before it would only filter bookmarks if the term was found in the three places).
